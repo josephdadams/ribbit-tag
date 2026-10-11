@@ -1,0 +1,15 @@
+{
+  "name": "Ribbit Tag",
+  "short_name": "Ribbit Tag",
+  "description": "A frog tag game you play with sticky frog hands.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#10291b",
+  "theme_color": "#10291b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

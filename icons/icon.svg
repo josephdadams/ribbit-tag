@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0" stop-color="#2f6b3c"/>
+      <stop offset="1" stop-color="#10291b"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- head -->
+  <ellipse cx="256" cy="300" rx="170" ry="128" fill="#5cb85c"/>
+  <!-- eye bumps -->
+  <circle cx="170" cy="196" r="66" fill="#5cb85c"/>
+  <circle cx="342" cy="196" r="66" fill="#5cb85c"/>
+  <circle cx="170" cy="192" r="46" fill="#ffffff"/>
+  <circle cx="342" cy="192" r="46" fill="#ffffff"/>
+  <circle cx="180" cy="198" r="24" fill="#111111"/>
+  <circle cx="332" cy="198" r="24" fill="#111111"/>
+  <circle cx="188" cy="188" r="8" fill="#ffffff"/>
+  <circle cx="340" cy="188" r="8" fill="#ffffff"/>
+  <!-- belly shade, cheeks, smile, nostrils -->
+  <ellipse cx="256" cy="352" rx="112" ry="56" fill="#7fd07a" opacity="0.55"/>
+  <ellipse cx="146" cy="318" rx="26" ry="16" fill="#ff8fab" opacity="0.85"/>
+  <ellipse cx="366" cy="318" rx="26" ry="16" fill="#ff8fab" opacity="0.85"/>
+  <path d="M176 318 Q256 392 336 318" fill="none" stroke="#1d4429" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="236" cy="272" r="6" fill="#1d4429"/>
+  <circle cx="276" cy="272" r="6" fill="#1d4429"/>
+  <!-- a fly buzzing by -->
+  <ellipse cx="372" cy="104" rx="22" ry="13" fill="#dff6ff" opacity="0.9" transform="rotate(-30 372 104)"/>
+  <ellipse cx="402" cy="100" rx="22" ry="13" fill="#dff6ff" opacity="0.9" transform="rotate(30 402 100)"/>
+  <ellipse cx="388" cy="122" rx="20" ry="15" fill="#1b1b22"/>
+  <circle cx="374" cy="118" r="4" fill="#ff4d4d"/>
+</svg>
