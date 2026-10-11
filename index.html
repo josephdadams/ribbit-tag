@@ -547,7 +547,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-23';
+const APP_VERSION = 'ribbit-24';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -4149,42 +4149,89 @@ async function loadNetLibs(all) {
   netLibs = libs.filter(Boolean);
   return netLibs;
 }
-// One room made of several: a peer counts as here while any path still sees them, and each message goes out once
-function joinMulti(libs, name) {
+// One room made of several: a peer counts as here while any path still sees them, and each message goes out once.
+// With relay on (game rooms), devices also pass messages along for pairs that can't connect directly: every 2 seconds each
+// device tells its direct peers who it's connected to, and anyone I can only reach through someone else counts as here too.
+// Some browser pairs never connect (Firefox to an iPhone on the same Wi-Fi, for one), but both can usually reach a third.
+function joinMulti(libs, name, relay = false) {
   const rooms = [];
   for (const { name: path, lib, cfg } of libs) {
     try { rooms.push({ path, lib, r: lib.joinRoom(Object.assign({ appId: 'asher-ribbit-tag-v1' }, cfg), name) }); } catch (e) {}
   }
-  const peers = new Map();
-  const M = { onPeerJoin: null, onPeerLeave: null, paths: id => [...(peers.get(id) || [])],
+  const selfId = libs.length ? libs[0].lib.selfId : '';
+  const peers = new Map(); // direct peers -> the paths that see them
+  const links = new Map(), relayed = new Set(), handlers = new Map(); // links: direct peer -> who they see directly
+  let rlySend = null, linkTimer = 0;
+  const viaFor = id => { for (const [n, l] of links) if (peers.has(n) && l.has(id)) return n; return null; };
+  const M = { onPeerJoin: null, onPeerLeave: null,
+    paths: id => peers.has(id) ? [...peers.get(id)] : relayed.has(id) ? ['relay'] : [],
     sockets: () => rooms.reduce((all, { lib }) => { try { return all.concat(Object.values(lib.getRelaySockets ? lib.getRelaySockets() : {})); } catch (e) { return all; } }, []),
-    leave: () => rooms.forEach(({ r }) => { try { r.leave(); } catch (e) {} }) };
+    leave: () => { clearInterval(linkTimer); rooms.forEach(({ r }) => { try { r.leave(); } catch (e) {} }); } };
+  const makeRaw = (key, onMsg) => { // one action across every path; sends to a direct peer over whichever path sees them
+    const acts = rooms.map(({ path, r }) => ({ path, a: r.makeAction(key) }));
+    acts.forEach(({ a }) => { a.onMessage = onMsg; });
+    return (data, id) => {
+      const via = peers.get(id); if (!via) return;
+      const pick = acts.find(x => via.has(x.path)); if (!pick) return;
+      try { const p = pick.a.send(data, { target: id }); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+    };
+  };
+  function reroute() { // who can I reach only through someone else? join and leave them like anyone else
+    if (!relay) return;
+    const reach = new Set();
+    for (const [n, l] of links) if (peers.has(n)) for (const id of l) if (id !== selfId && !peers.has(id)) reach.add(id);
+    for (const id of reach) if (!relayed.has(id)) { relayed.add(id); if (M.onPeerJoin) M.onPeerJoin(id); }
+    for (const id of [...relayed]) {
+      if (peers.has(id)) relayed.delete(id);
+      else if (!reach.has(id)) { relayed.delete(id); if (M.onPeerLeave) M.onPeerLeave(id); }
+    }
+  }
+  let tellLinks = () => {};
   rooms.forEach(({ path, r }) => {
     r.onPeerJoin = id => {
-      let via = peers.get(id); const fresh = !via;
+      let via = peers.get(id); const fresh = !via && !relayed.has(id);
       if (!via) peers.set(id, via = new Set());
-      via.add(path);
+      via.add(path); relayed.delete(id); // reached directly now: no second hello
       if (fresh && M.onPeerJoin) M.onPeerJoin(id);
+      tellLinks();
     };
     r.onPeerLeave = id => {
       const via = peers.get(id); if (!via) return;
       via.delete(path);
-      if (!via.size) { peers.delete(id); if (M.onPeerLeave) M.onPeerLeave(id); }
+      if (via.size) return;
+      peers.delete(id); links.delete(id);
+      if (relay && viaFor(id)) relayed.add(id); // still reachable through someone else: they haven't left
+      else if (M.onPeerLeave) M.onPeerLeave(id);
+      reroute(); tellLinks();
     };
   });
   M.makeAction = key => {
-    const acts = rooms.map(({ path, r }) => ({ path, a: r.makeAction(key) }));
     const act = { onMessage: null, send(data, opts) {
-      const ids = opts && opts.target ? [opts.target] : [...peers.keys()];
+      const ids = opts && opts.target ? [opts.target] : [...peers.keys(), ...relayed];
       for (const id of ids) {
-        const via = peers.get(id); if (!via) continue;
-        const pick = acts.find(x => via.has(x.path)); if (!pick) continue;
-        try { const p = pick.a.send(data, { target: id }); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+        if (peers.has(id)) sendTo(data, id);
+        else if (rlySend && relayed.has(id)) { const n = viaFor(id); if (n) rlySend({ t: id, k: key, d: data }, n); }
       }
     } };
-    acts.forEach(({ a }) => { a.onMessage = (d, meta) => { if (act.onMessage) act.onMessage(d, meta); }; });
+    const sendTo = makeRaw(key, (d, meta) => { if (act.onMessage) act.onMessage(d, meta); });
+    handlers.set(key, act);
     return act;
   };
+  if (relay) {
+    rlySend = makeRaw('rly', (m, { peerId }) => {
+      if (!m || typeof m !== 'object' || typeof m.k !== 'string' || !peers.has(peerId)) return;
+      if (typeof m.t === 'string') { if (peers.has(m.t)) rlySend({ f: peerId, k: m.k, d: m.d }, m.t); return; } // pass it on
+      if (typeof m.f !== 'string' || !relayed.has(m.f)) return; // passed on to me (the relay names the sender, so it can't be faked by others)
+      const act = handlers.get(m.k); if (act && act.onMessage) act.onMessage(m.d, { peerId: m.f });
+    });
+    const lnkSend = makeRaw('lnk', (ids, { peerId }) => {
+      if (!Array.isArray(ids) || !peers.has(peerId)) return;
+      links.set(peerId, new Set(ids.filter(x => typeof x === 'string').slice(0, 64)));
+      reroute();
+    });
+    tellLinks = () => { const ids = [...peers.keys()]; for (const id of ids) lnkSend(ids, id); };
+    linkTimer = setInterval(tellLinks, 2000);
+  }
   return M;
 }
 const HATS = [0xff8c42, 0xf72585, 0x4cc9f0, 0xb5e48c, 0xffffff, 0x8338ec, 0xffb703];
@@ -4337,7 +4384,7 @@ async function joinNet(code, lobby, role = 'auto') {
   const libs = await loadNetLibs(!lobby);
   if (seq !== joinSeq || net) return; // went back to the menu (or in again) while loading
   if (!libs.length) { flash('No connection', "Couldn't reach the internet, so this is a solo game.", 3); return; }
-  const room = joinMulti(libs, lobby ? 'public-' + lobby : 'room-' + code);
+  const room = joinMulti(libs, lobby ? 'public-' + lobby : 'room-' + code, true);
   myId = libs[0].lib.selfId; player.id = myId;
   if (!lobby && mysteryOn && ghostRoomFor(code)) { // a haunted code: someone will visit soon
     mysteryTimer = Math.min(mysteryTimer, 12 + Math.random() * 8);
@@ -6839,6 +6886,8 @@ const myWhere = () => state === 'menu' ? 'menu' : !net ? 'solo' : net.isPublic ?
 // (AES-GCM) saying my name and which game I'm in, so only frogs who typed my code can read it and hop in.
 // Adding works both ways: when I spot a friend online, I send them my own code locked with theirs, and they add me back
 // (unless they removed me before).
+// The same notes also go out as "beacons" through a few public MQTT servers (see Friend beacons below), so friends still show
+// up when their browsers can't open a direct connection to each other (Brave, iPhones, strict networks).
 const FR_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I, O, 0 or 1 to mix up
 let myFriendCode = '', friends = [], unfriended = [], frOnlineWas = new Set(), frDrawn = '';
 try {
@@ -6859,6 +6908,7 @@ function saveFriends() {
     localStorage.setItem('ribbit-friends', JSON.stringify(friends.map(({ code, name }) => ({ code, name }))));
     localStorage.setItem('ribbit-unfriended', JSON.stringify(unfriended));
   } catch (e) {}
+  beaconSync();
 }
 const frKeys = new Map();
 function frKey(code) {
@@ -6891,17 +6941,19 @@ function lockNote() {
   if (net && state !== 'menu') { if (net.isPublic) note.l = net.lobby; else note.r = net.code; }
   return seal(myFriendCode, note);
 }
+function cleanNote(f, n) { // an unlocked note, made safe to show; also picks up the friend's latest name
+  const lobby = Math.floor(+n.l) || 0, room = typeof n.r === 'string' ? cleanCode(n.r) : '';
+  const name = typeof n.n === 'string' ? n.n.trim().slice(0, 16) : '';
+  if (name && name !== f.name) { f.name = name; saveFriends(); }
+  return { w: ['menu', 'solo', 'public', 'friends'].includes(n.w) ? n.w : 'menu', m: MAPS[n.m] ? n.m : '',
+    l: lobby >= 1 && lobby <= PUBLIC_LOBBIES ? lobby : 0, r: room };
+}
 async function readPeer(p) { // try each friend's key on a peer's note; the right one opens it, the rest fail
   p.fr = null; p.note = null;
   if (!friends.length) return;
   for (const f of friends) {
     const n = await unseal(f.code, p.x); if (!n) continue;
-    const lobby = Math.floor(+n.l) || 0, room = typeof n.r === 'string' ? cleanCode(n.r) : '';
-    p.fr = f.code;
-    p.note = { w: ['menu', 'solo', 'public', 'friends'].includes(n.w) ? n.w : 'menu', m: MAPS[n.m] ? n.m : '',
-      l: lobby >= 1 && lobby <= PUBLIC_LOBBIES ? lobby : 0, r: room };
-    const name = typeof n.n === 'string' ? n.n.trim().slice(0, 16) : '';
-    if (name && name !== f.name) { f.name = name; saveFriends(); }
+    p.fr = f.code; p.note = cleanNote(f, n);
     if (!p.hiSent && p.id && presence.hi) { // once per visit: hand them my code so they add me back
       p.hiSent = true;
       seal(f.code, { c: myFriendCode, n: playerName || '' }).then(x => { if (x) presence.hi.send(x, { target: p.id }); }).catch(() => {});
@@ -6931,14 +6983,79 @@ async function gotHi(x, peerId) { // someone who has my code added me: add them 
   renderOnline();
 }
 async function sendHere(target) {
-  if (!presence.here) return;
   let x = null; try { x = await lockNote(); } catch (e) {}
   presence.sealOk = !!x;
+  if (!target && x) beaconSend(x);
+  if (!presence.here) return;
   try { presence.here.send(x ? { w: myWhere(), x } : { w: myWhere() }, target ? { target } : undefined); } catch (e) {}
+}
+// ---------- Friend beacons ----------
+// Every 20 seconds my locked note is also published to a topic named after a hash of my friend code on public MQTT servers,
+// and I listen on my friends' topics. It only needs the servers, not a direct connection, so it works on any browser
+// that can reach them. Strangers watching the servers see hashed topics and locked notes, never names or room codes.
+// Each code also has an inbox topic where friends drop their own code so adding works both ways here too.
+const BEACON_BROKERS = ['wss://broker.hivemq.com:8884/mqtt', 'wss://public:public@public.cloud.shiftr.io', 'wss://broker.emqx.io:8084/mqtt',
+  'wss://test.mosquitto.org:8081/mqtt', 'wss://broker-cn.emqx.io:8084/mqtt']; // free servers come and go, so use them all
+const beacon = { clients: [], seen: new Map(), topics: new Map(), hiSent: new Set() }; // seen: code -> { note, t }
+async function beaconTopic(kind, code) {
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ribbit-topic:' + code)));
+  return `ribbit-tag/v1/${kind}/` + Array.from(h.slice(0, 16), b => b.toString(16).padStart(2, '0')).join('');
+}
+async function beaconWanted() { // topic -> what it's for
+  const want = new Map();
+  try {
+    want.set(await beaconTopic('in', myFriendCode), { kind: 'in' });
+    for (const f of friends) want.set(await beaconTopic('note', f.code), { kind: 'note', code: f.code });
+  } catch (e) {}
+  return want;
+}
+async function beaconSync() { // subscribe to what the friends list needs now, drop the rest
+  const want = await beaconWanted();
+  beacon.topics = want;
+  for (const c of beacon.clients) {
+    if (!c.connected) continue;
+    const had = c.ribbitSubs || new Set();
+    const add = [...want.keys()].filter(t => !had.has(t)), drop = [...had].filter(t => !want.has(t));
+    try { if (add.length) c.subscribe(add); if (drop.length) c.unsubscribe(drop); } catch (e) {}
+    c.ribbitSubs = new Set(want.keys());
+  }
+  for (const code of [...beacon.seen.keys()]) if (!friends.some(f => f.code === code)) beacon.seen.delete(code);
+}
+async function beaconSend(x) {
+  let t; try { t = await beaconTopic('note', myFriendCode); } catch (e) { return; }
+  for (const c of beacon.clients) if (c.connected) try { c.publish(t, x); } catch (e) {}
+}
+async function gotBeacon(topic, text) {
+  const what = beacon.topics.get(topic); if (!what) return;
+  if (what.kind === 'in') { gotHi(text, null); return; }
+  const f = friends.find(o => o.code === what.code); if (!f) return;
+  const n = await unseal(f.code, text); if (!n) return;
+  beacon.seen.set(f.code, { note: cleanNote(f, n), t: Date.now() });
+  if (!beacon.hiSent.has(f.code)) { // once per visit: drop my code in their inbox so they add me back
+    beacon.hiSent.add(f.code);
+    try {
+      const [hi, inbox] = await Promise.all([seal(f.code, { c: myFriendCode, n: playerName || '' }), beaconTopic('in', f.code)]);
+      if (hi) for (const c of beacon.clients) if (c.connected) c.publish(inbox, hi);
+    } catch (e) {}
+  }
+  renderOnline();
+}
+async function startBeacons() {
+  let mqtt;
+  try { mqtt = (await import('https://cdn.jsdelivr.net/npm/mqtt@5.15.2/+esm')).default; } catch (e) { return; } // the same copy the MQTT path loads
+  for (const url of BEACON_BROKERS) {
+    let c;
+    try { c = mqtt.connect(url, { reconnectPeriod: 15000, connectTimeout: 10000, clean: true, queueQoSZero: false }); } catch (e) { continue; }
+    c.on('connect', () => { c.ribbitSubs = new Set(); beaconSync(); sendHere(); });
+    c.on('message', (topic, buf) => { gotBeacon(topic, buf.toString()); });
+    c.on('error', () => {});
+    beacon.clients.push(c);
+  }
 }
 function renderOnline() {
   const now = Date.now();
   for (const [id, p] of presence.peers) if (now - p.t > 70000) presence.peers.delete(id);
+  for (const [code, b] of beacon.seen) if (now - b.t > 70000) beacon.seen.delete(code);
   const counts = { menu: 0, solo: 0, public: 0, friends: 0 };
   counts[myWhere()]++;
   for (const p of presence.peers.values()) if (counts[p.w] !== undefined) counts[p.w]++;
@@ -6959,7 +7076,8 @@ function renderOnline() {
     for (const id of presence.peers.keys()) for (const path of presence.room.paths(id)) n[path] = (n[path] || 0) + 1;
     via = Object.keys(n).length ? ` (via ${Object.entries(n).map(([path, c]) => `${path} ${c}`).join(', ')})` : '';
   }
-  $('frDiag').textContent = `Online check: ${APP_VERSION.split('-').slice(0, 2).join('-')}${servers} · ` + (!presence.room ? 'not connected yet'
+  const beacons = ` · beacons ${beacon.clients.filter(c => c.connected).length} of ${BEACON_BROKERS.length}`;
+  $('frDiag').textContent = `Online check: ${APP_VERSION.split('-').slice(0, 2).join('-')}${servers}${beacons} · ` + (!presence.room ? 'not connected yet'
     : `sees ${others} other frog${others === 1 ? '' : 's'}${via}, ${noted} with friend codes · ` + (presence.sealOk === false ? 'friend codes NOT working in this browser' : presence.sealOk ? 'friend codes working' : 'starting…'));
   renderFriends();
 }
@@ -6973,6 +7091,7 @@ function renderFriends() {
   const rows = friends.map(f => {
     let best = null;
     for (const p of presence.peers.values()) if (p.fr === f.code && rank(p.note) > rank(best)) best = p.note;
+    const b = beacon.seen.get(f.code); if (b && rank(b.note) > rank(best)) best = b.note;
     return { f, n: best };
   }).sort((a, b) => rank(b.n) - rank(a.n));
   const online = new Set(rows.filter(r => r.n).map(r => r.f.code));
@@ -7009,6 +7128,7 @@ function renderFriends() {
       if (!unfriended.includes(f.code)) unfriended.push(f.code); // so their next hello doesn't add them right back
       saveFriends();
       for (const p of presence.peers.values()) if (p.fr === f.code) { p.fr = null; p.note = null; }
+      beacon.seen.delete(f.code);
       renderOnline();
     });
     li.append(x); list.append(li);
@@ -7075,6 +7195,7 @@ async function startPresence() {
   renderOnline();
 }
 setTimeout(startPresence, 1500);
+setTimeout(startBeacons, 1500);
 
 // ---------- Loop ----------
 let last = performance.now(), hudT = 0, menuAng = 0;
