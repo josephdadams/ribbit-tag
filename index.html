@@ -339,6 +339,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">&uarr;</span><span>Next to a tree or rock wall? Keep swiping down to <strong>climb</strong> it. The treehouse has steps.</span></li>
         <li><span class="ic hot">!</span><span>Your hands go see-through when there is nothing close enough to grab. The arrow at the top points to the lava frog.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
+        <li><span class="ic">Pad</span><span><strong>Controller:</strong> left stick to push (up forward, down back, sideways), right stick to turn, <kbd>A</kbd> jump, hold <kbd>RT</kbd> for big pushes, <kbd>X</kbd> talk (D-pad for quick replies), <kbd>Y</kbd> player list, <kbd>Start</kbd> menu. On menus, the D-pad moves, <kbd>A</kbd> picks, <kbd>B</kbd> goes back.</span></li>
         <li><span class="ic">Key</span><span><strong>Keyboard:</strong> <kbd>W</kbd> push forward, <kbd>S</kbd> back, <kbd>A</kbd> <kbd>D</kbd> turn, <kbd>Q</kbd> <kbd>E</kbd> sideways, <kbd>Space</kbd> jump, hold <kbd>Shift</kbd> for big pushes. <kbd>T</kbd> talk, <kbd>1</kbd>–<kbd>9</kbd> quick replies, <kbd>Tab</kbd> next frog, <kbd>H</kbd> be host, <kbd>M</kbd> music on/off, <kbd>P</kbd> player list, <kbd>Esc</kbd> menu. On the menu: <kbd>1</kbd> Infection, <kbd>2</kbd> Classic, <kbd>3</kbd> Capture the Lily Pad, <kbd>4</kbd> Freeze Tag, <kbd>5</kbd> Hot Potato, <kbd>6</kbd> Fly Feast, <kbd>7</kbd> Free Play, <kbd>8</kbd> King of the Lily Pad, <kbd>Q</kbd> Daily quests, <kbd>O</kbd> Play online, <kbd>R</kbd> Wardrobe.</span></li>
       </ul>
     </div>
@@ -375,7 +376,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-5';
+const APP_VERSION = 'ribbit-6';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -1198,7 +1199,7 @@ function collide(b) {
     if (d < 1e-5) { tn.set(0, 1, 0); p.y = bx.max.y + R; }
     else { tn.multiplyScalar(1 / d); p.addScaledVector(tn, R - d); }
     const vn = v.dot(tn);
-    if (bx.bounce && tn.y > 0.6 && vn < -2) { v.y = Math.max(bx.bounce, -vn * 0.85); if (b.isPlayer) { sfxTone(260, 620, 0.16, 'sine', 0.1); questEvent('bounce'); } continue; }
+    if (bx.bounce && tn.y > 0.6 && vn < -2) { v.y = Math.max(bx.bounce, -vn * 0.85); if (b.isPlayer) { sfxTone(260, 620, 0.16, 'sine', 0.1); questEvent('bounce'); rumble(60, 0.3); } continue; }
     if (vn < 0) v.addScaledVector(tn, -vn);
     if (tn.y > 0.6) { b.grounded = true; if (bx.ice) b.onIce = true; } else if (Math.abs(tn.y) < 0.5) b.wall = true;
   }
@@ -1929,7 +1930,7 @@ function doTag(a, b) {
     if (!b.isPlayer && Math.random() < 0.4) setTimeout(() => chatter(b, 'lava'), 1400);
   } else if (!b.isPlayer && !b.isRemote) setTimeout(() => sayEvent(b, 'lava', null, true), 250);
   if (b.isPlayer) {
-    stats.tagged++;
+    stats.tagged++; rumble(250, 0.8);
     if (mode === 'infection') {
       playerTaggedThisRound = true; survived = roundTime;
       if (survived > best) { best = survived; try { localStorage.setItem('ribbit-best', String(best)); } catch (e) {} }
@@ -2696,7 +2697,7 @@ async function joinNet(code, lobby) {
   net.ev.onMessage = (e, { peerId }) => {
     if (e.k === 'round' && peerId === net.hostId) startRound(e.first, e.seed);
     else if (e.k === 'q' && peerId === net.hostId) questEvent(String(e.ev), Math.min(10, +e.n || 1));
-    else if (e.k === 'bump' && peerId === net.hostId) { player.vel.set(+e.x || 0, +e.y || 6, +e.z || 0); sfxSlap(0.35); flash('Bumped!', 'Someone knocked you off the pad.', 1.4, '#ffd23f'); }
+    else if (e.k === 'bump' && peerId === net.hostId) { player.vel.set(+e.x || 0, +e.y || 6, +e.z || 0); sfxSlap(0.35); rumble(200, 0.8); flash('Bumped!', 'Someone knocked you off the pad.', 1.4, '#ffd23f'); }
     else if (e.k === 'msg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 140), 2.6, /^(#[0-9a-f]{3,6}|var\(--[a-z]+\))$/i.test(e.color || '') ? e.color : 'var(--bone)');
     else if (e.k === 'home' && peerId === net.hostId) { ctfRespawn(player, false); flash('Tagged!', 'Back to your base.', 2, TEAM_CSS[1 - (player.team || 0)]); }
     else if (e.k === 'ctfmsg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 120), 2.6, TEAM_CSS[e.team] || 'var(--bone)');
@@ -3546,7 +3547,7 @@ function shuffled(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { c
 function freezeHit(a, b) {
   setIce(b, true); b.vel.set(0, 0, 0);
   sfxTone(1200, 600, 0.3, 'sine', 0.1);
-  if (b === player) flash('Frozen!', 'Wait for a teammate to touch you.', 2.2, '#bfe9ff');
+  if (b === player) { flash('Frozen!', 'Wait for a teammate to touch you.', 2.2, '#bfe9ff'); rumble(300, 0.7); }
   else if (a === player) flash('Frozen!', `${b.name} is an ice cube.`, 1.5, '#bfe9ff');
   questFor(a, 'tag');
   if (!b.isPlayer && !b.isRemote && Math.random() < 0.6) say(b, pick(["Brrr! Help!", "I'm an ice cube!", "Somebody unfreeze me!"]));
@@ -3837,7 +3838,7 @@ function kingUpdate(dt, t) {
     if (b.isRemote) { if (net) net.ev.send({ k: 'bump', x: r2(push.x * 8), y: 6, z: r2(push.z * 8) }, { target: b.id }); }
     else { b.vel.x = push.x * 8; b.vel.z = push.z * 8; b.vel.y = 6; }
     if (a === player || b === player) { sfxSlap(0.35); sfxTone(300, 120, 0.15, 'square', 0.06); }
-    if (b === player) flash('Bumped!', `${a.name || 'Someone'} knocked you off the pad.`, 1.4, '#ffd23f');
+    if (b === player) { flash('Bumped!', `${a.name || 'Someone'} knocked you off the pad.`, 1.4, '#ffd23f'); rumble(200, 0.8); }
   }
   for (const b of bodies) if (b.bumpCd > 0) b.bumpCd -= dt;
   const lead = kingLeader();
@@ -3850,6 +3851,90 @@ function kingUpdate(dt, t) {
 function kingEnd() {
   if (kingPad.group) { scene.remove(kingPad.group); kingPad.group = null; }
   if (kingPad.crown) { scene.remove(kingPad.crown); kingPad.crown = null; }
+}
+
+// ---------- Controller ----------
+// Standard-mapping gamepads (Xbox, PlayStation, Switch Pro, most Bluetooth pads).
+// In a game: left stick pushes (up = forward, down = back, sideways = sideways), right stick turns,
+// A jumps, RT/R2 makes big pushes, X talks (D-pad sends quick replies), Y player list, Start menu.
+// On menus: D-pad or left stick moves between buttons, A presses, B goes back.
+const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+let padPrev = [], padNavT = 0, padSeen = false;
+addEventListener('gamepadconnected', e => {
+  padSeen = true;
+  flash('Controller connected', 'Left stick to push, right stick to turn, A to jump.', 2.6, 'var(--leaf)');
+  if (!usedKeys) $('hint').textContent = 'Left stick to push · right stick to turn · A to jump · X to talk';
+});
+function activePad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (const p of pads) if (p && p.connected && p.mapping === 'standard') return p;
+  for (const p of pads) if (p && p.connected) return p;
+  return null;
+}
+function rumble(ms = 120, strength = 0.5) {
+  const p = activePad();
+  try { if (p && p.vibrationActuator) p.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: strength, weakMagnitude: strength * 0.6 }); } catch (e) {}
+}
+// menu navigation: move focus through the visible buttons of whatever panel is on top
+function padFocusables() {
+  const root = !$('questsPanel').hidden ? $('questsPanel') : wardrobeOpen ? $('wardrobe') : !$('menu').hidden ? $('menu') : !$('talk').hidden ? $('talk') : !$('players').hidden ? $('players') : null;
+  if (!root) return [];
+  return [...root.querySelectorAll('button')].filter(el => !el.disabled && el.offsetParent !== null && !el.closest('[hidden]'));
+}
+function padMoveFocus(step) {
+  const els = padFocusables(); if (!els.length) return;
+  const i = els.indexOf(document.activeElement);
+  const next = els[(i < 0 ? 0 : (i + step + els.length) % els.length)];
+  next.focus({ preventScroll: false }); next.scrollIntoView({ block: 'nearest' });
+}
+function padBack() {
+  if (!$('questsPanel').hidden) $('questsClose').click();
+  else if (wardrobeOpen) closeWardrobe();
+  else if (!$('players').hidden) togglePlayers(false);
+  else if (!$('talk').hidden) $('talk').hidden = true;
+}
+function pollGamepad(dt) {
+  const p = activePad();
+  if (!p) return;
+  if (!padSeen) { padSeen = true; }
+  const b = i => !!(p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.5));
+  const pressed = i => b(i) && !padPrev[i];
+  const dz = v => Math.abs(v) < 0.18 ? 0 : v;
+  const lx = dz(p.axes[0] || 0), ly = dz(p.axes[1] || 0), rx = dz(p.axes[2] || 0);
+  const inMenu = state === 'menu' || !$('questsPanel').hidden || wardrobeOpen;
+  if (inMenu || !$('players').hidden) {
+    padNavT -= dt;
+    const up = b(PAD.UP) || ly < -0.5 || b(PAD.LEFT) || lx < -0.5, down = b(PAD.DOWN) || ly > 0.5 || b(PAD.RIGHT) || lx > 0.5;
+    if ((up || down) && padNavT <= 0) { padMoveFocus(down ? 1 : -1); padNavT = 0.22; }
+    if (!up && !down) padNavT = 0;
+    if (pressed(PAD.A)) { initAudio(); const el = document.activeElement; if (el && el.tagName === 'BUTTON') el.click(); else padMoveFocus(0); }
+    if (pressed(PAD.B)) padBack();
+    if (wardrobeOpen && mannequin) mannequin.group.rotation.y += rx * dt * 3;
+  } else if (state !== 'menu') {
+    const talkOpen = !$('talk').hidden;
+    player.yaw -= rx * 2.8 * dt;
+    if (keyCd <= 0 && player.frozen <= 0) {
+      const power = b(PAD.RT) || b(PAD.LT) ? 1.8 : 0.9, mag = Math.hypot(lx, ly);
+      let did = false;
+      if (pressed(PAD.A) || (b(PAD.A) && keyCd <= 0 && player.grounded)) did = keyJump();
+      else if (mag > 0.3) {
+        if (Math.abs(ly) >= Math.abs(lx)) did = keyPush((ly < 0 ? 220 : -260) * Math.min(1, mag + 0.2), power, 0);
+        else did = keyPush(170 * Math.min(1, mag + 0.2), power, lx < 0 ? Math.PI / 2 : -Math.PI / 2);
+      }
+      if (did) { keyCd = b(PAD.A) ? 0.35 : 0.34 - mag * 0.08; usedKeys = true; }
+    }
+    if (pressed(PAD.X)) { if (talkOpen) $('talk').hidden = true; else openTalk(); }
+    if (talkOpen) {
+      const qi = pressed(PAD.UP) ? 0 : pressed(PAD.RIGHT) ? 1 : pressed(PAD.DOWN) ? 2 : pressed(PAD.LEFT) ? 3 : -1;
+      if (qi >= 0) { const q = $('quick').children[qi]; if (q) q.click(); }
+      if (pressed(PAD.RB)) $('talkNext').click();
+    }
+    if (pressed(PAD.Y)) togglePlayers();
+    if (pressed(PAD.B)) padBack();
+    if (pressed(PAD.BACK)) claimHost();
+    if (pressed(PAD.START)) $('menuBtn').click();
+  }
+  padPrev = p.buttons.map((_, i) => b(i));
 }
 
 // ---------- Loop ----------
@@ -4016,6 +4101,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const raw = (now - last) / 1000, dt = Math.min(0.05, raw); last = now;
   adaptQuality(raw);
+  pollGamepad(dt);
   const t = now / 1000;
   if (state === 'menu') {
     for (const a of ais) physics(a, dt);

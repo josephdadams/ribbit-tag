@@ -30,6 +30,24 @@ It runs on tablets (including Amazon Fire tablets), phones, and computers. There
 - Your hands go see-through when there is nothing close enough to grab.
 - **Tap a frog** (or press **Talk**) to chat with it.
 
+### Controller
+
+Plug in or pair a gamepad (Xbox, PlayStation, Switch Pro, or most Bluetooth controllers) and press any button.
+
+| Button | Action |
+| --- | --- |
+| Left stick | Push: up for forward, down for back, sideways to push sideways |
+| Right stick | Turn |
+| `A` | Jump |
+| `RT` / `R2` (hold) | Big pushes |
+| `X` | Talk (then the D-pad sends quick replies, `RB` picks the next frog) |
+| `Y` | Player list |
+| `B` | Close a panel |
+| `Back` / `Select` | Become the host |
+| `Start` | Menu |
+
+On menus, the D-pad or left stick moves between buttons, `A` picks, and `B` goes back. Controllers that support rumble buzz when you get tagged, frozen, bumped, or bounce.
+
 ### Keyboard
 
 | Key | Action |
