@@ -84,6 +84,12 @@ h1 span { color: var(--lava); display: block; }
 .how .ic { width: 44px; height: 44px; border-radius: 12px; background: var(--canopy); display: grid; place-items: center; font-family: var(--display); font-size: 1.3rem; color: var(--leaf); }
 .how .ic.hot { color: var(--lava); }
 .how strong { color: var(--bone); }
+.how li.keys-li { align-items: start; }
+.keys { display: grid; grid-template-columns: max-content 1fr; gap: 5px 12px; margin: 6px 0 0; align-items: center; font-size: .92rem; }
+.keys dt { white-space: nowrap; }
+.keys dd { margin: 0; }
+.mode-label { margin: 16px 0 0; }
+.keys-sub { margin: 10px 0 0; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--leaf); }
 @media (max-width: 720px) { .card { grid-template-columns: 1fr; padding: 18px; } }
 
 /* HUD */
@@ -310,6 +316,12 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       </div>
             <button class="mode join" id="joinBtn" type="button" hidden><b id="joinTitle">Join</b><small>Plays whatever map and mode your friends are on.</small></button>
       <button class="mode online" id="onlineBtn" type="button"><b>Play online</b><small>Join a public game with other Ribbit Tag players. No chat, and names are hidden.</small></button>
+      <div class="row">
+        <span class="label">1. Pick a map</span>
+        <div class="seg maps" id="maps"></div>
+        <p class="map-info" id="mapInfo" aria-live="polite"></p>
+      </div>
+      <p class="label mode-label">2. Pick a mode</p>
       <p class="note" id="modesNote">To play with friends: the host types a room code and taps a mode. Everyone else types the same code and taps Join.</p>
       <div class="modes">
         <button class="mode lava" id="modeInfection" type="button"><b>Infection</b><small>Every tag makes more lava. Be the last frog standing.</small></button>
@@ -374,11 +386,6 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         </div>
       </div>
       <div class="row">
-        <span class="label">Map</span>
-        <div class="seg maps" id="maps"></div>
-        <p class="map-info" id="mapInfo" aria-live="polite"></p>
-      </div>
-      <div class="row">
         <label class="label" for="nameIn">Your name</label>
         <input class="name-in" id="nameIn" type="text" maxlength="16" placeholder="So frogs know you">
       </div>
@@ -414,8 +421,12 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">&uarr;</span><span>Next to a tree or rock wall? Keep swiping down to <strong>climb</strong> it. The treehouse has steps.</span></li>
         <li><span class="ic hot">!</span><span>Your hands go see-through when there is nothing close enough to grab. The arrow at the top points to the lava frog.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
-        <li><span class="ic">Pad</span><span><strong>Controller:</strong> left stick to push (up forward, down back, sideways), right stick to turn, <kbd>A</kbd> jump, hold <kbd>RT</kbd> for big pushes, <kbd>X</kbd> talk (D-pad for quick replies), <kbd>Y</kbd> player list, <kbd>Start</kbd> menu. On menus, the D-pad moves, <kbd>A</kbd> picks, <kbd>B</kbd> goes back.</span></li>
-        <li><span class="ic">Key</span><span><strong>Keyboard:</strong> <kbd>W</kbd> push forward, <kbd>S</kbd> back, <kbd>A</kbd> <kbd>D</kbd> turn, <kbd>Q</kbd> <kbd>E</kbd> sideways, <kbd>Space</kbd> jump, hold <kbd>Shift</kbd> for big pushes. <kbd>T</kbd> talk, <kbd>1</kbd>–<kbd>9</kbd> quick replies, <kbd>Tab</kbd> next frog, <kbd>H</kbd> be host, <kbd>M</kbd> music on/off, <kbd>P</kbd> player list, <kbd>I</kbd> mode info, <kbd>Esc</kbd> menu. On the menu: <kbd>1</kbd> Infection, <kbd>2</kbd> Classic, <kbd>3</kbd> Capture the Lily Pad, <kbd>4</kbd> Freeze Tag, <kbd>5</kbd> Hot Potato, <kbd>6</kbd> Fly Feast, <kbd>7</kbd> Free Play, <kbd>8</kbd> King of the Lily Pad, <kbd>Q</kbd> Daily quests, <kbd>O</kbd> Play online, <kbd>R</kbd> Wardrobe.</span></li>
+        <li class="keys-li"><span class="ic">Pad</span><div><strong>Controller</strong>
+          <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
+          <p class="keys-sub">On menus</p><dl class="keys"><dt><kbd>D-pad</kbd></dt><dd>Move around</dd><dt><kbd>A</kbd></dt><dd>Pick</dd><dt><kbd>B</kbd></dt><dd>Go back</dd></dl></div></li>
+        <li class="keys-li"><span class="ic">Key</span><div><strong>Keyboard</strong>
+          <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
+          <p class="keys-sub">On the menu</p><dl class="keys"><dt><kbd>1</kbd></dt><dd>Infection</dd><dt><kbd>2</kbd></dt><dd>Classic</dd><dt><kbd>3</kbd></dt><dd>Capture the Lily Pad</dd><dt><kbd>4</kbd></dt><dd>Freeze Tag</dd><dt><kbd>5</kbd></dt><dd>Hot Potato</dd><dt><kbd>6</kbd></dt><dd>Fly Feast</dd><dt><kbd>7</kbd></dt><dd>Free Play</dd><dt><kbd>8</kbd></dt><dd>King of the Lily Pad</dd><dt><kbd>Q</kbd></dt><dd>Daily quests</dd><dt><kbd>O</kbd></dt><dd>Play online</dd><dt><kbd>R</kbd></dt><dd>Wardrobe</dd></dl></div></li>
       </ul>
     </div>
   </div>
