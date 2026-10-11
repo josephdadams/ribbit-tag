@@ -39,6 +39,7 @@ Plug in or pair a gamepad (Xbox, PlayStation, Switch Pro, or most Bluetooth cont
 | --- | --- |
 | Left stick | Push: up for forward, down for back, sideways to push sideways |
 | Right stick | Turn |
+| Right stick click | With Look around on, look straight ahead again |
 | `A` | Jump |
 | `RT` / `R2` (hold) | Big pushes |
 | `X` | Talk (then the D-pad sends quick replies, `RB` picks the next frog) |
@@ -48,6 +49,10 @@ Plug in or pair a gamepad (Xbox, PlayStation, Switch Pro, or most Bluetooth cont
 | `Start` | Menu |
 
 On menus, the D-pad or left stick moves between buttons, `A` picks, and `B` goes back. Controllers that support rumble buzz when you get tagged, frozen, bumped, or bounce.
+
+### Look around
+
+Turn on **Look around** in the menu settings and the tablet becomes your frog's head: point it left, right, up or down to look that way, and pushes go where you're looking. Keep moving with the controller or swipes. Tablets without a gyroscope (like most Fire tablets) can only feel tilting, so tilt up and down to look and lean the tablet like a steering wheel to turn.
 
 ### Keyboard
 
