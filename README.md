@@ -81,7 +81,9 @@ On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freez
 - **King of the Lily Pad**: stand on the golden lily pad alone to score a point every second, and bump other frogs off it. The pad moves every 35 seconds. First to 60 wins.
 - **Free Play**: no tagging. Explore, climb, bounce, talk to the frogs, and catch flies.
 
-Tap **More modes** on the menu for 15 more:
+- **Monster Night** (in More modes, under Spooky): everyone teams up against monsters that hunt you down. Pumpkin Heads are fast, Swamp Blobs climb walls, and Ghosts float through walls. Throw fireflies (`F`, a quick tap, or `B`) to stun them, touch caught friends to free them, and survive 3 minutes. Spookiest on Haunted Manor.
+
+Tap **More modes** on the menu for even more:
 
 | Tag twists | Team games | Races and challenges | Party |
 | --- | --- | --- | --- |

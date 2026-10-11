@@ -177,6 +177,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mode.mini { padding: 8px 10px; background: var(--canopy); color: var(--bone); box-shadow: 0 4px 0 rgba(0,0,0,.35); }
 .mode.mini b { font-size: 1.05rem; }
+.mode.mini.spooky { background: #3a2433; color: #ffd6a8; }
 .mode.mini small { font-size: .74rem; opacity: .85; display: block; }
 #blind { position: fixed; inset: 0; z-index: 3; display: grid; place-content: center; text-align: center; gap: 6px; background: #05070a; color: var(--bone); pointer-events: none; }
 #blind b { font-family: var(--display); font-weight: 400; font-size: clamp(2rem, 8vw, 3.4rem); }
@@ -309,7 +310,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <button class="mode kingmode" id="modeKing" type="button"><b>King of the Lily Pad</b><small>Hold the golden pad alone to score. Bump others off!</small></button>
         <button class="mode freemode" id="modeFree" type="button"><b>Free Play</b><small>No tagging. Explore, climb and catch flies.</small></button>
       </div>
-      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (15)</button>
+      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (16)</button>
       <div id="moreModes" hidden>
         <h3 class="more-cat">Tag twists</h3>
         <div class="more-grid">
@@ -332,6 +333,10 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
           <button class="mode mini" data-mode="lava" id="mode-lava" type="button"><b>Floor Is Lava</b><small>The lava rises. Climb high and stay out of it!</small></button>
           <button class="mode mini" data-mode="swarm" id="mode-swarm" type="button"><b>Bug Swarm</b><small>Everyone together: squash bugs before they reach the lily pad.</small></button>
           <button class="mode mini" data-mode="simon" id="mode-simon" type="button"><b>Simon Says Frog</b><small>Only do it if Grandpa Silver says "Silver says"!</small></button>
+        </div>
+        <h3 class="more-cat">Spooky</h3>
+        <div class="more-grid">
+          <button class="mode mini spooky" data-mode="monsters" id="mode-monsters" type="button"><b>Monster Night</b><small>Monsters chase everyone! Throw fireflies to stun them and survive 3 minutes.</small></button>
         </div>
         <h3 class="more-cat">Party</h3>
         <div class="more-grid">
@@ -436,7 +441,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-13';
+const APP_VERSION = 'ribbit-14';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -3380,7 +3385,7 @@ const endPointer = e => {
   if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 14 || performance.now() - p.t0 > 350) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  if (['mud', 'dodge'].includes(mode) && state === 'play') { tryThrow(ray.ray.direction.clone()); return; }
+  if (['mud', 'dodge', 'monsters'].includes(mode) && state === 'play') { tryThrow(ray.ray.direction.clone()); return; }
   const hit = ray.intersectObjects(ais.map(a => a.group).concat(mysteryActive ? [mysteryActive.group] : []), true)[0];
   if (hit && hit.object.userData.mystery) {
     const m = mysteries[hit.object.userData.mystery];
@@ -3536,7 +3541,7 @@ $('modeFeast').addEventListener('click', () => begin('feast'));
 $('modeFree').addEventListener('click', () => begin('free'));
 $('modeKing').addEventListener('click', () => begin('king'));
 document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode)));
-$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (15)'; });
+$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (16)'; });
 $('menuBtn').addEventListener('click', () => {
   state = 'menu'; pointers.clear(); showBest();
   $('menu').hidden = false; $('hud').hidden = true;
@@ -4544,7 +4549,7 @@ function concealed(b) {
 }
 const CLASSICISH = ['classic', 'potato', 'bat', 'shrink', 'tongue', 'gravity'];
 const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge'];
-Object.assign(MODE_NAMES, { hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
+Object.assign(MODE_NAMES, { monsters: 'Monster Night', hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
   mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines' });
 function m2Send(d, target) { if (net && isHost()) net.ev.send({ k: 'm2', d }, target ? { target } : undefined); }
 function m2Ask(d) { if (net && !isHost()) net.ev.send({ k: 'm2', d }, { target: net.hostId }); }
@@ -4587,9 +4592,9 @@ function overlay(id, on, text) { const el = $(id); el.hidden = !on; if (text !==
 function splatScreen() { const el = $('splat'); el.hidden = false; el.style.opacity = 1; clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = 0; setTimeout(() => { el.hidden = true; }, 400); }, 700); rumble(150, 0.6); }
 
 // ---- projectiles (mud balls and pond balls): the host decides hits, everyone draws them ----
-const proj = { list: [], seq: 0, mats: { mud: new THREE.MeshLambertMaterial({ color: 0x6b4a2b }), ball: new THREE.MeshLambertMaterial({ color: 0xe63946, emissive: 0x3a0000 }) } };
+const proj = { list: [], seq: 0, mats: { firefly: new THREE.MeshLambertMaterial({ color: 0xfff3a0, emissive: 0xffd23f }), mud: new THREE.MeshLambertMaterial({ color: 0x6b4a2b }), ball: new THREE.MeshLambertMaterial({ color: 0xe63946, emissive: 0x3a0000 }) } };
 function spawnProj(id, owner, p, v, kind, ballIdx) {
-  const m = new THREE.Mesh(ballGeo, proj.mats[kind]); m.scale.setScalar(kind === 'ball' ? 0.32 : 0.22); m.position.copy(p); scene.add(m);
+  const m = new THREE.Mesh(ballGeo, proj.mats[kind]); m.scale.setScalar(kind === 'ball' ? 0.32 : kind === 'firefly' ? 0.16 : 0.22); m.position.copy(p); scene.add(m);
   proj.list.push({ id, owner, pos: p.clone(), vel: v.clone(), kind, mesh: m, life: 3, ballIdx });
 }
 function removeProj(pr) { scene.remove(pr.mesh); proj.list.splice(proj.list.indexOf(pr), 1); }
@@ -4618,15 +4623,15 @@ function updateProj(dt, onHit, onLand) {
   }
 }
 function projEvent(d) {
-  if (d.t === 'proj') spawnProj(d.id, byId(d.o) || player, new V(...d.p), new V(...d.v), d.kind === 'ball' ? 'ball' : 'mud', d.bi);
+  if (d.t === 'proj') spawnProj(d.id, byId(d.o) || player, new V(...d.p), new V(...d.v), ['ball', 'firefly'].includes(d.kind) ? d.kind : 'mud', d.bi);
   else if (d.t === 'projx') { const pr = proj.list.find(x => x.id === d.id); if (pr) removeProj(pr); }
 }
 // the throw button (F, a quick tap, or B on a controller)
 let throwCd = 0;
 function tryThrow(dirV) {
-  if (state !== 'play' || !['mud', 'dodge'].includes(mode) || player.frozen > 0 || player.out || throwCd > 0) return false;
+  if (state !== 'play' || !['mud', 'dodge', 'monsters'].includes(mode) || player.frozen > 0 || player.out || throwCd > 0) return false;
   if (mode === 'dodge' && !MODE2.dodge.balls.some(bl => bl.holder === player)) { flash('No ball!', 'Grab a red ball first.', 1, 'var(--bone)'); return false; }
-  throwCd = mode === 'mud' ? 0.55 : 0.4;
+  throwCd = mode === 'mud' ? 0.55 : mode === 'monsters' ? 1.1 : 0.4;
   const d = (dirV || camForward()); const arr = [d.x, d.y + 0.08, d.z].map(r2);
   if (isHost()) MODE2[mode].throwBy(player, arr); else m2Ask({ t: 'throw', d: arr });
   return true;
@@ -5293,6 +5298,168 @@ const MODE2 = {
     snap() { return { p: this.phase, t: r2(this.t), pads: this.pads.map(pd => [r2(pd.pos.x), r2(pd.pos.y), r2(pd.pos.z), pd.owner ? idOf(pd.owner) : null]) }; },
     apply(ms) { this.phase = ms.p; this.t = ms.t; this.pads = (ms.pads || []).map(r => ({ pos: new V(r[0], r[1], r[2]), owner: r[3] ? byId(r[3]) : null })); },
     end() { this.meshes.forEach(m => scene.remove(m)); this.meshes = []; this.pads = []; if (music.master) music.master.gain.value = musicOn ? 0.22 : 0; for (const b of bodies) setOut(b, false); },
+  },
+  // ===== Spooky =====
+  monsters: { list: [], spawnT: 0, pool: { pumpkin: [], blob: [], ghost: [] }, growlT: 0,
+    TYPES: {
+      pumpkin: { speed: 5.4, jump: 5, climbs: false },
+      blob: { speed: 3.8, jump: 4, climbs: true },
+      ghost: { speed: 3.3, fly: true },
+    },
+    mesh(type) {
+      const g = new THREE.Group();
+      if (type === 'pumpkin') {
+        part(g, GEO.cone, cmat(0x3a2448), 0.45, 0.9, 0.45, 0, -0.1, 0);
+        part(g, ballGeo, new THREE.MeshLambertMaterial({ color: 0xff7a1a, emissive: 0x4a1a00 }), 0.42, 0.38, 0.42, 0, 0.6, 0);
+        const glow = new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0xffa000 });
+        for (const sx of [-1, 1]) part(g, GEO.cone, glow, 0.08, 0.1, 0.03, sx * 0.15, 0.68, -0.39, Math.PI / 2);
+        part(g, boxGeo, glow, 0.28, 0.06, 0.03, 0, 0.5, -0.4);
+        part(g, GEO.cyl, cmat(0x3d6b2a), 0.05, 0.14, 0.05, 0, 1.02, 0);
+        g.userData.arms = [-1, 1].map(sx => { const a = new THREE.Group(); a.position.set(sx * 0.35, 0.25, 0); g.add(a); part(a, boxGeo, cmat(0x3a2448), 0.1, 0.6, 0.1, 0, -0.3, 0); return a; });
+      } else if (type === 'blob') {
+        g.userData.body = part(g, ballGeo, new THREE.MeshLambertMaterial({ color: 0x6ad84a, emissive: 0x1a4a0a, transparent: true, opacity: 0.85 }), 0.65, 0.5, 0.65, 0, 0, 0);
+        for (const sx of [-1, 1]) { part(g, ballGeo, M.eye, 0.13, 0.13, 0.13, sx * 0.22, 0.42, -0.35); part(g, ballGeo, M.pupil, 0.06, 0.06, 0.04, sx * 0.22, 0.43, -0.47); }
+      } else {
+        const gm = new THREE.MeshLambertMaterial({ color: 0xf0ecff, emissive: 0x3a3a5a, transparent: true, opacity: 0.65, depthWrite: false });
+        part(g, ballGeo, gm, 0.5, 0.55, 0.5, 0, 0.3, 0); part(g, GEO.cone, gm, 0.5, 0.8, 0.5, 0, -0.3, 0, Math.PI);
+        for (const sx of [-1, 1]) { part(g, ballGeo, cmat(0x111111), 0.08, 0.12, 0.05, sx * 0.17, 0.42, -0.45); part(g, boxGeo, gm, 0.1, 0.45, 0.1, sx * 0.5, 0.25, -0.15, -0.9); }
+        part(g, ballGeo, cmat(0x111111), 0.1, 0.13, 0.05, 0, 0.18, -0.46);
+      }
+      scene.add(g); return g;
+    },
+    start() {
+      this.clear(); this.spawnT = 2; this.growlT = 0;
+      for (const b of bodies) { setOut(b, false); b.score = 0; }
+      scene.fog.near *= 0.7; scene.fog.far *= 0.7; hemiLight.intensity *= 0.7;
+      flash('Monster Night!', 'Monsters are coming! Stay together, throw fireflies (F, tap, or B) to stun them, and survive 3 minutes.', 3.5, '#ff9f5a');
+    },
+    clear() { for (const m of this.list) if (m.g) m.g.visible = false; this.list = []; for (const arr of Object.values(this.pool)) arr.forEach(g => { g.visible = false; }); },
+    spawn() {
+      const types = ['pumpkin', 'pumpkin', 'blob', 'ghost'], type = pick(types);
+      let best = null, bd = -1;
+      for (let i = 0; i < 10; i++) {
+        const a = Math.random() * Math.PI * 2, c = new V(clamp(Math.cos(a) * 26, -HALF + 2, HALF - 2), 0, clamp(Math.sin(a) * 26, -HALF + 2, HALF - 2));
+        findSpot(c.x, c.z, c);
+        const d = Math.min(...bodies.filter(b => !b.out).map(b => flat(b.pos, c)));
+        if (d > bd) { bd = d; best = c; }
+      }
+      const m = { type, pos: best.clone(), vel: new V(), grounded: false, wall: false, frozen: 0, isPlayer: false, hopT: 0.5, yaw: 0 };
+      if (type === 'ghost') m.pos.y = 2.5;
+      if (MAPS[mapKey].spawnHigh && type !== 'ghost') m.pos.y = 8.6;
+      this.list.push(m);
+    },
+    target(m) {
+      let best = null, bd = 1e9;
+      for (const b of bodies) if (!b.out) { const d = b.pos.distanceTo(m.pos); if (d < bd) { bd = d; best = b; } }
+      return best;
+    },
+    throwBy(owner, d) { throwFrom(owner, d, 'firefly'); },
+    update(dt, t, host) {
+      // draw monsters (pooled meshes per type)
+      const used = { pumpkin: 0, blob: 0, ghost: 0 };
+      for (const m of this.list) {
+        const arr = this.pool[m.type]; if (!arr[used[m.type]]) arr.push(this.mesh(m.type));
+        const g = arr[used[m.type]++]; g.visible = true; m.g = g;
+        g.position.copy(m.pos); if (m.type === 'ghost') g.position.y += Math.sin(t * 2 + m.pos.x) * 0.2;
+        g.rotation.y = m.yaw + (m.frozen > 0 ? t * 8 : 0);
+        if (g.userData.arms) g.userData.arms.forEach((a, i) => { a.rotation.x = -1.2 + Math.sin(t * 8 + i * Math.PI) * 0.4; });
+        if (g.userData.body) g.userData.body.scale.set(0.65 + Math.sin(t * 6) * 0.05, 0.5 - Math.sin(t * 6) * 0.05, 0.65);
+      }
+      for (const [type, arr] of Object.entries(this.pool)) for (let i = used[type]; i < arr.length; i++) arr[i].visible = false;
+      throwCd -= dt;
+      // fireflies in flight stun monsters
+      for (const pr of proj.list.slice()) {
+        if (pr.kind !== 'firefly') continue;
+        pr.vel.y -= 10 * dt; pr.pos.addScaledVector(pr.vel, dt); pr.mesh.position.copy(pr.pos); pr.life -= dt;
+        const hit = host && this.list.find(m => m.pos.distanceTo(pr.pos) < 1.3);
+        if (hit) { hit.frozen = 3.5; questFor(pr.owner, 'tag'); if (pr.owner === player) { sfxTone(1300, 700, 0.2, 'triangle', 0.1); addFlies(1); } }
+        if (hit || pr.pos.y < 0.2 || pr.life <= 0) { removeProj(pr); if (host) m2Send({ t: 'projx', id: pr.id }); }
+      }
+      // a growl when something is close
+      const near = this.list.reduce((d, m) => Math.min(d, m.pos.distanceTo(player.pos)), 1e9);
+      if ((this.growlT -= dt) <= 0 && near < 9 && !player.out) { this.growlT = 3 + Math.random() * 3; sfxTone(110 + Math.random() * 40, 55, 0.6, 'sawtooth', 0.06); }
+      if (!host || state !== 'play') return;
+      // more monsters over time
+      const cap = Math.min(9, 2 + Math.floor(roundTime / 32) + Math.floor(remotes.size / 2));
+      if (this.list.length < cap && (this.spawnT -= dt) <= 0) { this.spawnT = 3; this.spawn(); }
+      const boost = (0.92 + roundTime / 320) * DIFF[diff];
+      for (const m of this.list) {
+        const T = this.TYPES[m.type], tg = this.target(m);
+        if (m.frozen > 0) m.frozen -= dt;
+        if (!tg) continue;
+        m.yaw = Math.atan2(-(tg.pos.x - m.pos.x), -(tg.pos.z - m.pos.z));
+        if (T.fly) { if (m.frozen <= 0) { const to = tg.pos.clone().add(new V(0, 0.3, 0)).sub(m.pos); m.pos.addScaledVector(to.normalize(), T.speed * boost * dt); } }
+        else {
+          physics(m, dt);
+          m.hopT -= dt;
+          surfaceGap(m.pos); m.nearWall = m.wall || wallGap < 0.45;
+          if (m.frozen <= 0 && m.hopT <= 0 && (m.grounded || m.nearWall)) {
+            const dirv = tg.pos.clone().sub(m.pos).setY(0).normalize();
+            let jump = T.jump, quick = false;
+            const up = tg.pos.y - m.pos.y;
+            if (up > 1.6 && (T.climbs || m.type === 'pumpkin')) { const cp = climbPlan(m, tg.pos); if (cp && (T.climbs || !cp.quick || up < 4)) { jump = cp.jumpV; quick = !!cp.quick && T.climbs; if (cp.ledge) dirv.set(cp.ledge.cx - m.pos.x, 0, cp.ledge.cz - m.pos.z).normalize(); } }
+            m.vel.x = dirv.x * T.speed * boost; m.vel.z = dirv.z * T.speed * boost; m.vel.y = Math.max(m.vel.y, jump);
+            m.hopT = quick ? 0.15 : 0.35 + Math.random() * 0.2;
+          }
+        }
+        if (m.frozen <= 0) for (const b of bodies) if (!b.out && b.immune <= 0 && b.pos.distanceTo(m.pos) < 1.25) { // caught!
+          setOut(b, true); b.frozen = 999;
+          const what = m.type === 'pumpkin' ? 'A pumpkin monster' : m.type === 'blob' ? 'A swamp blob' : 'A ghost';
+          if (b === player) { flash('Caught!', `${what} got you! A friend can touch you to free you.`, 2.4, '#ff9f5a'); rumble(300, 0.8); }
+          else if (b.isRemote && net) net.ev.send({ k: 'msg', big: 'Caught!', small: `${what} got you! A friend can touch you to free you.`, color: '#ff9f5a' }, { target: b.id });
+          else say(b, pick(["Aaah! Help me!", "It got me!", "Somebody save me!"]));
+          m.frozen = 1.2;
+        }
+      }
+      // free frogs rescue caught ones by touching them
+      for (const a of bodies) if (!a.out) for (const b of bodies) if (b.out && a.pos.distanceTo(b.pos) < 1.4) {
+        setOut(b, false); b.frozen = 0; b.immune = 3; a.score = (a.score || 0) + 1; questFor(a, 'rescue');
+        if (b === player) flash('Rescued!', `${a.name || 'A friend'} saved you. Run!`, 1.6, 'var(--leaf)');
+        if (a === player) { flash('Rescued!', `You saved ${b.name}.`, 1.4, 'var(--leaf)'); addFlies(1); }
+      }
+      for (const a of ais) { // computer frogs throw fireflies at close monsters
+        if (a.out || (a.throwT = (a.throwT || 2) - dt) > 0) continue;
+        const m = this.list.find(x => x.frozen <= 0 && x.pos.distanceTo(a.pos) < 9); if (!m) continue;
+        a.throwT = 2.5 + Math.random() * 2;
+        const aim = m.pos.clone().sub(a.pos); aim.y += 1;
+        this.throwBy(a, [aim.x, aim.y, aim.z].map(r2));
+      }
+      const free = alive();
+      if (!free.length) { state = 'over'; overT = 6; announce('The monsters got everyone!', `You lasted ${fmt(roundTime)}. Try again!`, '#ff9f5a', 5); }
+      else if (roundTime >= 180) {
+        state = 'over'; overT = 6;
+        announce('You survived Monster Night!', `${free.length} frog${free.length > 1 ? 's' : ''} made it to morning.`, 'var(--leaf)', 5, free);
+        if (!player.out) addFlies(10);
+      }
+    },
+    goal(ai) {
+      if (ai.out) { ai.hopT = 1; return ai.pos; }
+      let mon = null, md = 1e9; for (const m of this.list) { const d = m.pos.distanceTo(ai.pos); if (d < md) { md = d; mon = m; } }
+      if (mon && md < 11) { // run away
+        const away = ai.pos.clone().sub(mon.pos).setY(0).normalize().multiplyScalar(9).add(ai.pos);
+        away.x = clamp(away.x + (Math.random() - 0.5) * 5, -HALF + 3, HALF - 3); away.z = clamp(away.z + (Math.random() - 0.5) * 5, -HALF + 3, HALF - 3);
+        return away;
+      }
+      let cb = null, cd = 30; for (const b of bodies) if (b.out && b !== ai) { const d = b.pos.distanceTo(ai.pos); if (d < cd) { cd = d; cb = b; } }
+      return cb ? cb.pos : null;
+    },
+    hud() {
+      let mon = null, md = 1e9; for (const m of this.list) { const d = m.pos.distanceTo(player.pos); if (d < md) { md = d; mon = m; } }
+      const free = alive().length;
+      return { chip: player.out ? 'CAUGHT!' : 'SURVIVE!', bg: player.out ? '#9aa0a6' : '#ff9f5a', info: `${this.list.length} monsters · ${free} frog${free === 1 ? '' : 's'} free · ${fmt(Math.max(0, 180 - roundTime))} left`,
+        radar: mon ? { pos: mon.pos, label: mon.type === 'pumpkin' ? 'Pumpkin monster' : mon.type === 'blob' ? 'Swamp blob' : 'Ghost' } : 'hide' };
+    },
+    row(b) { return b.out ? 'Caught' : `${b.score || 0} rescues`; },
+    snap() { return { m: this.list.map(m => [m.type[0], r2(m.pos.x), r2(m.pos.y), r2(m.pos.z), r2(m.yaw), m.frozen > 0 ? 1 : 0]) }; },
+    apply(ms) {
+      const T = { p: 'pumpkin', b: 'blob', g: 'ghost' };
+      this.list = (ms.m || []).map(r => ({ type: T[r[0]] || 'pumpkin', pos: new V(r[1], r[2], r[3]), yaw: r[4], frozen: r[5] ? 1 : 0 }));
+    },
+    onEvent(d, from) {
+      if (d.t === 'throw' && isHost()) { const o = remotes.get(from); if (o && !o.out && (o.throwCd || 0) < performance.now()) { o.throwCd = performance.now() + 1100; this.throwBy(o, d.d); } }
+      else projEvent(d);
+    },
+    end() { this.clear(); clearProj(); mapLighting(); for (const b of bodies) { setOut(b, false); } },
   },
   sardines: { hider: null, found: [], count: 0,
     start() {
