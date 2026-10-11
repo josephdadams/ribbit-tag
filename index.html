@@ -24,10 +24,11 @@
 [hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; overflow: hidden; background: var(--jungle); color: var(--bone); font-family: var(--body);
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
-#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+input, textarea, select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; touch-action: manipulation; font-size: 16px; }
+#game { position: fixed; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; display: block; }
 
 /* Menu */
-#menu { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;
+#menu { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;
   background: radial-gradient(ellipse at 30% 20%, rgba(16,41,27,.35), rgba(10,26,16,.82)); touch-action: pan-y; }
 .card { width: 100%; max-width: 860px; display: grid; grid-template-columns: 1.05fr 1fr; gap: 24px; margin: auto;
   background: rgba(16,41,27,.92); border: 3px solid var(--canopy); border-radius: 22px; padding: 24px; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
@@ -76,7 +77,7 @@ h1 span { color: var(--lava); display: block; }
 @media (max-width: 720px) { .card { grid-template-columns: 1fr; padding: 18px; } }
 
 /* HUD */
-#hud { position: fixed; inset: 0; pointer-events: none; }
+#hud { position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; }
 .hud-top { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 12px; right: 12px; display: flex; gap: 8px; align-items: center; }
 .chip { font-family: var(--display); font-size: 1.15rem; padding: 6px 14px; border-radius: 999px; background: rgba(10,26,16,.72); color: var(--bone); white-space: nowrap; }
 #status.safe { background: var(--leaf); color: var(--ink); }
@@ -96,12 +97,12 @@ h1 span { color: var(--lava); display: block; }
   line-height: 1; text-shadow: 0 4px 0 rgba(0,0,0,.35); opacity: 0; transform: scale(.8); transition: opacity .2s, transform .2s; }
 #flash.show { opacity: 1; transform: scale(1); }
 #flash small { display: block; font-family: var(--body); font-weight: 800; font-size: 1.05rem; margin-top: 10px; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
-#vignette { position: absolute; inset: 0; box-shadow: inset 0 0 0 0 rgba(255,106,43,0); transition: box-shadow .3s; }
+#vignette { position: absolute; top: 0; right: 0; bottom: 0; left: 0; box-shadow: inset 0 0 0 0 rgba(255,106,43,0); transition: box-shadow .3s; }
 #hud.lava #vignette { box-shadow: inset 0 0 120px 36px rgba(255,106,43,.55); }
 #hint { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px);
   text-align: center; font-weight: 800; background: rgba(10,26,16,.72); padding: 8px 16px; border-radius: 999px; transition: opacity .6s; }
 #hint.gone { opacity: 0; }
-#err { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; font-weight: 800; }
+#err { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: grid; place-items: center; padding: 16px; text-align: center; font-weight: 800; }
 /* Flies + wardrobe */
 .ban { width: 1.1em; height: 1.1em; flex: none; }
 .chip.fly { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; transition: transform .15s; }
@@ -111,7 +112,7 @@ h1 span { color: var(--lava); display: block; }
 .wardrobe-btn > span:first-child { font-family: var(--display); font-size: 1.35rem; }
 .wb-count, .wr-flies { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .wardrobe-btn:focus-visible { outline: 3px solid var(--bone); outline-offset: 3px; }
-#wardrobe { position: fixed; inset: 0; display: flex; justify-content: flex-end; align-items: stretch; padding: 16px; pointer-events: none; }
+#wardrobe { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; justify-content: flex-end; align-items: stretch; padding: 16px; pointer-events: none; }
 .wr-panel { pointer-events: auto; width: min(430px, 100%); max-height: 100%; overflow-y: auto; touch-action: pan-y; display: flex; flex-direction: column; gap: 12px;
   background: rgba(16,41,27,.94); border: 3px solid var(--canopy); border-radius: 22px; padding: 16px; }
 .wr-head { display: flex; align-items: center; gap: 10px; }
@@ -131,7 +132,7 @@ h1 span { color: var(--lava); display: block; }
 @media (max-aspect-ratio: 1/1) { #wardrobe { align-items: flex-end; } .wr-panel { max-height: 56%; } }
 kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: var(--ink); border: 1px solid var(--canopy); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
 /* Talking */
-#bubbles { position: absolute; inset: 0; overflow: hidden; }
+#bubbles { position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; }
 .bubble { position: absolute; left: 0; top: 0; max-width: min(260px, 60vw); padding: 7px 12px 8px; border-radius: 14px; background: var(--bone); color: var(--ink);
   font-weight: 800; font-size: .95rem; line-height: 1.25; transform: translate(-50%, -100%); box-shadow: 0 4px 0 rgba(0,0,0,.25); }
 .bubble::after { content: ''; position: absolute; left: 50%; bottom: -8px; margin-left: -8px; border: 8px solid transparent; border-bottom: 0; border-top-color: var(--bone); }
@@ -179,12 +180,12 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .mode.mini b { font-size: 1.05rem; }
 .mode.mini.spooky { background: #3a2433; color: #ffd6a8; }
 .mode.mini small { font-size: .74rem; opacity: .85; display: block; }
-#blind { position: fixed; inset: 0; z-index: 3; display: grid; place-content: center; text-align: center; gap: 6px; background: #05070a; color: var(--bone); pointer-events: none; }
+#blind { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 3; display: grid; place-content: center; text-align: center; gap: 6px; background: #05070a; color: var(--bone); pointer-events: none; }
 #blind b { font-family: var(--display); font-weight: 400; font-size: clamp(2rem, 8vw, 3.4rem); }
 #blind small { font-weight: 800; opacity: .7; }
-#splat { position: fixed; inset: 0; z-index: 3; pointer-events: none; transition: opacity .4s;
+#splat { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 3; pointer-events: none; transition: opacity .4s;
   background: radial-gradient(circle at 30% 40%, rgba(90,60,30,.85) 0 12%, transparent 13%), radial-gradient(circle at 65% 55%, rgba(90,60,30,.8) 0 15%, transparent 16%), radial-gradient(circle at 48% 25%, rgba(110,75,40,.75) 0 8%, transparent 9%), radial-gradient(circle at 75% 20%, rgba(90,60,30,.7) 0 6%, transparent 7%); }
-#questsPanel { position: fixed; inset: 0; z-index: 4; display: grid; place-items: center; padding: 16px; background: rgba(10,26,16,.6); }
+#questsPanel { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 4; display: grid; place-items: center; padding: 16px; background: rgba(10,26,16,.6); }
 .qp-card { width: min(460px, 100%); max-height: 100%; overflow-y: auto; background: var(--jungle); border: 3px solid var(--canopy); border-radius: 20px; padding: 16px; }
 .qp-card h2 { font-family: var(--display); font-weight: 400; font-size: 1.6rem; margin: 0; }
 #questList { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
@@ -232,7 +233,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .pill-btn:focus-visible, .name-in:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
 .note { margin: 6px 0 0; font-size: .85rem; opacity: .75; max-width: 46ch; }
 .bubble.nametag { padding: 3px 10px 4px; font-size: .85rem; opacity: .9; }
-.name-in { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 7px 14px; background: var(--ink); color: var(--bone); width: 11em; max-width: 100%; }
+.name-in { font: inherit; font-size: 16px; font-weight: 800; border: 0; border-radius: 999px; padding: 7px 14px; background: var(--ink); color: var(--bone); width: 11em; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { #flash, .mode { transition: none; } }
 </style>
 </head>
@@ -293,7 +294,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       <p class="tagline">Sticky frog hands, no hopping allowed. Push off the ground, fling through the jungle, and stay away from the lava frog.</p>
       <div class="row">
         <label class="label" for="roomIn">Room code</label>
-        <input class="name-in" id="roomIn" type="text" maxlength="12" placeholder="Empty = solo" autocapitalize="characters">
+        <input class="name-in" id="roomIn" type="text" maxlength="12" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Empty = solo" autocapitalize="characters">
         <button class="pill-btn" id="makeRoom" type="button">New code</button>
         <button class="pill-btn" id="soloBtn" type="button">Solo</button>
       </div>
