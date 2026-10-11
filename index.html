@@ -158,9 +158,17 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 #playersBtn { pointer-events: auto; border: 0; cursor: pointer; }
 #playersBtn[aria-expanded="true"] { background: var(--bone); color: var(--ink); }
 #playersBtn:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
-#players { position: absolute; top: calc(56px + env(safe-area-inset-top, 0px)); right: 12px; width: min(340px, calc(100% - 24px)); max-height: calc(100% - 140px);
+#players, #scores { position: absolute; top: calc(56px + env(safe-area-inset-top, 0px)); right: 12px; width: min(340px, calc(100% - 24px)); max-height: calc(100% - 140px);
   overflow-y: auto; pointer-events: auto; touch-action: pan-y; background: rgba(10,26,16,.9); border-radius: 18px; padding: 12px 14px; }
 .pl-head { display: flex; align-items: center; gap: 8px; }
+.sc-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.sc-list li { display: grid; grid-template-columns: 26px 1fr 44px 50px 50px; gap: 6px; align-items: center; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.04); font-weight: 800; font-size: .92rem; }
+.sc-list li.no-score { grid-template-columns: 26px 1fr 44px 50px; }
+.sc-list li.head { background: none; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; opacity: .65; padding-top: 0; padding-bottom: 0; }
+.sc-list li.me { background: rgba(143,209,98,.14); }
+.sc-list li.lead .sc-rank { color: #ffd23f; }
+.sc-list .sc-n { text-align: right; font-variant-numeric: tabular-nums; }
+.sc-list .sc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pl-head h2 { font-family: var(--display); font-weight: 400; font-size: 1.3rem; margin: 0; }
 .pl-sub { margin: 12px 0 4px; font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; opacity: .65; }
 .pl-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
@@ -264,12 +272,18 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
     <button id="info" class="chip" type="button" title="What mode is this?"></button>
     <div class="spacer"></div>
     <div id="flyChip" class="chip fly"><svg class="ban" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="7.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(-25 7.5 9)"/><ellipse cx="16.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(25 16.5 9)"/><ellipse cx="12" cy="14" rx="3.6" ry="5.4" fill="#1b1b22"/><circle cx="10.6" cy="9.6" r="1.3" fill="#d62828"/><circle cx="13.4" cy="9.6" r="1.3" fill="#d62828"/></svg><span id="flyCount">0</span></div>
+    <button id="scoresBtn" class="chip" type="button" aria-expanded="false" aria-controls="scores">Scores</button>
     <button id="playersBtn" class="chip" type="button" aria-expanded="false" aria-controls="players">Players</button>
     <button id="hostBtn" class="chip" type="button" hidden>Be host</button>
     <button id="talkBtn" class="chip" type="button">Talk</button>
     <button id="menuBtn" class="chip" type="button">Menu</button>
   </div>
   <div id="bubbles"></div>
+  <div id="scores" hidden>
+    <div class="pl-head"><h2 id="scTitle">Scores</h2><span class="spacer"></span><button id="scClose" class="pill-btn" type="button">Close</button></div>
+    <p class="pl-status">Everyone in this game, since it started.</p>
+    <ol class="sc-list" id="scList"></ol>
+  </div>
   <div id="players" hidden>
     <div class="pl-head"><h2 id="plTitle">Players</h2><span class="spacer"></span><button id="plClose" class="pill-btn" type="button">Close</button></div>
     <p class="pl-status" id="plStatus"></p>
@@ -434,7 +448,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
           <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
           <p class="keys-sub">On menus</p><dl class="keys"><dt><kbd>D-pad</kbd></dt><dd>Move around</dd><dt><kbd>A</kbd></dt><dd>Pick</dd><dt><kbd>B</kbd></dt><dd>Go back</dd></dl></div></li>
         <li class="keys-li"><span class="ic">Key</span><div><strong>Keyboard</strong>
-          <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
+          <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>L</kbd></dt><dd>Scores</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
           <p class="keys-sub">On the menu</p><dl class="keys"><dt><kbd>1</kbd></dt><dd>Infection</dd><dt><kbd>2</kbd></dt><dd>Classic</dd><dt><kbd>3</kbd></dt><dd>Capture the Lily Pad</dd><dt><kbd>4</kbd></dt><dd>Freeze Tag</dd><dt><kbd>5</kbd></dt><dd>Hot Potato</dd><dt><kbd>6</kbd></dt><dd>Fly Feast</dd><dt><kbd>7</kbd></dt><dd>Free Play</dd><dt><kbd>8</kbd></dt><dd>King of the Lily Pad</dd><dt><kbd>Q</kbd></dt><dd>Daily quests</dd><dt><kbd>O</kbd></dt><dd>Play online</dd><dt><kbd>R</kbd></dt><dd>Wardrobe</dd></dl></div></li>
       </ul>
     </div>
@@ -635,6 +649,19 @@ function addCap(x, y, z, r, m) { // mushroom caps and umbrellas: round look, box
   const w = r * 1.5, b = { min: new V(x - w / 2, y - 0.35, z - w / 2), max: new V(x + w / 2, y + 0.35, z + w / 2) };
   boxes.push(b); ledges.push(b);
 }
+function addJumpWalls(x, z, alongX, h = 11) { // two tall plank walls close together: push off one, then the other, and climb fast
+  const GAP = 2.4, L = 4.5, T = 0.5;
+  for (const s of [-1, 1]) {
+    const off = s * (GAP / 2 + T / 2), wx = x + (alongX ? 0 : off), wz = z + (alongX ? off : 0);
+    const b = addBox(wx, h / 2, wz, alongX ? L : T, h, alongX ? T : L, M.jwWood, true); b.jump = true;
+    for (let k = -2; k <= 2; k++) { // plank seams on both faces
+      const seam = put(new THREE.Mesh(boxGeo, M.jwLine));
+      seam.scale.set(alongX ? 0.06 : T + 0.04, h, alongX ? T + 0.04 : 0.06);
+      seam.position.set(wx + (alongX ? k * L / 5 : 0), h / 2, wz + (alongX ? 0 : k * L / 5));
+    }
+    const cap = put(new THREE.Mesh(boxGeo, M.jwTop)); cap.scale.set(alongX ? L : T + 0.05, 0.15, alongX ? T + 0.05 : L); cap.position.set(wx, h + 0.07, wz);
+  }
+}
 function addPad(x, z, r, y, big) { // a floating lily pad; most of them are bouncy
   const pad = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(r, r, 0.1, 12, 1, false, 0.3, Math.PI * 2 - 0.6))), M.lilyPad)); pad.position.set(x, y, z);
   const b = addBox(x, y, z, r * 1.5, 0.12, r * 1.5, M.lilyPad, true, true); b.bounce = big ? 13 : 9;
@@ -693,6 +720,9 @@ function steps(list, m, size = 2.6, post) {
   }
 }
 
+Object.assign(M, { // jump walls
+  jwWood: lam(0xb8704a), jwLine: lam(0x8a4f30), jwTop: fx(0xffd23f),
+});
 Object.assign(M, { // the Stump
   stBark: lam(0x5a3d26), stTube: new THREE.MeshLambertMaterial({ color: 0x5a3d26, side: THREE.DoubleSide }), stWood: lam(0xc79a62), stRing: lam(0xa87a48), stMoss: lam(0x4f7d34), stRedCap: lam(0xd8442f), stDot: lam(0xfff4e0),
 });
@@ -723,7 +753,8 @@ const MAPS = {
       addBox(-12, 0.9, 13, 3.5, 1.8, 3.5, M.rock, true);
       addBox(18, 0.8, -6, 2.5, 1.6, 4, M.rock, true);
       addBox(9, 0.5, -15, 8, 1, 1.2, M.trunk, true);
-      const taken = [[0, 0], [-18, -15], [14, 14], [-12, 13], [18, -6], [9, -15], [-14, -12]];
+      const taken = [[0, 0], [-18, -15], [14, 14], [-12, 13], [18, -6], [9, -15], [-14, -12], [21, 21]];
+      addJumpWalls(21, 21, false);
       scatter(24, 5.5, taken, (x, z) => Math.hypot(x, z) > 10 && !(x > 3 && x < 13 && z > -8 && z < 10),
         (x, z) => addTree(x, z, 0.5 + srnd() * 0.45, 6 + srnd() * 5, 2.4 + srnd() * 1.6));
       addTufts(M.leafB, 220); addClouds();
@@ -794,7 +825,8 @@ const MAPS = {
       addBox(5, 4.5, 2, 2.4, 9, 2.4, M.sandstone, true);
       addBox(0, 9.7, 2, 12.4, 1.4, 2.8, M.sandstone, true);
       steps([[-7.6, 1.4, 4], [-8, 3, 1], [-7.6, 4.6, 4], [-8, 6.2, 1], [-7.4, 7.8, 3.6]], M.redrock, 2);
-      const taken = mesas.map(([x, z]) => [x, z]).concat([[-5, 2], [5, 2], [0, 2], [0, -14]]);
+      const taken = mesas.map(([x, z]) => [x, z]).concat([[-5, 2], [5, 2], [0, 2], [0, -14], [0, 22]]);
+      addJumpWalls(0, 22, true, 12);
       scatter(18, 5, taken, (x, z) => Math.abs(z + 14) > 3, (x, z) => {
         const h = 2 + srnd() * 2.2;
         addPillar(x, z, 0.35, h, M.cactus, 0.3);
@@ -870,7 +902,8 @@ const MAPS = {
         const head = put(new THREE.Mesh(ballGeo, M.snow)); head.scale.setScalar(0.34); head.position.set(x, 2.35, z);
         const nose = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(0.06, 0.3, 6))), M.carrot)); nose.rotation.x = -Math.PI / 2; nose.position.set(x, 2.35, z - 0.45);
       }
-      const taken = [[-6, -6], [18, -18], [-17, 14], [6, 10], [-4, 16], [14, 6], [12, -14]];
+      const taken = [[-6, -6], [18, -18], [-17, 14], [6, 10], [-4, 16], [14, 6], [12, -14], [21, 20]];
+      addJumpWalls(21, 20, false);
       scatter(26, 5, taken, (x, z) => !(x > -15 && x < 3 && z > -13 && z < 1), (x, z) => {
         const h = 5 + srnd() * 4;
         addPillar(x, z, 0.35, h * 0.35, M.trunk, 0.3);
@@ -1454,7 +1487,8 @@ const MAPS = {
         }
       }
       // red mushrooms with white dots around the clearing, and a ring of trees
-      const taken = [[0, 0]];
+      const taken = [[0, 0], [-20, -16], [20, -16]];
+      addJumpWalls(-20, -16, false, 12); addJumpWalls(20, -16, false, 12); // practice walls on both sides of the clearing
       scatter(8, 5, taken, (x, z) => Math.hypot(x, z) > 15, (x, z) => {
         const h = 1.4 + srnd() * 2.2;
         addPillar(x, z, 0.35, h, M.stem, 0.3);
@@ -1873,26 +1907,26 @@ function physics(b, dt) {
 }
 // Nearest grabbable surface for the player's hands
 const sN = new V(), wallN = new V();
-let wallGap = 99;
+let wallGap = 99, wallBox = null;
 function surfaceGap(p) {
-  let best = p.y - R; wallGap = 99; sN.set(0, 1, 0);
+  let best = p.y - R; wallGap = 99; wallBox = null; sN.set(0, 1, 0);
   for (const b of boxes) {
     tq.copy(p).clamp(b.min, b.max); tn.subVectors(p, tq);
     const len = tn.length(), d = len - R;
     if (len < 1e-5) tn.set(0, 1, 0); else tn.multiplyScalar(1 / len);
     if (d < best) { best = d; sN.copy(tn); }
-    if (Math.abs(tn.y) < 0.5 && d < wallGap) { wallGap = d; wallN.copy(tn); }
+    if (Math.abs(tn.y) < 0.5 && d < wallGap) { wallGap = d; wallN.copy(tn); wallBox = b; }
   }
   for (const t of trees) {
     if (p.y > t.h + 0.5 || p.y < t.y0 - 0.5) continue;
     const dx = p.x - t.x, dz = p.z - t.z, hd = Math.hypot(dx, dz) || 1, d = hd - t.r - R;
     if (d < best) { best = d; sN.set(dx / hd, 0, dz / hd); }
-    if (d < wallGap) { wallGap = d; wallN.set(dx / hd, 0, dz / hd); }
+    if (d < wallGap) { wallGap = d; wallN.set(dx / hd, 0, dz / hd); wallBox = null; }
   }
   for (const s of blobs) {
     tn.subVectors(p, s.c); const len = tn.length() || 1, d = len - s.r - R; tn.multiplyScalar(1 / len);
     if (d < best) { best = d; sN.copy(tn); }
-    if (tn.y < 0.5 && d < wallGap) { wallGap = d; wallN.copy(tn); }
+    if (tn.y < 0.5 && d < wallGap) { wallGap = d; wallN.copy(tn); wallBox = null; }
   }
   return best;
 }
@@ -2585,7 +2619,16 @@ const DIFF = [0.78, 1, 1.18];
 let best = 0;
 try { best = +localStorage.getItem('ribbit-best') || 0; } catch (e) {}
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-function showBest() { $('best').textContent = best > 0 ? `Longest Infection survival: ${fmt(best)}` : 'Tip: Infection is the classic way to play.'; }
+const records = { mostTags: 0, totalTags: 0 };
+try { Object.assign(records, JSON.parse(localStorage.getItem('ribbit-records') || '{}')); } catch (e) {}
+function saveRecords() { try { localStorage.setItem('ribbit-records', JSON.stringify(records)); } catch (e) {} }
+function showBest() {
+  const bits = [];
+  if (best > 0) bits.push(`Longest Infection survival: ${fmt(best)}`);
+  if (records.mostTags > 0) bits.push(`Most tags in one game: ${records.mostTags}`);
+  if (records.totalTags > 0) bits.push(`Total tags: ${records.totalTags}`);
+  $('best').textContent = bits.length ? 'Your records · ' + bits.join(' · ') : 'Tip: Infection is the classic way to play.';
+}
 showBest();
 
 let flashTimer = 0;
@@ -2635,8 +2678,13 @@ function startRound(firstId, seed) {
   setTimeout(() => { const o = pick(ais.filter(a => !a.it)); if (o && state === 'play') sayEvent(o, 'start'); }, 1500);
 }
 
+function countTag(a, b) { // leaderboard counts; the host's numbers win in multiplayer (they ride along in the snapshot)
+  a.tags = (a.tags || 0) + 1; b.tagged = (b.tagged || 0) + 1;
+  if (a === player) { records.totalTags++; records.mostTags = Math.max(records.mostTags, player.tags); saveRecords(); }
+}
 function doTag(a, b) {
   if (net && isHost()) net.ev.send({ k: 'tag', a: a === player ? myId : a.id, b: b === player ? myId : b.id });
+  countTag(a, b);
   setLava(b, true);
   b.frozen = CLASSICISH.includes(mode) ? (mode === 'potato' ? 0.6 : 2) : 1;
   if (CLASSICISH.includes(mode)) { setLava(a, false); a.immune = mode === 'potato' ? 1.5 : 3; }
@@ -3419,7 +3467,7 @@ function removeRemote(id) {
 const r2 = x => Math.round(x * 100) / 100;
 function snapshot() {
   const it = {};
-  for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0), r2(b.score || 0), r2(b.size || 1), b.hits || 0];
+  for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0), r2(b.score || 0), r2(b.size || 1), b.hits || 0, b.tags || 0, b.tagged || 0];
   return { n: ais.length, m: mapKey, mo: mode, st: state, rt: r2(roundTime), ot: r2(overT), d: diff,
     ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null,
     pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
@@ -3454,7 +3502,7 @@ function applySnapshot(s, from) {
     b.feastScore = fs || 0;
   }
   if (s.pf !== undefined) potato.fuse = s.pf;
-  for (const [id, row] of Object.entries(s.it)) { const b = byId(id); if (b) { b.kingScore = row[6] || 0; b.score = row[7] || 0; b.size = row[8] || 1; b.hits = row[9] || 0; } }
+  for (const [id, row] of Object.entries(s.it)) { const b = byId(id); if (b) { b.kingScore = row[6] || 0; b.score = row[7] || 0; b.size = row[8] || 1; b.hits = row[9] || 0; b.tags = row[10] || 0; b.tagged = row[11] || 0; } }
   if (MODE2[mode]) { MODE2[mode].active = true; if (s.ms && MODE2[mode].apply && state !== 'menu') MODE2[mode].apply(s.ms); }
   for (const [k, m] of Object.entries(MODE2)) if (k !== mode && m.active) { m.active = false; if (m.end) m.end(); }
   if (s.kp && mode === 'king') { if (!kingPad.group || kingPad.mapKey !== mapKey) kingBuild(); kingPlace(s.kp[0], s.kp[1], s.kp[2]); }
@@ -3605,19 +3653,20 @@ function armPush(dy, fingerSpeed, turn = 0) {
   if (player.frozen > 0) return false;
   const gap = surfaceGap(player.pos);
   if (gap > REACH) return false;
-  const wall = wallGap < REACH * 0.85;
+  const wall = wallGap < REACH * 0.85, jw = wall && wallBox && wallBox.jump; // jump walls fling you up and away
   const boost = clamp(0.7 + fingerSpeed * 0.8, 0.7, 2.2);
   const push = (MODE2[mode] && MODE2[mode].pushMul ? MODE2[mode].pushMul() : 1) * dy * 0.018 * boost * (820 / Math.max(400, innerHeight));
   const fx = -Math.sin(player.yaw + turn), fz = -Math.cos(player.yaw + turn), v = player.vel;
   if (push > 0) {
     v.x += fx * push; v.z += fz * push;
-    v.y += push * (wall ? 1.05 : 0.5);
-    if (wall) { v.x += wallN.x * push * 0.25; v.z += wallN.z * push * 0.25; }
+    v.y += push * (jw ? 1.45 : wall ? 1.05 : 0.5);
+    if (wall) { v.x += wallN.x * push * (jw ? 0.7 : 0.25); v.z += wallN.z * push * (jw ? 0.7 : 0.25); }
     pushedDistance += dy;
   } else { v.x += fx * push * 0.5; v.z += fz * push * 0.5; }
   const hs = Math.hypot(v.x, v.z);
   if (hs > 15) { v.x *= 15 / hs; v.z *= 15 / hs; }
-  v.y = Math.min(v.y, 11);
+  v.y = Math.min(v.y, jw ? 13 : 11);
+  if (jw && push > 0.6) sfxTone(500, 900, 0.12, 'triangle', 0.05);
   return true;
 }
 canvas.addEventListener('pointerdown', e => {
@@ -3689,9 +3738,10 @@ addEventListener('keydown', e => {
   }
   if (GAME_KEYS.includes(e.code)) e.preventDefault();
   if (!usedKeys) { usedKeys = true; $('hint').textContent = 'W to push forward · A/D to turn · Space to jump · T to talk'; }
-  if (e.code === 'Escape') { if (!$('players').hidden) togglePlayers(false); else if (talkOpen) $('talk').hidden = true; else $('menuBtn').click(); return; }
+  if (e.code === 'Escape') { if (!$('scores').hidden) toggleScores(false); else if (!$('players').hidden) togglePlayers(false); else if (talkOpen) $('talk').hidden = true; else $('menuBtn').click(); return; }
   if (e.code === 'KeyH') { claimHost(); return; }
-  if (e.code === 'KeyP') { togglePlayers(); return; }
+  if (e.code === 'KeyP') { toggleScores(false); togglePlayers(); return; }
+  if (e.code === 'KeyL') { toggleScores(); return; }
   if (e.code === 'KeyF') { tryThrow(); return; }
   if (e.code === 'KeyI') { modeRules(); return; }
   if (e.code === 'KeyM') { setMusic(!musicOn); return; }
@@ -3721,8 +3771,9 @@ function keyMove() {
 }
 function keyJump() {
   if (player.frozen > 0 || surfaceGap(player.pos) > REACH) return false;
-  const wall = wallGap < REACH * 0.85;
-  player.vel.y = Math.max(player.vel.y, wall ? 8.5 : 7);
+  const wall = wallGap < REACH * 0.85, jw = wall && wallBox && wallBox.jump;
+  player.vel.y = Math.max(player.vel.y, jw ? 10.5 : wall ? 8.5 : 7);
+  if (jw) { player.vel.x += wallN.x * 6; player.vel.z += wallN.z * 6; } // kick off toward the other wall
   sfxSlap(0.25); handKick[0] = handKick[1] = 0.18;
   return true;
 }
@@ -3791,6 +3842,7 @@ function begin(m, lobby = 0, role) {
   ais.forEach(a => { a.greeted = false; });
   $('talk').hidden = true; talkTarget = null;
   stats.safe = 0; stats.tagged = 0;
+  bodies.forEach(b => { b.tags = 0; b.tagged = 0; });
   $('menu').hidden = true; $('hud').hidden = false;
   $('hint').classList.remove('gone'); pushedDistance = 0;
   try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
@@ -3881,7 +3933,7 @@ $('menuBtn').addEventListener('click', () => {
   state = 'menu'; pointers.clear(); showBest();
   $('menu').hidden = false; $('hud').hidden = true;
   bodies.forEach(b => setLava(b, false));
-  $('talk').hidden = true; talkTarget = null; togglePlayers(false);
+  $('talk').hidden = true; talkTarget = null; togglePlayers(false); toggleScores(false);
   ais.forEach(a => { a.bubble.hidden = true; a.bubbleT = 0; a.follow = 0; });
   try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
   setTimeout(() => { sendHere(); renderOnline(); }, 300);
@@ -4182,7 +4234,32 @@ function togglePlayers(open) {
   $('playersBtn').setAttribute('aria-expanded', String(!p.hidden));
   if (!p.hidden) renderPlayers();
 }
-$('playersBtn').addEventListener('click', e => { e.currentTarget.blur(); togglePlayers(); });
+$('playersBtn').addEventListener('click', e => { e.currentTarget.blur(); toggleScores(false); togglePlayers(); });
+// Scoreboard: everyone in this game, ranked by the mode's score if it keeps one, otherwise by tags
+const scoreOf = b => mode === 'feast' ? b.feastScore || 0 : mode === 'king' ? Math.floor(b.kingScore || 0) : Math.floor(b.score || 0);
+function renderScores() {
+  const list = $('scList'); list.innerHTML = '';
+  const all = [player, ...remotes.values(), ...ais];
+  const withScore = all.some(b => scoreOf(b) > 0);
+  all.sort((a, b) => (withScore ? scoreOf(b) - scoreOf(a) : 0) || (b.tags || 0) - (a.tags || 0) || (a.tagged || 0) - (b.tagged || 0));
+  const row = (cells, cls) => {
+    const li = document.createElement('li'); li.className = cls + (withScore ? '' : ' no-score');
+    cells.forEach(([text, c]) => { const sp = document.createElement('span'); sp.className = c; sp.textContent = text; li.append(sp); });
+    list.append(li);
+  };
+  row([['#', 'sc-rank'], ['Frog', 'sc-name'], ['Tags', 'sc-n'], ['Tagged', 'sc-n']].concat(withScore ? [['Score', 'sc-n']] : []), 'head');
+  all.forEach((b, i) => row([[String(i + 1), 'sc-rank'], [b === player ? `${playerName || 'You'} (you)` : b.name, 'sc-name'], [String(b.tags || 0), 'sc-n'], [String(b.tagged || 0), 'sc-n']]
+    .concat(withScore ? [[String(scoreOf(b)), 'sc-n']] : []), (b === player ? 'me' : '') + (i === 0 && ((b.tags || 0) > 0 || scoreOf(b) > 0) ? ' lead' : '')));
+  $('scTitle').textContent = `Scores · ${MODE_NAMES[mode] || ''}`;
+}
+function toggleScores(open) {
+  const p = $('scores'); p.hidden = open === undefined ? !p.hidden : !open;
+  $('scoresBtn').setAttribute('aria-expanded', String(!p.hidden));
+  if (!p.hidden) { togglePlayers(false); renderScores(); }
+}
+$('scoresBtn').addEventListener('click', e => { e.currentTarget.blur(); toggleScores(); });
+$('scClose').addEventListener('click', () => toggleScores(false));
+setInterval(() => { if (!$('scores').hidden) renderScores(); }, 500);
 $('plClose').addEventListener('click', () => togglePlayers(false));
 
 // ---------- Flies & wardrobe ----------
@@ -4502,7 +4579,7 @@ function shuffled(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { c
 
 // Freeze Tag: taggers freeze runners; runners unfreeze each other with a touch
 function freezeHit(a, b) {
-  setIce(b, true); b.vel.set(0, 0, 0);
+  setIce(b, true); b.vel.set(0, 0, 0); countTag(a, b);
   sfxTone(1200, 600, 0.3, 'sine', 0.1);
   if (b === player) { flash('Frozen!', 'Wait for a teammate to touch you.', 2.2, '#bfe9ff'); rumble(300, 0.7); }
   else if (a === player) flash('Frozen!', `${b.name} is an ice cube.`, 1.5, '#bfe9ff');
@@ -4848,6 +4925,7 @@ function padMoveFocus(step) {
 function padBack() {
   if (!$('questsPanel').hidden) $('questsClose').click();
   else if (wardrobeOpen) closeWardrobe();
+  else if (!$('scores').hidden) toggleScores(false);
   else if (!$('players').hidden) togglePlayers(false);
   else if (!$('talk').hidden) $('talk').hidden = true;
 }

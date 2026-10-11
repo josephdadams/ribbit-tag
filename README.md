@@ -102,7 +102,7 @@ Every day brings three new quests, like "Catch 25 flies", "Unfreeze 4 frogs in F
 
 ## Maps
 
-Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in), and The Backrooms (a yellow maze under humming lights).
+Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), and The Backrooms (a yellow maze under humming lights).
 
 ### Holiday maps
 
