@@ -210,6 +210,9 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .fr-list .fr-join { background: var(--leaf); color: var(--ink); }
 .fr-list .fr-x { background: transparent; opacity: .6; padding: 7px 10px; }
 .fr-empty { font-size: .85rem; opacity: .75; }
+.fr-hello { margin: 8px 0 0; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--leaf); color: var(--ink); display: flex; align-items: center; gap: 8px; font-weight: 800; }
+.fr-hello span { flex: 1; min-width: 0; }
+.fr-hello .pill-btn { background: var(--ink); }
 .fr-add { margin-top: 10px; display: grid; gap: 8px; }
 .fr-mine { font-size: .9rem; }
 .fr-mine b { font-family: var(--display); font-weight: 400; font-size: 1.35rem; letter-spacing: .08em; color: var(--leaf); margin-left: 4px; }
@@ -366,6 +369,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       <button class="mode online" id="onlineBtn" type="button"><b>Play online</b><small>Join a public game with other Ribbit Tag players. No chat, and names are hidden.</small></button>
       <div class="friends" id="friends">
         <div class="fr-head"><span class="label">Friends</span><span id="frCount"></span><span class="spacer"></span><button class="pill-btn" id="frAddBtn" type="button" aria-expanded="false" aria-controls="frAdd">Add a friend</button></div>
+        <p class="fr-hello" id="frHello" role="status" hidden><span id="frHelloTxt"></span><button class="pill-btn" id="frHelloOk" type="button">OK</button></p>
         <ul class="fr-list" id="frList"></ul>
         <div class="fr-add" id="frAdd" hidden>
           <p class="fr-mine">Your friend code:<b id="frMine"></b></p>
@@ -542,7 +546,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-19';
+const APP_VERSION = 'ribbit-20';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -6904,6 +6908,14 @@ async function readPeer(p) { // try each friend's key on a peer's note; the righ
     return;
   }
 }
+// "Ben added you as a friend!" waits at the top of the Friends box until you tap OK, so it's there when you get back to the menu
+const frHellos = [];
+function showHellos() {
+  const n = frHellos, who = n.length < 3 ? n.join(' and ') : `${n.slice(0, -1).join(', ')}, and ${n[n.length - 1]}`;
+  $('frHelloTxt').textContent = n.length ? `${who} added you as ${n.length === 1 ? 'a friend' : 'friends'}!` : '';
+  $('frHello').hidden = !n.length;
+}
+$('frHelloOk').addEventListener('click', () => { frHellos.length = 0; showHellos(); });
 async function gotHi(x, peerId) { // someone who has my code added me: add them too
   const o = await unseal(myFriendCode, x); if (!o) return;
   const c = typeof o.c === 'string' ? cleanCode(o.c) : '', name = typeof o.n === 'string' ? o.n.trim().slice(0, 16) : '';
@@ -6913,6 +6925,7 @@ async function gotHi(x, peerId) { // someone who has my code added me: add them 
   const f = { code: c, name }; friends.push(f); saveFriends();
   frOnlineWas.add(c); // the "added you" message below says it, so skip "is online"
   if (state === 'play') flash(`${friendName(f)} added you as a friend!`, 'You can see each other on the Menu now.', 3.2, 'var(--leaf)');
+  frHellos.push(friendName(f)); showHellos();
   const p = presence.peers.get(peerId); if (p) await readPeer(p);
   renderOnline();
 }
