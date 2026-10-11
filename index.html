@@ -374,7 +374,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
             <input class="name-in" id="frIn" type="text" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="characters" placeholder="KP7-QX2">
             <button class="pill-btn" id="frSave" type="button">Add</button>
           </div>
-          <p class="note" id="frNote">Swap codes with a friend and add each other. Only frogs who have your code can see when you're online.</p>
+          <p class="note" id="frNote">Type a friend's code and you'll both show up on each other's lists. Only frogs who have your code can see when you're online.</p>
         </div>
       </div>
       <div class="row">
@@ -542,7 +542,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-18';
+const APP_VERSION = 'ribbit-19';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -1094,14 +1094,14 @@ const HOG_HI = ['Beep beep!', 'Vroom vroom!', "I'm driving!", 'Toadhog time!', '
 const HOG_RIDE = ['Can I come too?', 'Wait for me!', 'Shotgun!', 'Road trip!'];
 function aiSeat(ai, h, s) {
   h.seats[s] = ai; ai.hog = h; ai.seat = s; ai.vel.set(0, 0, 0);
-  ai.hogT = 0; ai.stuckT = 0; ai.stuckN = 0; ai.backT = 0; ai.wp = null; ai.hogWant = null; ai.hogSafeT = 0;
+  ai.hogT = 0; ai.stuckT = 0; ai.stuckN = 0; ai.backT = 0; ai.dodgeT = 0; ai.wp = null; ai.hogWant = null; ai.hogSafeT = 0; ai.fled = false;
   if (Math.random() < 0.5 && ai.talkCd <= 0 && flat(ai.pos, player.pos) < 25) say(ai, pick(s === 0 ? HOG_HI : HOG_RIDE));
 }
 function aiLeaveHog(ai) { hopOut(ai); ai.hogCd = 8 + Math.random() * 10; ai.hopT = 0.4; }
 function ejectAiHogs() { for (const a of ALL_AIS) if (a.hog) { if (a.hog.seats[a.seat] === a) a.hog.seats[a.seat] = null; a.hog = null; a.seat = -1; } }
 function aiHogThink(ai, dt) { // on foot: should I get in a hog? Returns true if walking to one took over this hop
   if (!hogs.length || ai.out || ai.iced || ai.frozen > 0) return false;
-  ai.hogCd = (ai.hogCd === undefined ? 5 + Math.random() * 10 : ai.hogCd) - dt;
+  ai.hogCd = (ai.hogCd === undefined ? 2 + Math.random() * 4 : ai.hogCd) - dt;
   const fb = ai.follow > 0 ? ai.followBody || player : null;
   if (fb && fb.hog && fb.seat === 0) { // ride along with the frog you're following
     const h = fb.hog, s = h.seats.indexOf(null, 1);
@@ -1116,10 +1116,10 @@ function aiHogThink(ai, dt) { // on foot: should I get in a hog? Returns true if
       if (goal) why = flat(goal, ai.pos) > 24 && Math.random() < 0.35;
       else if (ai.it) { const t = nearestTarget(ai); why = !!t && flat(t.pos, ai.pos) > 16 && Math.random() < 0.4; }
       else why = bodies.some(b => b.it && b !== ai && flat(b.pos, ai.pos) < 12) && Math.random() < 0.25;
-      if (mode === 'free') why = Math.random() < 0.06;
+      if (mode === 'free') why = Math.random() < 0.35;
     }
-    if (!why) { ai.hogCd = 2 + Math.random() * 3; return false; }
-    let best = null, bd = 14;
+    if (!why) { ai.hogCd = 1.5 + Math.random() * 2; return false; }
+    let best = null, bd = 30;
     for (const h of hogs) {
       if (h.seats[0] || (h.claim && h.claim !== ai && h.claimT > performance.now())) continue;
       const d = flat(h.pos, ai.pos); if (d < bd && Math.abs(h.pos.y - ai.pos.y) < 3) { bd = d; best = h; }
@@ -1134,6 +1134,21 @@ function aiHogThink(ai, dt) { // on foot: should I get in a hog? Returns true if
   return false; // keep walking; aiThink points the frog at ai.hogWant
 }
 const aiGoal = new V();
+function hogBlocked(h, x, z) { // would the hog hit something standing here?
+  if (Math.abs(x) > HALF - 2 || Math.abs(z) > HALF - 2) return true;
+  const lo = h.pos.y + HOG.step, hi = h.pos.y + 1.6, m = 1.1;
+  for (const b of boxes) if (b !== h.box && b.max.y > lo && b.min.y < hi && x > b.min.x - m && x < b.max.x + m && z > b.min.z - m && z < b.max.z + m) return true;
+  for (const t of trees) if (t.h > lo && t.y0 < hi && Math.hypot(x - t.x, z - t.z) < t.r + m) return true;
+  return hogGround(h, x, z) < h.pos.y - 3; // a big drop
+}
+function aiWaypoint(h) { // somewhere open, on about the same level, a good drive away
+  for (let i = 0; i < 20; i++) {
+    const x = (Math.random() - 0.5) * (HALF - 8) * 2, z = (Math.random() - 0.5) * (HALF - 8) * 2;
+    if (Math.hypot(x - h.pos.x, z - h.pos.z) < 15 || Math.abs(standY(x, z) - R - h.pos.y) > 2 || hogBlocked(h, x, z)) continue;
+    return new V(x, h.pos.y, z);
+  }
+  return new V(h.home[0], h.pos.y, h.home[1]);
+}
 function aiDriveInput(h, ai, dt) { // [throttle, steer] for a computer frog at the wheel; may hop out instead
   ai.hogT += dt;
   if (ai.iced || ai.out || state === 'menu') { aiLeaveHog(ai); return null; }
@@ -1146,22 +1161,27 @@ function aiDriveInput(h, ai, dt) { // [throttle, steer] for a computer frog at t
       let th = null, td = 30;
       for (const b of bodies) if (b.it && b !== ai) { const d = flat(b.pos, h.pos); if (d < td) { td = d; th = b; } }
       if (th) {
-        flee = true; reason = 'flee'; ai.hogSafeT = 0;
+        flee = true; reason = 'flee'; ai.hogSafeT = 0; ai.fled = true;
         const ax = h.pos.x - th.pos.x, az = h.pos.z - th.pos.z, al = Math.hypot(ax, az) || 1;
         goal = aiGoal.set(clamp(h.pos.x + ax / al * 25, -HALF + 8, HALF - 8), h.pos.y, clamp(h.pos.z + az / al * 25, -HALF + 8, HALF - 8));
-      } else ai.hogSafeT += dt;
+      } else if (ai.fled) ai.hogSafeT += dt; // got away: hop out once it's been safe a while
     }
   }
   if (!goal) { // joyride between random spots
-    if (!ai.wp || flat(ai.wp, h.pos) < 7 || ai.hogT > ai.wpT) { ai.wp = new V((Math.random() - 0.5) * (HALF - 10) * 2, h.pos.y, (Math.random() - 0.5) * (HALF - 10) * 2); ai.wpT = ai.hogT + 14; }
+    if (!ai.wp || flat(ai.wp, h.pos) < 7 || ai.hogT > ai.wpT) { ai.wp = aiWaypoint(h); ai.wpT = ai.hogT + 14; }
     goal = ai.wp;
   }
   const dx = goal.x - h.pos.x, dz = goal.z - h.pos.z, dist = Math.hypot(dx, dz);
   const diff = Math.atan2(Math.sin(Math.atan2(-dx, -dz) - h.yaw), Math.cos(Math.atan2(-dx, -dz) - h.yaw));
   let thr = 1, str = clamp(diff * 2.2, -1, 1);
+  if (h.speed > 2) { // whiskers: if something's in the way ahead, turn toward the clearer side
+    const look = 3 + h.speed * 0.3, ahead = a => hogBlocked(h, h.pos.x - Math.sin(h.yaw + a) * look, h.pos.z - Math.cos(h.yaw + a) * look);
+    if (ahead(str * 0.3)) { const l = ahead(0.6), r = ahead(-0.6); if (l !== r) str = l ? -1 : 1; else if (l) thr = 0.4; }
+  }
   if (Math.abs(diff) > 2.3 && dist < 9 && !flee) { thr = -0.7; str = -str; } // it's right behind: back up toward it
   else if (dist < 6 && reason !== 'chase') thr = 0.35;
-  if (ai.backT > 0) { ai.backT -= dt; thr = -1; str = ai.backSteer; }
+  if (ai.backT > 0) { ai.backT -= dt; thr = -1; str = ai.backSteer; if (ai.backT <= 0) { ai.dodgeT = 1.3; ai.wp = null; } }
+  else if (ai.dodgeT > 0) { ai.dodgeT -= dt; str = -ai.backSteer; } // then swing around whatever was in the way
   else if (Math.abs(h.speed) < 1.2 && !h.air) { // stuck against something: reverse and turn away
     ai.stuckT += dt;
     if (ai.stuckT > 0.7) { ai.stuckT = 0; ai.stuckN++; ai.backT = 1 + Math.random() * 0.5; ai.backSteer = -(Math.sign(str) || 1); }
@@ -6812,10 +6832,16 @@ const presence = { room: null, here: null, peers: new Map() };
 const myWhere = () => state === 'menu' ? 'menu' : !net ? 'solo' : net.isPublic ? 'public' : 'friends';
 // Friends: every device gets its own friend code. Each "here" message also carries a note locked with my code
 // (AES-GCM) saying my name and which game I'm in, so only frogs who typed my code can read it and hop in.
+// Adding works both ways: when I spot a friend online, I send them my own code locked with theirs, and they add me back
+// (unless they removed me before).
 const FR_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I, O, 0 or 1 to mix up
-let myFriendCode = '', friends = [], frOnlineWas = new Set(), frDrawn = '';
-try { myFriendCode = localStorage.getItem('ribbit-fcode') || ''; friends = JSON.parse(localStorage.getItem('ribbit-friends') || '[]'); } catch (e) {}
+let myFriendCode = '', friends = [], unfriended = [], frOnlineWas = new Set(), frDrawn = '';
+try {
+  myFriendCode = localStorage.getItem('ribbit-fcode') || '';
+  friends = JSON.parse(localStorage.getItem('ribbit-friends') || '[]'); unfriended = JSON.parse(localStorage.getItem('ribbit-unfriended') || '[]');
+} catch (e) {}
 if (!Array.isArray(friends)) friends = [];
+if (!Array.isArray(unfriended)) unfriended = [];
 const isFriendCode = c => c.length === 6 && [...c].every(ch => FR_ABC.includes(ch));
 if (!isFriendCode(myFriendCode)) {
   myFriendCode = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => FR_ABC[b % 32]).join('');
@@ -6823,7 +6849,12 @@ if (!isFriendCode(myFriendCode)) {
 }
 const showCode = c => c.slice(0, 3) + '-' + c.slice(3);
 const friendName = f => f.name || showCode(f.code);
-function saveFriends() { try { localStorage.setItem('ribbit-friends', JSON.stringify(friends.map(({ code, name }) => ({ code, name })))); } catch (e) {} }
+function saveFriends() {
+  try {
+    localStorage.setItem('ribbit-friends', JSON.stringify(friends.map(({ code, name }) => ({ code, name }))));
+    localStorage.setItem('ribbit-unfriended', JSON.stringify(unfriended));
+  } catch (e) {}
+}
 const frKeys = new Map();
 function frKey(code) {
   if (!frKeys.has(code)) frKeys.set(code, (async () => {
@@ -6835,30 +6866,55 @@ function frKey(code) {
   return frKeys.get(code);
 }
 const b64 = u => btoa(String.fromCharCode(...u)), unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
-async function lockNote() {
-  const key = await frKey(myFriendCode); if (!key) return null;
+async function seal(code, obj) {
+  const key = await frKey(code); if (!key) return null;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
+  return b64(iv) + '.' + b64(new Uint8Array(box));
+}
+async function unseal(code, x) { // null unless x was locked with this code
+  if (typeof x !== 'string' || x.length > 600) return null;
+  const key = await frKey(code); if (!key) return null;
+  try {
+    const [iv, box] = x.split('.');
+    const o = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, key, unb64(box))));
+    return o && typeof o === 'object' ? o : null;
+  } catch (e) { return null; }
+}
+function lockNote() {
   const note = { n: playerName || '', w: myWhere(), m: mapKey };
   if (net && state !== 'menu') { if (net.isPublic) note.l = net.lobby; else note.r = net.code; }
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(note)));
-  return b64(iv) + '.' + b64(new Uint8Array(box));
+  return seal(myFriendCode, note);
 }
 async function readPeer(p) { // try each friend's key on a peer's note; the right one opens it, the rest fail
   p.fr = null; p.note = null;
-  if (typeof p.x !== 'string' || p.x.length > 600 || !friends.length) return;
-  const [iv, box] = p.x.split('.');
+  if (!friends.length) return;
   for (const f of friends) {
-    const key = await frKey(f.code); if (!key) continue;
-    let n; try { n = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, key, unb64(box)))); } catch (e) { continue; }
-    if (!n || typeof n !== 'object') continue;
+    const n = await unseal(f.code, p.x); if (!n) continue;
     const lobby = Math.floor(+n.l) || 0, room = typeof n.r === 'string' ? cleanCode(n.r) : '';
     p.fr = f.code;
     p.note = { w: ['menu', 'solo', 'public', 'friends'].includes(n.w) ? n.w : 'menu', m: MAPS[n.m] ? n.m : '',
       l: lobby >= 1 && lobby <= PUBLIC_LOBBIES ? lobby : 0, r: room };
     const name = typeof n.n === 'string' ? n.n.trim().slice(0, 16) : '';
     if (name && name !== f.name) { f.name = name; saveFriends(); }
+    if (!p.hiSent && p.id && presence.hi) { // once per visit: hand them my code so they add me back
+      p.hiSent = true;
+      seal(f.code, { c: myFriendCode, n: playerName || '' }).then(x => { if (x) presence.hi.send(x, { target: p.id }); }).catch(() => {});
+    }
     return;
   }
+}
+async function gotHi(x, peerId) { // someone who has my code added me: add them too
+  const o = await unseal(myFriendCode, x); if (!o) return;
+  const c = typeof o.c === 'string' ? cleanCode(o.c) : '', name = typeof o.n === 'string' ? o.n.trim().slice(0, 16) : '';
+  if (!isFriendCode(c) || c === myFriendCode || unfriended.includes(c) || friends.length >= 100) return;
+  const known = friends.find(f => f.code === c);
+  if (known) { if (name && name !== known.name) { known.name = name; saveFriends(); renderOnline(); } return; }
+  const f = { code: c, name }; friends.push(f); saveFriends();
+  frOnlineWas.add(c); // the "added you" message below says it, so skip "is online"
+  if (state === 'play') flash(`${friendName(f)} added you as a friend!`, 'You can see each other on the Menu now.', 3.2, 'var(--leaf)');
+  const p = presence.peers.get(peerId); if (p) await readPeer(p);
+  renderOnline();
 }
 async function sendHere(target) {
   if (!presence.here) return;
@@ -6920,7 +6976,9 @@ function renderFriends() {
     x.setAttribute('aria-label', `Remove ${friendName(f)}`);
     x.addEventListener('click', () => {
       if (!confirm(`Remove ${friendName(f)} from your friends?`)) return;
-      friends = friends.filter(o => o !== f); saveFriends();
+      friends = friends.filter(o => o !== f);
+      if (!unfriended.includes(f.code)) unfriended.push(f.code); // so their next hello doesn't add them right back
+      saveFriends();
       for (const p of presence.peers.values()) if (p.fr === f.code) { p.fr = null; p.note = null; }
       renderOnline();
     });
@@ -6940,9 +6998,9 @@ async function addFriend() {
   if (!isFriendCode(c)) { note.textContent = "That doesn't look like a friend code. They have 6 letters and numbers, like KP7-QX2."; return; }
   if (c === myFriendCode) { note.textContent = "That's your own code! Type your friend's code instead."; return; }
   if (friends.some(f => f.code === c)) { note.textContent = `${friendName(friends.find(f => f.code === c))} is already your friend.`; return; }
-  friends.push({ code: c, name: '' }); saveFriends();
+  friends.push({ code: c, name: '' }); unfriended = unfriended.filter(o => o !== c); saveFriends();
   $('frIn').value = '';
-  note.textContent = `Added ${showCode(c)}! They'll show up here when they're online. Ask them to add your code too.`;
+  note.textContent = `Added ${showCode(c)}! They'll show up here when they're online, and you'll show up on their list too.`;
   await Promise.all([...presence.peers.values()].filter(p => !p.fr).map(readPeer)); // maybe they're already here
   renderOnline();
 }
@@ -6959,12 +7017,13 @@ async function startPresence() {
   let lib;
   try { lib = await import(TRYSTERO); } catch (e) { $('onlineNow').textContent = 'Offline'; return; }
   const room = lib.joinRoom({ appId: 'asher-ribbit-tag-v1', relayConfig: { redundancy: 16 } }, 'presence-v1');
-  presence.room = room; presence.here = room.makeAction('here');
+  presence.room = room; presence.here = room.makeAction('here'); presence.hi = room.makeAction('hi');
+  presence.hi.onMessage = (x, { peerId }) => { gotHi(x, peerId); };
   room.onPeerJoin = id => { presence.peers.set(id, { w: 'menu', t: Date.now() }); sendHere(id); renderOnline(); };
   room.onPeerLeave = id => { presence.peers.delete(id); renderOnline(); };
   presence.here.onMessage = async (d, { peerId }) => {
     const p = presence.peers.get(peerId) || {};
-    p.w = d && ['menu', 'solo', 'public', 'friends'].includes(d.w) ? d.w : 'menu'; p.t = Date.now(); p.x = d && d.x;
+    p.id = peerId; p.w = d && ['menu', 'solo', 'public', 'friends'].includes(d.w) ? d.w : 'menu'; p.t = Date.now(); p.x = d && d.x;
     presence.peers.set(peerId, p);
     await readPeer(p);
     renderOnline();
