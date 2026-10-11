@@ -410,6 +410,15 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
           <button type="button" data-v="0" aria-pressed="false" id="vOff">Off</button>
         </div>
       </div>
+      <div class="row">
+        <span class="label">Graphics</span>
+        <div class="seg" id="gfxSeg">
+          <button type="button" data-g="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-g="nice" aria-pressed="false">Nice</button>
+          <button type="button" data-g="fast" aria-pressed="false">Fast</button>
+        </div>
+      </div>
+      <p class="note" id="gfxNote" hidden>Reload the page to switch smooth edges on or off.</p>
       <div class="best" id="best"></div>
     </div>
     <div class="how">
@@ -472,8 +481,12 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
 // ---------- Renderer ----------
 const canvas = $('game');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+// Graphics: 'auto' (shadows on, dropped if the device struggles), 'nice' (always on), 'fast' (no shadows, lower resolution)
+let gfx = 'auto', shadowAutoOff = false;
+try { gfx = localStorage.getItem('ribbit-gfx') || 'auto'; } catch (e) {}
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: gfx !== 'fast', powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, gfx === 'fast' ? 1 : 1.5));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 const SKY = 0xa9d9e6;
 scene.background = new THREE.Color(SKY);
@@ -483,7 +496,23 @@ camera.rotation.order = 'YXZ';
 scene.add(camera);
 const sun = new THREE.DirectionalLight(0xfff1d6, 0.75);
 sun.position.set(20, 40, 10);
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -38, right: 38, top: 38, bottom: -38, near: 1, far: 120 });
+sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
 scene.add(sun);
+const shadowsWanted = () => !(MAPS[mapKey] && MAPS[mapKey].indoor) && (gfx === 'nice' || (gfx === 'auto' && !shadowAutoOff));
+// everything solid casts and catches shadows; see-through things (ghosts, glass, water) don't cast
+function shadowFlags(root) { root.traverse(m => { if (m.isMesh) { const clear = m.material && m.material.transparent; m.castShadow = !clear; m.receiveShadow = true; } }); }
+// a sky that fades from the fog color at the horizon to a deeper color overhead
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(130, 24, 12), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+skyDome.renderOrder = -1; scene.add(skyDome);
+function paintSky(hex) {
+  const g = skyDome.geometry, pos = g.attributes.position, n = pos.count;
+  if (!g.attributes.color) g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  const horizon = new THREE.Color(hex), top = horizon.clone().offsetHSL(0, 0.1, -0.14), c = new THREE.Color(), col = g.attributes.color;
+  for (let i = 0; i < n; i++) { const t = Math.pow(Math.max(0, pos.getY(i) / 130), 0.7); c.copy(horizon).lerp(top, t); col.setXYZ(i, c.r, c.g, c.b); }
+  col.needsUpdate = true; skyDome.userData.hex = hex;
+}
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
   camera.aspect = innerWidth / innerHeight;
@@ -702,7 +731,7 @@ const MAPS = {
   },
   caves: {
     label: 'Crystal Caves', sky: 0x17132a, fog: [10, 46], hemi: [0x9a8fe0, 0x2a2238, 0.75], sun: 0.3,
-    spawn: [0, 18], ring: [0, 0, 14],
+    spawn: [0, 18], ring: [0, 0, 14], indoor: true,
     idle: ["It's so dark in here!", "Ooh, shiny crystals!", "Did you hear that echo?", "Those mushrooms are glowing!"],
     build() {
       addGround(M.stone); addWalls(M.caveWall); addEdgeRocks(M.caveRock, 32, 7);
@@ -1340,7 +1369,7 @@ const MAPS = {
   },
   backrooms: {
     label: 'The Backrooms', sky: 0xcbb764, fog: [5, 34], hemi: [0xfff3c2, 0x8f7d3e, 1.05], sun: 0.3,
-    spawn: [0, 2], ring: [0, 2, 10],
+    spawn: [0, 2], ring: [0, 2, 10], indoor: true, // no sun shadows under a ceiling
     idle: ["Where even are we?", "Every room looks the same!", "Bzzzz... the lights are humming!", "Ew, the carpet is soggy!", "I think we've been here before...", "Is that an exit sign?"],
     build() {
       addGround(M.brCarpet); addWalls(M.brWall);
@@ -1709,6 +1738,7 @@ function buildMap(key) {
   scene.background.setHex(mp.sky); scene.fog.color.setHex(mp.sky); scene.fog.near = mp.fog[0]; scene.fog.far = mp.fog[1];
   if (typeof spawnFlies === 'function' && flyGeo) spawnFlies();
   hemiLight.color.setHex(mp.hemi[0]); hemiLight.groundColor.setHex(mp.hemi[1]); hemiLight.intensity = mp.hemi[2]; sun.intensity = mp.sun;
+  shadowFlags(mapGroup); paintSky(mp.sky);
 }
 function mergeStatic() {
   const groups = new Map();
@@ -2272,6 +2302,7 @@ function dressUp(o, look) {
     for (const z of [-0.18, 0.08, 0.32]) { const k = Math.sqrt(Math.max(0.2, 1 - (z / 0.5) ** 2)); part(acc, GEO.ring, cmat(skinItem.stripes), 0.56 * k, 0.43 * k, 0.4, 0, 0, z); }
   }
   if (o.ownerAi) acc.traverse(m => { m.userData.ai = o.ownerAi; });
+  shadowFlags(o.group);
 }
 function makeFrog(skinHex, look) { // a frog: squat body, wide head, bulging eyes, sticky hands
   const skin = new THREE.MeshLambertMaterial({ color: skinHex });
@@ -3929,6 +3960,7 @@ for (const [key, def] of Object.entries(MYSTERY_DEFS)) {
   if (key === 'shadow') o.group.traverse(m => { if (m.material === M.eye || m.material === faceMat) m.material = o.skin; });
   if (key === 'lumi') o.group.traverse(m => { if (m.material && m.material !== o.skin && !m.material.transparent) { m.material = m.material.clone(); m.material.transparent = true; m.material.opacity = 0.55; } });
   o.group.traverse(m => { m.userData.mystery = key; });
+  shadowFlags(o.group);
   o.group.visible = false;
   o.tag = document.createElement('div'); o.tag.className = 'bubble nametag myst'; o.tag.style.background = def.tint; o.tag.textContent = def.name; o.tag.hidden = true; bubbleLayer.append(o.tag);
   o.bubble = document.createElement('div'); o.bubble.className = 'bubble myst'; o.bubble.hidden = true; bubbleLayer.append(o.bubble);
@@ -6056,7 +6088,16 @@ function modeRules() { // the same one-line rules the menu buttons show
   flash(MODE_NAMES[mode] || 'Ribbit Tag', `${rules} Map: ${MAPS[mapKey].label}.`, 4, 'var(--leaf)');
 }
 $('info').addEventListener('click', e => { e.currentTarget.blur(); modeRules(); });
-const maxQuality = Math.min(window.devicePixelRatio || 1, 1.25);
+function showGfx() { document.querySelectorAll('#gfxSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === gfx))); }
+const gfxAtLoad = gfx;
+document.querySelectorAll('#gfxSeg button').forEach(b => b.addEventListener('click', () => {
+  gfx = b.dataset.g; shadowAutoOff = false;
+  try { localStorage.setItem('ribbit-gfx', gfx); } catch (e) {}
+  showGfx();
+  $('gfxNote').hidden = (gfx === 'fast') === (gfxAtLoad === 'fast'); // smooth edges are fixed when the page loads
+}));
+showGfx();
+const maxQuality = Math.min(window.devicePixelRatio || 1, gfx === 'fast' ? 1 : 1.5);
 let quality = maxQuality, fpsTime = 0, fpsFrames = 0;
 function adaptQuality(raw) {
   if (raw > 0.5) return; // tab was asleep
@@ -6064,14 +6105,19 @@ function adaptQuality(raw) {
   if (fpsTime < 2) return;
   const fps = fpsFrames / fpsTime; fpsTime = 0; fpsFrames = 0;
   let q = quality;
+  if (fps < 34 && gfx === 'auto' && !shadowAutoOff && q <= 0.8) { shadowAutoOff = true; return; } // still slow at low resolution: drop the shadows
   if (fps < 40 && q > 0.6) q = Math.max(0.6, q - 0.2);
   else if (fps > 57 && q < maxQuality) q = Math.min(maxQuality, q + 0.1);
   if (q !== quality) { quality = q; renderer.setPixelRatio(q); resize(); }
 }
+const skyPos = new V();
 function frame(now) {
   requestAnimationFrame(frame);
   const raw = (now - last) / 1000, dt = Math.min(0.05, raw); last = now;
   adaptQuality(raw);
+  const wantShadow = shadowsWanted() && !(MODE2.bat && MODE2.bat.active);
+  if (sun.castShadow !== wantShadow) sun.castShadow = wantShadow;
+  skyDome.position.copy(camera.getWorldPosition(skyPos)); skyDome.visible = scene.background.getHex() === skyDome.userData.hex;
   pollGamepad(dt);
   const t = now / 1000;
   if (state === 'menu') {
