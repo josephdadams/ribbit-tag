@@ -4173,6 +4173,9 @@ async function loadNetLibs(all) {
 // With relay on (game rooms), devices also pass messages along for pairs that can't connect directly: every 2 seconds each
 // device tells its direct peers who it's connected to, and anyone I can only reach through someone else counts as here too.
 // Some browser pairs never connect (Firefox to an iPhone on the same Wi-Fi, for one), but both can usually reach a third.
+// That 2-second hello goes out on every path, and messages go over whichever path last heard from that player: a path can
+// go quiet without closing (Firefox does this), and messages sent down it would just vanish. A player who's gone quiet on
+// every path for a few seconds is reached through someone else, if anyone can.
 function joinMulti(libs, name, relay = false) {
   const rooms = [];
   for (const { name: path, lib, cfg } of libs) {
@@ -4182,19 +4185,27 @@ function joinMulti(libs, name, relay = false) {
   const peers = new Map(); // direct peers -> the paths that see them
   const links = new Map(), relayed = new Set(), handlers = new Map(); // links: direct peer -> who they see directly
   let rlySend = null, linkTimer = 0;
-  const viaFor = id => { for (const [n, l] of links) if (peers.has(n) && l.has(id)) return n; return null; };
+  const lastRx = new Map(); // peer -> { path: when I last heard them on it, _j: when they joined }
+  const heard = (id, path) => { let m = lastRx.get(id); if (!m) lastRx.set(id, m = {}); m[path] = performance.now(); };
+  const quiet = id => { const m = lastRx.get(id); return !m || performance.now() - Math.max(...Object.values(m)) > 6000; };
+  const bestPath = (id, via) => { const m = lastRx.get(id) || {}; let best = null, bt = -1; for (const p of via) if ((m[p] || 0) > bt) { bt = m[p] || 0; best = p; } return best; };
+  const viaFor = id => { for (const [n, l] of links) if (peers.has(n) && !quiet(n) && l.has(id)) return n; return null; };
+  const useRelay = id => relay && quiet(id) && viaFor(id); // gone quiet directly, but someone else can still reach them
   const M = { onPeerJoin: null, onPeerLeave: null,
     paths: id => peers.has(id) ? [...peers.get(id)] : relayed.has(id) ? ['relay'] : [],
     sockets: () => rooms.reduce((all, { lib }) => { try { return all.concat(Object.values(lib.getRelaySockets ? lib.getRelaySockets() : {})); } catch (e) { return all; } }, []),
     leave: () => { clearInterval(linkTimer); rooms.forEach(({ r }) => { try { r.leave(); } catch (e) {} }); } };
-  const makeRaw = (key, onMsg) => { // one action across every path; sends to a direct peer over whichever path sees them
+  const makeRaw = (key, onMsg) => { // one action across every path; sends to a direct peer over the path that last heard them
     const acts = rooms.map(({ path, r }) => ({ path, a: r.makeAction(key) }));
-    acts.forEach(({ a }) => { a.onMessage = onMsg; });
-    return (data, id) => {
+    acts.forEach(({ path, a }) => { a.onMessage = (d, meta) => { heard(meta.peerId, path); onMsg(d, meta); }; });
+    const out = (x, data, id) => { try { const p = x.a.send(data, { target: id }); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
+    const send = (data, id) => {
       const via = peers.get(id); if (!via) return;
-      const pick = acts.find(x => via.has(x.path)); if (!pick) return;
-      try { const p = pick.a.send(data, { target: id }); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+      const best = bestPath(id, via), pick = acts.find(x => x.path === best) || acts.find(x => via.has(x.path));
+      if (pick) out(pick, data, id);
     };
+    send.all = (data, id) => { const via = peers.get(id); if (via) for (const x of acts) if (via.has(x.path)) out(x, data, id); };
+    return send;
   };
   function reroute() { // who can I reach only through someone else? join and leave them like anyone else
     if (!relay) return;
@@ -4212,6 +4223,7 @@ function joinMulti(libs, name, relay = false) {
       let via = peers.get(id); const fresh = !via && !relayed.has(id);
       if (!via) peers.set(id, via = new Set());
       via.add(path); relayed.delete(id); // reached directly now: no second hello
+      if (!lastRx.has(id)) lastRx.set(id, { _j: performance.now() });
       if (fresh && M.onPeerJoin) M.onPeerJoin(id);
       tellLinks();
     };
@@ -4219,7 +4231,7 @@ function joinMulti(libs, name, relay = false) {
       const via = peers.get(id); if (!via) return;
       via.delete(path);
       if (via.size) return;
-      peers.delete(id); links.delete(id);
+      peers.delete(id); links.delete(id); lastRx.delete(id);
       if (relay && viaFor(id)) relayed.add(id); // still reachable through someone else: they haven't left
       else if (M.onPeerLeave) M.onPeerLeave(id);
       reroute(); tellLinks();
@@ -4229,8 +4241,8 @@ function joinMulti(libs, name, relay = false) {
     const act = { onMessage: null, send(data, opts) {
       const ids = opts && opts.target ? [opts.target] : [...peers.keys(), ...relayed];
       for (const id of ids) {
-        if (peers.has(id)) sendTo(data, id);
-        else if (rlySend && relayed.has(id)) { const n = viaFor(id); if (n) rlySend({ t: id, k: key, d: data }, n); }
+        if (peers.has(id) && !useRelay(id)) sendTo(data, id);
+        else if (rlySend && (relayed.has(id) || peers.has(id))) { const n = viaFor(id); if (n) rlySend({ t: id, k: key, d: data }, n); }
       }
     } };
     const sendTo = makeRaw(key, (d, meta) => { if (act.onMessage) act.onMessage(d, meta); });
@@ -4241,7 +4253,7 @@ function joinMulti(libs, name, relay = false) {
     rlySend = makeRaw('rly', (m, { peerId }) => {
       if (!m || typeof m !== 'object' || typeof m.k !== 'string' || !peers.has(peerId)) return;
       if (typeof m.t === 'string') { if (peers.has(m.t)) rlySend({ f: peerId, k: m.k, d: m.d }, m.t); return; } // pass it on
-      if (typeof m.f !== 'string' || !relayed.has(m.f)) return; // passed on to me (the relay names the sender, so it can't be faked by others)
+      if (typeof m.f !== 'string' || !(relayed.has(m.f) || peers.has(m.f))) return; // passed on to me (the relay names the sender, so it can't be faked by others)
       const act = handlers.get(m.k); if (act && act.onMessage) act.onMessage(m.d, { peerId: m.f });
     });
     const lnkSend = makeRaw('lnk', (ids, { peerId }) => {
@@ -4249,7 +4261,10 @@ function joinMulti(libs, name, relay = false) {
       links.set(peerId, new Set(ids.filter(x => typeof x === 'string').slice(0, 64)));
       reroute();
     });
-    tellLinks = () => { const ids = [...peers.keys()]; for (const id of ids) lnkSend(ids, id); };
+    tellLinks = () => { // only links that are really working, so nobody routes through a dead one
+      const ids = [...peers.keys()].filter(id => !quiet(id));
+      for (const id of peers.keys()) lnkSend.all(ids, id);
+    };
     linkTimer = setInterval(tellLinks, 2000);
   }
   return M;
@@ -4276,7 +4291,13 @@ function pickHostRoles() { // friends rooms: the host is whoever tapped a mode w
     try { net.prof.send(myProfile()); } catch (e) {}
     flash(`${h ? h.name : 'Someone'} is already hosting ${net.code}`, 'Joining their game instead.', 3, 'var(--leaf)');
   } else if (net.role === 'guest' && net.hostId) { joinWait = true; }
-  else if (net.role === 'guest' && was && !net.hostId) flash('The host left', 'Waiting for them to come back. Tap Menu to host your own game.', 4, 'var(--lava)');
+  else if (net.role === 'guest' && was && !net.hostId) {
+    flash('Lost the host', 'Reconnecting… Tap Menu to host your own game.', 4, 'var(--lava)');
+    const code = net.code;
+    setTimeout(() => { // usually just a dropped connection: reconnect right away rather than waiting for keepLooking
+      if (state !== 'menu' && net && net.code === code && net.role === 'guest' && !net.hostId) { leaveNet(); joinNet(code, 0, 'guest'); }
+    }, 4000);
+  }
 }
 function pickHost() {
   if (net.role && net.role !== 'auto') return pickHostRoles();
