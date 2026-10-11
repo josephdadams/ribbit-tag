@@ -495,13 +495,14 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">&darr;</span><span><strong>Swipe down</strong> to shove the ground away and launch forward. Faster swipes make bigger leaps.</span></li>
         <li><span class="ic">&harr;</span><span><strong>Swipe sideways</strong> to turn around.</span></li>
         <li><span class="ic">&uarr;</span><span>Next to a tree or rock wall? Keep swiping down to <strong>climb</strong> it. The treehouse has steps.</span></li>
+        <li><span class="ic">✋</span><span><strong>Hold your finger down</strong> while touching a wall, tree or ceiling to <strong>hang on</strong>. Swipe down to climb higher, let go to drop.</span></li>
         <li><span class="ic hot">!</span><span>Your hands go see-through when there is nothing close enough to grab. The arrow at the top points to the lava frog.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
         <li class="keys-li"><span class="ic">Pad</span><div><strong>Controller</strong>
-          <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
+          <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RB</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
           <p class="keys-sub">On menus</p><dl class="keys"><dt><kbd>D-pad</kbd></dt><dd>Move around</dd><dt><kbd>A</kbd></dt><dd>Pick</dd><dt><kbd>B</kbd></dt><dd>Go back</dd></dl></div></li>
         <li class="keys-li"><span class="ic">Key</span><div><strong>Keyboard</strong>
-          <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>L</kbd></dt><dd>Scores</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
+          <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>C</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>L</kbd></dt><dd>Scores</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
           <p class="keys-sub">On the menu</p><dl class="keys"><dt><kbd>1</kbd></dt><dd>Infection</dd><dt><kbd>2</kbd></dt><dd>Classic</dd><dt><kbd>3</kbd></dt><dd>Capture the Lily Pad</dd><dt><kbd>4</kbd></dt><dd>Freeze Tag</dd><dt><kbd>5</kbd></dt><dd>Hot Potato</dd><dt><kbd>6</kbd></dt><dd>Fly Feast</dd><dt><kbd>7</kbd></dt><dd>Free Play</dd><dt><kbd>8</kbd></dt><dd>King of the Lily Pad</dd><dt><kbd>Q</kbd></dt><dd>Daily quests</dd><dt><kbd>O</kbd></dt><dd>Play online</dd><dt><kbd>R</kbd></dt><dd>Wardrobe</dd><dt><kbd>F</kbd></dt><dd>Meet the frogs</dd></dl></div></li>
       </ul>
     </div>
@@ -547,7 +548,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-24';
+const APP_VERSION = 'ribbit-25';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -2684,7 +2685,11 @@ function collide(b) {
   if (p.y > 40) { p.y = 40; if (v.y > 0) v.y = 0; }
 }
 function physics(b, dt) {
-  b.vel.y -= G * dt;
+  if (b.hang) { // hanging on: no gravity, a falling frog is caught, and we lean into the surface so we stay stuck to it
+    const v = b.vel; v.y *= Math.exp(-(v.y < 0 ? 10 : 3) * dt);
+    const f = Math.exp(-4 * dt); v.x *= f; v.z *= f;
+    v.addScaledVector(b.hangN, -6 * dt);
+  } else b.vel.y -= G * dt;
   if (b.frozen > 0) { const f = Math.exp(-8 * dt); b.vel.x *= f; b.vel.z *= f; }
   b.pos.addScaledVector(b.vel, dt);
   const wasGrounded = b.grounded, vy = b.vel.y;
@@ -2694,6 +2699,21 @@ function physics(b, dt) {
   const wet = b.pos.y < R + 0.3 && (water && b.pos.z > water.z || slowZones.some(([x0, x1, z0, z1]) => b.pos.x > x0 && b.pos.x < x1 && b.pos.z > z0 && b.pos.z < z1));
   const k = wet ? 6 : b.onIce ? 0.35 : b.grounded ? (b.isPlayer ? 3.2 : 4) : airDrag, f = Math.exp(-k * dt);
   b.vel.x *= f; b.vel.z *= f;
+}
+// Grabbing: hold a finger down (or C, or RB) while touching a wall, tree or ceiling to hang on. Swipe down to climb.
+let padGrip = false;
+function updateGrip() {
+  const b = player, was = b.hang;
+  if (!b.hangN) b.hangN = new V();
+  b.hang = 0;
+  if (!(pointers.size || keys.KeyC || padGrip) || state === 'menu' || b.hog || b.frozen > 0 || b.iced || b.out || b.grounded) return;
+  const best = surfaceGap(b.pos);
+  if (wallGap < 0.2) { b.hang = 1; b.hangN.copy(wallN); }
+  else if (best < 0.2 && sN.y < -0.5) { b.hang = 2; b.hangN.copy(sN); } // the ceiling
+  if (b.hang && !was) { sfxSlap(0.22); handKick[0] = handKick[1] = 0.18; }
+  if (was === 1 && !b.hang && best < REACH && sN.y > 0.5) { // climbed past the top of the wall: pull up onto it
+    b.vel.y = Math.max(b.vel.y, 4.5); b.vel.x -= b.hangN.x * 2.5; b.vel.z -= b.hangN.z * 2.5;
+  }
 }
 // Nearest grabbable surface for the player's hands
 const sN = new V(), wallN = new V();
@@ -3997,7 +4017,7 @@ function reply(ai, text) {
       line = !lava.length ? 'Nobody yet!' : ai.it ? "Me! And I'm coming for you!" : player.it && lava.length === 1 ? "You are, silly!" : fill('{lava}! Run!', ai);
       break;
     }
-    case 'help': line = 'Swipe down to push off the ground. Swipe down next to a wall or tree to climb it!'; break;
+    case 'help': line = 'Swipe down to push off the ground. Swipe down next to a wall or tree to climb it, and hold your finger down to hang on!'; break;
     case 'follow':
       if (ai.it && !player.it) line = "Follow you? I'm lava! I'll follow you all right!";
       else if (player.it && !ai.it) line = "No way, you're lava!";
@@ -4603,7 +4623,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (GAME_KEYS.includes(e.code)) e.preventDefault();
-  if (!usedKeys) { usedKeys = true; $('hint').textContent = 'W to push forward · A/D to turn · Space to jump · T to talk'; }
+  if (!usedKeys) { usedKeys = true; $('hint').textContent = 'W to push forward · A/D to turn · Space to jump · Hold C to grab · T to talk'; }
   if (e.code === 'Escape') { if (!$('scores').hidden) toggleScores(false); else if (!$('players').hidden) togglePlayers(false); else if (talkOpen) $('talk').hidden = true; else $('menuBtn').click(); return; }
   if (e.code === 'KeyH') { claimHost(); return; }
   if (e.code === 'KeyP') { toggleScores(false); togglePlayers(); return; }
@@ -5811,7 +5831,7 @@ let padPrev = [], padNavT = 0, padSeen = false;
 addEventListener('gamepadconnected', e => {
   padSeen = true;
   flash('Controller connected', 'Left stick to push, right stick to turn, A to jump.', 2.6, 'var(--leaf)');
-  if (!usedKeys) $('hint').textContent = 'Left stick to push · right stick to turn · A to jump · X to talk';
+  if (!usedKeys) $('hint').textContent = 'Left stick to push · right stick to turn · A to jump · hold RB to grab · X to talk';
 });
 function activePad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -5845,6 +5865,7 @@ function padBack() {
 }
 function pollGamepad(dt) {
   const p = activePad();
+  padGrip = false;
   if (!p) return;
   if (!padSeen) { padSeen = true; }
   const b = i => !!(p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.5));
@@ -5865,6 +5886,7 @@ function pollGamepad(dt) {
     player.yaw -= rx * 2.8 * dt;
     hogPad.t = player.hog ? -ly + (b(PAD.RT) ? 1 : 0) - (b(PAD.LT) ? 1 : 0) : 0; hogPad.s = player.hog ? -lx : 0;
     if (pressed(PAD.LB)) toggleHog();
+    padGrip = b(PAD.RB) && !talkOpen;
     if (player.hog) { if (pressed(PAD.A)) honk(); }
     else if (keyCd <= 0 && player.frozen <= 0) {
       const power = b(PAD.RT) || b(PAD.LT) ? 1.8 : 0.9, mag = Math.hypot(lx, ly);
@@ -7207,6 +7229,7 @@ function update(dt, t) {
   player.yaw += turnKeys * 2.4 * dt;
   handKick[0] = Math.max(0, handKick[0] - dt); handKick[1] = Math.max(0, handKick[1] - dt);
   keyMove();
+  updateGrip();
 
   const steps = 2, h = dt / steps;
   const host = isHost();
