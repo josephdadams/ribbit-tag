@@ -61,6 +61,10 @@ h1 span { color: var(--lava); display: block; }
 .seg { display: inline-flex; background: var(--ink); border-radius: 999px; padding: 3px; }
 .seg button { font: inherit; font-weight: 800; border: 0; background: transparent; color: var(--bone); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
 .seg.maps { flex-wrap: wrap; border-radius: 18px; }
+.season-label { flex-basis: 100%; padding: 4px 10px 2px; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #ff9f5a; }
+.seg button.seasonal { background: #3a2433; color: #ffd6a8; }
+.seg button.seasonal small { font-size: .72rem; opacity: .8; }
+.seg button.seasonal[aria-pressed="true"] { background: #ff9f5a; color: var(--ink); }
 .seg button[aria-pressed="true"] { background: var(--bone); color: var(--ink); }
 .best { margin-top: 10px; font-size: .9rem; opacity: .75; font-variant-numeric: tabular-nums; }
 .how h2 { font-family: var(--display); font-weight: 400; font-size: 1.5rem; margin: 0 0 10px; color: var(--leaf); }
@@ -432,7 +436,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-12';
+const APP_VERSION = 'ribbit-13';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -482,6 +486,7 @@ const boxes = [], trees = [], blobs = [], ledges = [];
 const mapGroup = new THREE.Group();
 scene.add(mapGroup);
 let ownGeos = [], water = null, mapKey = 'forest', slowZones = [], airDrag = 0.15;
+var mapAnims = [];
 const geo = g => { ownGeos.push(g); return g; };
 const put = m => { mapGroup.add(m); return m; };
 const fx = c => new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: 0.6 });
@@ -526,6 +531,15 @@ Object.assign(M, {
   floorboards: lam(0xc8965a), wallpaper: lam(0xa8d8f0), rug: lam(0xe86a8a), windowSky: fx(0x9fd8ff), blanket: lam(0x4a7ae8), pillow: lam(0xfff8f0), woodToy: lam(0xd8a060),
   blockR: lam(0xe63946), blockY: lam(0xffd23f), blockB: lam(0x3a86ff), blockG: lam(0x52b788), bookA: lam(0x8a3a5a), bookB: lam(0x3a5a8a), bookC: lam(0x5a8a3a),
   iceWall: new THREE.MeshLambertMaterial({ color: 0x7fb6e0, emissive: 0x0a1c30 }), iceRoof: lam(0x3f7ab8),
+});
+Object.assign(M, {
+  manorWall: lam(0x6e5f82), manorFloor: lam(0x6a5440), manorRoof: lam(0x3a2f48), cobweb: new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.25, depthWrite: false }), hedge: lam(0x2f5a2a),
+  farmGrass: lam(0x8aab4a), fenceWood: lam(0x9a7650), barnRed: lam(0xb83232), barnRoof: lam(0x5a3a2a), hay: lam(0xe8c860), tractor: lam(0x3a8a3a), corn: lam(0xc8b04a),
+  autumnA: lam(0xe8833a), autumnB: lam(0xd84a2a), autumnC: lam(0xe8c040),
+  ginger: lam(0xa8643a), brick: lam(0x8a3a2a), giftA: lam(0xe63946), giftB: lam(0x3a86ff), giftC: lam(0x52b788), giftD: lam(0x9b5de5),
+  pinkGrass: lam(0x9ad88a), marble: lam(0xf4f0f8), heartRed: lam(0xe0203a), heartPink: lam(0xff8fb5),
+  hillGreen: lam(0x4fae3a), clover: lam(0x2fae4a),
+  eggA: lam(0xff9fc8), eggB: lam(0x9fd8ff), eggC: lam(0xfff09f), eggD: lam(0xc8a8ff), eggE: lam(0xa8f0b8), picnic: lam(0xe86a6a), basket: lam(0xc8965a),
 });
 const waterMat = new THREE.MeshLambertMaterial({ color: 0x2f9fcf, transparent: true, opacity: 0.8 });
 
@@ -1288,6 +1302,261 @@ const MAPS = {
       });
     },
   },
+  // ===== Holiday maps (only on the menu during their season) =====
+  manor: {
+    label: 'Haunted Manor', season: [1001, 1102], until: 'Nov 2', sky: 0x1e152c, fog: [12, 58], hemi: [0x9a8ad0, 0x1a1424, 0.85], sun: 0.3, fx: 'fireflies',
+    spawn: [0, 11], ring: [0, 9, 5],
+    idle: ["Did that ghost just wave at me?", "I'm not scared. You're scared.", "Happy Halloween!", "Who left all these candles burning?", "Boo! Hee hee, got you."],
+    build() {
+      addGround(M.spookGround); addPatches(M.spookDirt, 8, 1.5, 3); addWalls(M.spookWall); addEdgeRocks(M.spookWall, 24, 7);
+      const W = M.manorWall, F = M.manorFloor;
+      const wall = (x0, z0, x1, z1, h, y0 = 0) => addBox((x0 + x1) / 2, y0 + h / 2, (z0 + z1) / 2, Math.max(0.6, Math.abs(x1 - x0)), h, Math.max(0.6, Math.abs(z1 - z0)), W, true);
+      // outer walls with doorways (front, back, both sides)
+      wall(-12, 0, -1.6, 0, 10); wall(1.6, 0, 12, 0, 10); wall(-1.6, 0, 1.6, 0, 6.5, 3.5);
+      wall(-12, -16, 6, -16, 10); wall(8, -16, 12, -16, 10); wall(6, -16, 8, -16, 6.5, 3.5);
+      wall(-12, -16, -12, -9, 10); wall(-12, -7, -12, 0, 10); wall(-12, -9, -12, -7, 6.5, 3.5);
+      wall(12, -16, 12, -9, 10); wall(12, -7, 12, 0, 10); wall(12, -9, 12, -7, 6.5, 3.5);
+      // rooms downstairs
+      wall(-4, -16, -4, -10, 5); wall(-4, -8, -4, 0, 5); wall(4, -6, 4, 0, 5);
+      // upstairs floor with a stairwell, and the stairs
+      addBox(-4, 5.2, -8, 16, 0.4, 16, F, true); addBox(8, 5.2, -4, 8, 0.4, 8, F, true); addBox(5, 5.2, -12, 2, 0.4, 8, F, true); addBox(9, 5.2, -15, 6, 0.4, 2, F, true);
+      steps([[7, 0.9, -9], [8, 1.8, -10.2], [9, 2.7, -11.4], [10, 3.6, -12.4], [10.8, 4.5, -13.2]], F, 1.4);
+      wall(0, -16, 0, -11, 4, 5.4); wall(0, -9, 0, 0, 4, 5.4);
+      // roof and a creepy tower
+      addBox(0, 10.2, -8, 24.6, 0.4, 16.6, M.manorRoof, true);
+      addBox(-10, 13, -2, 4, 6, 4, W, true); addBox(-10, 16.2, -2, 4.6, 0.4, 4.6, M.manorRoof, true);
+      const spire = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(2.6, 4, 4))), M.manorRoof)); spire.position.set(-10, 18.4, -2); spire.rotation.y = Math.PI / 4;
+      steps([[-14, 1.3, 2.5], [-15, 2.9, 0.2], [-14.6, 4.5, -2.4], [-13.6, 6.1, -4.6], [-13.4, 7.7, -6.6], [-13.4, 9.3, -8.6]], M.spookWall, 1.6);
+      // glowing windows
+      for (const [x, y, z, w, d] of [[-8, 2.5, 0.06, 2, 0.1], [8, 2.5, 0.06, 2, 0.1], [-8, 7.5, 0.06, 2, 0.1], [0, 7.5, 0.06, 2, 0.1], [8, 7.5, 0.06, 2, 0.1], [-12.06, 7.5, -12, 0.1, 2], [12.06, 7.5, -12, 0.1, 2], [-10, 14, -0.06, 1.2, 0.1]]) { const wn = put(new THREE.Mesh(boxGeo, M.window)); wn.scale.set(w, 1.6, d); wn.position.set(x, y, z); }
+      // cobwebs in the corners
+      for (const [x, y, z, ry] of [[-11.4, 4.4, -0.6, 0.8], [11.4, 4.4, -15.4, 0.8], [-3.4, 4.4, -15.4, -0.8], [11.4, 9.4, -0.6, -0.8], [-11.4, 9.4, -15.4, 0.8]]) { const cw = put(new THREE.Mesh(boxGeo, M.cobweb)); cw.scale.set(1.6, 1.6, 0.02); cw.position.set(x, y, z); cw.rotation.set(0, ry, 0.785); }
+      // candles that flicker (animated, so they're groups and don't get merged)
+      const flames = [];
+      for (const [x, y, z] of [[-8, 1.1, -4], [8, 1.1, -3], [-8, 1.1, -12], [2, 1.1, -12], [-6, 6.5, -4], [6, 6.5, -12], [-3, 6.5, -13]]) {
+        addBox(x, y - 0.55, z, 1.4, 1.1, 0.9, M.trunk, true);
+        const g = new THREE.Group(); g.position.set(x, y, z); mapGroup.add(g);
+        part(g, GEO.cyl, cmat(0xf4ecd9), 0.07, 0.3, 0.07, 0, 0.15, 0);
+        flames.push(part(g, ballGeo, M.flame, 0.07, 0.13, 0.07, 0, 0.38, 0));
+      }
+      // floating ghosts
+      const ghostMat = new THREE.MeshLambertMaterial({ color: 0xf0ecff, emissive: 0x3a3a5a, transparent: true, opacity: 0.6, depthWrite: false });
+      const ghosts = [[-6, 2, -6, 3], [6, 7, -10, 2.5], [0, 12, -8, 6], [-16, 2, 10, 4], [14, 2, 10, 3.5], [-6, 7, -12, 2]].map(([x, y, z, r], i) => {
+        const g = new THREE.Group(); mapGroup.add(g);
+        part(g, ballGeo, ghostMat, 0.5, 0.55, 0.5, 0, 0, 0);
+        part(g, GEO.cone, ghostMat, 0.5, 0.8, 0.5, 0, -0.6, 0, Math.PI);
+        for (const sx of [-1, 1]) part(g, ballGeo, cmat(0x111111), 0.08, 0.12, 0.05, sx * 0.17, 0.12, -0.45);
+        part(g, ballGeo, cmat(0x111111), 0.1, 0.13, 0.05, 0, -0.12, -0.46);
+        return { g, x, y, z, r, s: 0.3 + i * 0.07, ph: i * 1.7 };
+      });
+      // graveyard, fence, pumpkins along the path, a hedge maze
+      for (let i = 0; i < 12; i++) addBox(-18 + (i % 4) * 3, 0.7, 6 + Math.floor(i / 4) * 3.4, 1.2, 1.4 + (i % 3) * 0.3, 0.35, M.grave, true);
+      for (let x = -21; x <= -7; x += 1.1) { const f = put(new THREE.Mesh(boxGeo, M.pupil)); f.scale.set(0.08, 1.3, 0.08); f.position.set(x, 0.65, 3.8); }
+      for (let z = 2; z <= 16; z += 2.5) for (const sx of [-1, 1]) { const pk = put(new THREE.Mesh(ballGeo, M.pumpkin)); pk.scale.set(0.55, 0.45, 0.55); pk.position.set(sx * 2.4, 0.45, z); const e = put(new THREE.Mesh(boxGeo, M.window)); e.scale.set(0.25, 0.12, 0.05); e.position.set(sx * 2.4, 0.5, z - 0.53); }
+      for (const [x0, z0, x1, z1] of [[6, 4, 20, 4], [6, 4, 6, 12], [6, 16, 20, 16], [20, 4, 20, 16], [9, 7, 17, 7], [9, 7, 9, 13], [12, 10, 17, 10], [12, 13, 20, 13], [17, 7, 17, 10]]) addBox((x0 + x1) / 2, 1.2, (z0 + z1) / 2, Math.max(0.8, Math.abs(x1 - x0)), 2.4, Math.max(0.8, Math.abs(z1 - z0)), M.hedge, true);
+      const taken = [[0, -8], [-12, 9], [13, 10]];
+      scatter(10, 6, taken, (x, z) => z > 1 || Math.abs(x) > 14, (x, z) => { const h = 4 + srnd() * 3; addPillar(x, z, 0.3, h, M.deadwood, 0.15); for (let k = 0; k < 3; k++) { const br = put(new THREE.Mesh(boxGeo, M.deadwood)); const a = srnd() * 6.28; br.scale.set(1.4, 0.12, 0.12); br.position.set(x + Math.cos(a) * 0.6, h * (0.5 + k * 0.15), z + Math.sin(a) * 0.6); br.rotation.set(0, -a, 0.5); } });
+      const moon = put(new THREE.Mesh(geo(new THREE.SphereGeometry(6, 18, 12)), M.moonGlow)); moon.position.set(-30, 40, -60);
+      let flashT = 6 + Math.random() * 8, flashOn = 0, booCd = 0;
+      mapAnims.push((dt, t) => {
+        flames.forEach((f, i) => { f.scale.y = 0.11 + Math.abs(Math.sin(t * 9 + i * 2)) * 0.06; });
+        for (const gh of ghosts) { const a = t * gh.s + gh.ph; gh.g.position.set(gh.x + Math.cos(a) * gh.r, gh.y + 0.6 + Math.sin(t * 1.3 + gh.ph) * 0.35, gh.z + Math.sin(a) * gh.r); gh.g.rotation.y = -a; }
+        if ((flashT -= dt) <= 0) { flashT = 8 + Math.random() * 10; flashOn = 0.18; if (actx) setTimeout(() => sfxTone(60, 35, 1.4, 'sawtooth', 0.12), 400); }
+        if (flashOn > 0 && !(MODE2.bat && MODE2.bat.active)) { flashOn -= dt; hemiLight.intensity = flashOn > 0 ? 2.2 : MAPS.manor.hemi[2]; }
+        booCd -= dt;
+        if (state === 'play' && booCd <= 0) for (const gh of ghosts) if (gh.g.position.distanceTo(player.pos) < 2.6) { booCd = 25; flash('Boo!', '', 0.9, '#e8e0ff'); sfxTone(420, 160, 0.6, 'sine', 0.12); rumble(120, 0.4); break; }
+      });
+    },
+  },
+  farm: {
+    label: 'Harvest Farm', season: [1110, 1130], until: 'Nov 30', sky: 0xf2c48a, fog: [18, 75], hemi: [0xfff0d8, 0x7a5a30, 0.95], sun: 0.8, fx: 'leaves',
+    spawn: [0, 20], ring: [0, 14, 7],
+    idle: ["Happy Thanksgiving!", "I'm thankful for flies.", "Let's get lost in the corn maze!", "That scarecrow is staring at me."],
+    build() {
+      addGround(M.farmGrass); addPatches(M.soil, 8, 2, 4); addWalls(M.fenceWood); addEdgeRocks(M.rock, 16, 5);
+      // red barn with a hayloft
+      addBox(-14, 3, -14, 12, 6, 9, M.barnRed, true); addBox(-14, 6.8, -14, 13, 1.6, 10, M.barnRoof, true); addBox(-14, 8.2, -14, 9, 1.2, 10, M.barnRoof, true);
+      const door = put(new THREE.Mesh(boxGeo, M.white)); door.scale.set(3, 4, 0.1); door.position.set(-14, 2, -9.45);
+      steps([[-6.8, 1.3, -11], [-6.6, 2.9, -13.5], [-6.8, 4.5, -16], [-8.6, 6, -18.4]], M.hay, 2);
+      // hay bales and a tractor
+      for (const [x, z, n] of [[-4, -6, 3], [2, -12, 2], [8, -4, 4]]) for (let i = 0; i < n; i++) addBox(x + (i % 2) * 0.6, 0.6 + i * 1.2, z, 2.4, 1.2, 1.4, M.hay, true);
+      addBox(12, 1.2, 12, 3.6, 1.6, 2.4, M.tractor, true); addBox(11, 2.5, 12, 1.6, 1.2, 1.8, M.tractor, true);
+      for (const [dx, dz, r] of [[-1.2, -1.3, 0.9], [-1.2, 1.3, 0.9], [1.4, -1.3, 0.6], [1.4, 1.3, 0.6]]) { const w = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(r, r, 0.4, 10))), M.cannon)); w.rotation.x = Math.PI / 2; w.position.set(12 + dx, r, 12 + dz); }
+      // corn maze
+      for (let row = 0; row < 7; row++) for (let seg = 0; seg < 4; seg++) { if ((row + seg) % 3 === 1) continue; addBox(6 + seg * 3.5, 1.4, -24 + row * 2.4, 3.2, 2.8, 0.7, M.corn, true); }
+      // scarecrow
+      addPillar(-4, 8, 0.12, 3, M.trunk, 0.1); addBox(-4, 2.3, 8, 2.4, 0.2, 0.2, M.trunk); const head = put(new THREE.Mesh(ballGeo, M.hay)); head.scale.setScalar(0.4); head.position.set(-4, 3.2, 8); const hat = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(0.5, 0.6, 8))), M.trunk)); hat.position.set(-4, 3.7, 8);
+      // pumpkin patch
+      for (let i = 0; i < 14; i++) { const pk = put(new THREE.Mesh(ballGeo, M.pumpkin)); const s = 0.4 + srnd() * 0.5; pk.scale.set(s, s * 0.8, s); pk.position.set(-18 + srnd() * 10, s * 0.8, 6 + srnd() * 10); }
+      const autumn = [M.autumnA, M.autumnB, M.autumnC];
+      const taken = [[-14, -14], [8, -4], [12, 12], [-4, 8], [11, -17]];
+      scatter(16, 5.5, taken, (x, z) => !(x > 4 && x < 20 && z < -10), (x, z) => addTree(x, z, 0.5, 5 + srnd() * 3, 2.6, { leaves: autumn }));
+      addClouds();
+    },
+  },
+  santa: {
+    label: "Santa's Village", season: [1201, 106], until: 'Jan 6', sky: 0x9fc0e0, fog: [16, 66], hemi: [0xffffff, 0x8aa8c8, 1.0], sun: 0.7, fx: 'snow',
+    spawn: [0, 20], ring: [0, 14, 6],
+    idle: ["Merry Christmas!", "I asked Santa for a giant fly.", "Last one to the top of the tree is a rotten egg!", "Boing! The presents bounce!"],
+    build() {
+      addGround(M.snow); addPatches(M.snowShade, 8, 2, 4); addWalls(M.snowCliff); addEdgeRocks(M.snowCliff, 22, 7);
+      // the giant Christmas tree with branch rings to climb and a glowing star
+      addPillar(0, -4, 1, 16, M.trunk, 0.6);
+      const lights = [];
+      for (let k = 0; k < 6; k++) {
+        const r = 6 - k * 0.9, y = 2 + k * 2.4;
+        const c = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(r, 3.4, 10))), M.pine)); c.position.set(0, y + 1.2, -4);
+        addBox(0, y, -4, r * 1.25, 0.4, r * 1.25, M.pine, true, true);
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + k; const l = new THREE.Mesh(ballGeo, new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xff0000 })); l.scale.setScalar(0.18); l.position.set(Math.cos(a) * r * 0.85, y + 0.3, -4 + Math.sin(a) * r * 0.85); l.userData.dyn = true; mapGroup.add(l); lights.push(l); }
+      }
+      const star = put(new THREE.Mesh(geo(facet(new THREE.OctahedronGeometry(1, 0))), M.gold)); star.position.set(0, 17.4, -4); star.userData.dyn = true;
+      // workshop, gingerbread houses, presents (some bouncy), ice rink, sleigh
+      addBox(-15, 3, -15, 10, 6, 7, M.barnRed, true); addBox(-15, 6.5, -15, 11, 1, 8, M.snowRoof, true); addBox(-12, 8, -16, 1.2, 3, 1.2, M.brick, true);
+      steps([[-9, 1.3, -11.5], [-8.6, 2.9, -14], [-9, 4.5, -16.4], [-11, 6, -18.6]], M.giftA, 1.8);
+      for (const [x, z] of [[14, -14], [16, 4], [-17, 6]]) { addBox(x, 1.6, z, 4, 3.2, 4, M.ginger, true); addBox(x, 3.5, z, 4.6, 0.6, 4.6, M.white, true); }
+      const gifts = [M.giftA, M.giftB, M.giftC, M.giftD];
+      for (const [x, z, s, bouncy] of [[6, 6, 1.6, true], [8, 3, 1.2, false], [-6, 6, 1.8, true], [-8, 2, 1.1, false], [4, 10, 1.4, true], [-3, 11, 1, false]]) {
+        const b = addBox(x, s / 2, z, s * 1.2, s, s * 1.2, gifts[Math.floor(srnd() * 4)], true); if (bouncy) b.bounce = 11;
+        const rb = put(new THREE.Mesh(boxGeo, M.gold)); rb.scale.set(s * 1.22, s * 1.02, 0.18); rb.position.set(x, s / 2, z);
+      }
+      const rink = addBox(14, 0.05, 14, 10, 0.1, 8, M.ice); rink.ice = true;
+      addBox(-12, 0.6, 14, 4, 1, 2, M.barnRed, true); addBox(-12, 1.3, 15, 4, 1, 0.3, M.gold, true);
+      for (const [x, z] of [[-4, 16], [4, 16], [-10, -4], [10, -4]]) { addPillar(x, z, 0.15, 4, M.white, 0.15); for (let y = 0.4; y < 4; y += 0.8) { const st = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 8))), M.caneRed)); st.position.set(x, y, z); } const bulb = put(new THREE.Mesh(ballGeo, M.lamp)); bulb.scale.setScalar(0.3); bulb.position.set(x, 4.2, z); }
+      const cols = [0xff2a2a, 0x2aff5a, 0x2a8aff, 0xffd23f, 0xff5ad8];
+      mapAnims.push((dt, t) => {
+        lights.forEach((l, i) => { if (Math.floor(t * 2 + i) % 3 === 0) l.material.emissive.setHex(cols[(i + Math.floor(t * 2)) % cols.length]); });
+        star.rotation.y = t; star.scale.setScalar(1 + Math.sin(t * 3) * 0.08);
+      });
+    },
+  },
+  valentine: {
+    label: 'Sweetheart Garden', season: [207, 215], until: 'Feb 15', sky: 0xffd6e6, fog: [18, 72], hemi: [0xffffff, 0xf0a0c0, 1.0], sun: 0.75, fx: 'petals',
+    spawn: [0, 20], ring: [0, 12, 7],
+    idle: ["Happy Valentine's Day!", "Roses are red, frogs are green...", "Will you be my froggy friend?", "Love is in the air! And petals!"],
+    build() {
+      addGround(M.pinkGrass); addPatches(M.frostPink, 10, 2, 4); addWalls(M.hedge); addEdgeRocks(M.hedge, 18, 4);
+      // heart fountain in the middle
+      addBox(0, 0.5, 0, 6, 1, 6, M.marble, true); const pool = put(new THREE.Mesh(boxGeo, waterMat)); pool.scale.set(5, 0.2, 5); pool.position.set(0, 1.05, 0);
+      addPillar(0, 0, 0.5, 4, M.marble, 0.4, 1); addCap(0, 5.2, 0, 1.8, M.marble);
+      // giant hearts (two balls and a cone) you can climb on
+      const heart = (x, z, s, m) => {
+        for (const sx of [-1, 1]) { const b = put(new THREE.Mesh(ballGeo, m)); b.scale.setScalar(s); b.position.set(x + sx * s * 0.7, s * 2.2, z); blobs.push({ c: b.position.clone(), r: s * 0.95 }); }
+        const c = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(s * 1.75, s * 2.2, 12))), m)); c.rotation.x = Math.PI; c.position.set(x, s * 1.1, z);
+        addPillar(x, z, s * 0.7, s * 1.6, m, s * 1.2);
+      };
+      heart(-12, -10, 1.6, M.heartRed); heart(12, -10, 1.4, M.heartPink); heart(-10, 10, 1.2, M.heartPink); heart(14, 8, 1.8, M.heartRed);
+      // chocolate box platforms and a love bridge
+      for (const [x, z, h] of [[-4, -16, 1.2], [-1, -18, 2.6], [2, -16, 4], [5, -18, 5.4]]) addBox(x, h / 2, z, 2.6, h, 2.6, M.choco, true);
+      addBox(10, 5.6, -18, 7, 0.4, 2, M.heartPink, true);
+      // rose bushes and floating heart balloons
+      scatter(16, 4, [[0, 0], [-12, -10], [12, -10], [-10, 10], [14, 8]], () => true, (x, z) => { const b = put(new THREE.Mesh(ballGeo, M.hedge)); b.scale.set(1, 0.8, 1); b.position.set(x, 0.6, z); for (let k = 0; k < 4; k++) { const r = put(new THREE.Mesh(ballGeo, M.heartRed)); r.scale.setScalar(0.18); r.position.set(x + (srnd() - 0.5) * 1.4, 1 + srnd() * 0.4, z + (srnd() - 0.5) * 1.4); } });
+      const balloons = [[-6, 6], [6, 6], [-16, -2], [16, -2], [0, 14]].map(([x, z], i) => {
+        const g = new THREE.Group(); mapGroup.add(g); g.position.set(x, 6, z);
+        part(g, boxGeo, cmat(0xffffff), 0.01, 3, 0.01, 0, -1.8, 0);
+        for (const sx of [-1, 1]) part(g, ballGeo, i % 2 ? M.heartRed : M.heartPink, 0.4, 0.4, 0.3, sx * 0.28, 0.2, 0);
+        part(g, GEO.cone, i % 2 ? M.heartRed : M.heartPink, 0.55, 0.6, 0.3, 0, -0.3, 0, Math.PI);
+        return { g, x, z, ph: i };
+      });
+      mapAnims.push((dt, t) => { for (const b of balloons) { b.g.position.y = 6 + Math.sin(t + b.ph) * 0.5; b.g.rotation.z = Math.sin(t * 0.8 + b.ph) * 0.1; } });
+      addClouds();
+    },
+  },
+  rainbow: {
+    label: 'Rainbow Hills', season: [310, 318], until: 'Mar 18', sky: 0xaee4ff, fog: [20, 80], hemi: [0xffffff, 0x6aaa4a, 1.0], sun: 0.85,
+    spawn: [0, 20], ring: [0, 12, 7],
+    idle: ["Happy St. Patrick's Day!", "I'm going to find the pot of gold!", "Four-leaf clovers are lucky!", "Let's climb the rainbow!"],
+    build() {
+      addGround(M.lawn); addWalls(M.cliff); addEdgeRocks(M.rock, 18, 6);
+      // rolling green hills (terraces)
+      for (const [x, z, w, h] of [[-15, -14, 12, 2], [-15, -14, 8, 4], [-15, -14, 4, 6], [15, 12, 12, 2], [15, 12, 7, 4], [16, -15, 9, 3]]) addBox(x, h / 2, z, w, h, w, M.hillGreen, true);
+      // a rainbow you can walk over: colored step blocks rising and falling in an arch
+      const bands = [M.rbR, M.rbO, M.rbY, M.rbG, M.rbB, M.rbV];
+      for (let i = 0; i <= 16; i++) {
+        const t = i / 16, x = -14 + t * 28, y = Math.sin(t * Math.PI) * 9 + 0.3;
+        bands.forEach((m, k) => addBox(x, y + k * 0.01, 2 + (k - 2.5) * 0.45, 1.9, 0.3, 0.45, m, true));
+      }
+      // pot of gold at the end
+      addPillar(15.5, 2, 1.4, 1.6, M.cannon, 1.6);
+      const gold = put(new THREE.Mesh(geo(facet(new THREE.SphereGeometry(1.5, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2))), M.gold)); gold.position.set(15.5, 1.6, 2);
+      const goldB = addBox(15.5, 2, 2, 2.4, 0.3, 2.4, M.gold, true, true); goldB.bounce = 12;
+      // clovers and toadstools
+      scatter(20, 3.5, [[0, 2], [-15, -14], [15, 12], [16, -15], [15.5, 2]], () => true, (x, z) => {
+        const g = put(new THREE.Mesh(boxGeo, M.stemGreen)); g.scale.set(0.08, 1, 0.08); g.position.set(x, 0.5, z);
+        for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI * 2 + Math.PI / 4; const lf = put(new THREE.Mesh(ballGeo, M.clover)); lf.scale.set(0.35, 0.06, 0.35); lf.position.set(x + Math.cos(a) * 0.3, 1.05, z + Math.sin(a) * 0.3); }
+      });
+      scatter(10, 4, [[0, 2]], () => true, (x, z) => { const c = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(0.35, 0.35, 0.08, 10))), M.gold)); c.position.set(x, 0.05, z); });
+      addClouds();
+    },
+  },
+  eggs: {
+    label: 'Egg Hunt Meadow', season: [325, 420], until: 'Apr 20', sky: 0xbfe8ff, fog: [20, 80], hemi: [0xffffff, 0x8acd6a, 1.0], sun: 0.85,
+    spawn: [0, 20], ring: [0, 12, 7],
+    idle: ["Happy Easter!", "Look at all these giant eggs!", "I found a purple one!", "The flowers smell so good!"],
+    build() {
+      addGround(M.lawn); addPatches(M.frostPink, 6, 1.5, 3); addWalls(M.hedge); addEdgeRocks(M.hedge, 16, 4);
+      const eggs = [M.eggA, M.eggB, M.eggC, M.eggD, M.eggE];
+      // giant eggs to climb and bounce on
+      scatter(14, 5, [[0, 0]], (x, z) => Math.hypot(x, z) > 5, (x, z) => {
+        const s = 1 + srnd() * 1.4, m = eggs[Math.floor(srnd() * eggs.length)];
+        const e = put(new THREE.Mesh(ballGeo, m)); e.scale.set(s, s * 1.35, s); e.position.set(x, s * 1.3, z);
+        const band = put(new THREE.Mesh(boxGeo, eggs[(eggs.indexOf(m) + 2) % eggs.length])); band.scale.set(s * 2.02, s * 0.3, s * 2.02); band.position.set(x, s * 1.3, z);
+        blobs.push({ c: new V(x, s * 1.5, z), r: s * 1.05 });
+      });
+      // a picnic blanket, a basket and a bunny burrow hill
+      const blanket = put(new THREE.Mesh(boxGeo, M.picnic)); blanket.scale.set(6, 0.04, 6); blanket.position.set(0, 0.03, 0);
+      addBox(0, 0.7, -1.5, 2.4, 1.4, 1.6, M.basket, true); const handle = put(new THREE.Mesh(geo(new THREE.TorusGeometry(1.1, 0.12, 6, 14, Math.PI)), M.basket)); handle.position.set(0, 1.4, -1.5);
+      addBox(14, 1.5, -14, 10, 3, 10, M.hillGreen, true); addBox(14, 4, -14, 6, 2, 6, M.hillGreen, true);
+      steps([[8, 1.3, -10], [9, 3, -12]], M.hillGreen, 2);
+      // flowers and fluttering butterflies
+      const petals = [M.gumA, M.gumC, M.gumD, M.umbC, M.white];
+      for (let i = 0; i < 50; i++) { const x = (srnd() - 0.5) * 54, z = (srnd() - 0.5) * 54; if (Math.hypot(x, z) < 4) continue; const st = put(new THREE.Mesh(boxGeo, M.stemGreen)); st.scale.set(0.05, 0.6, 0.05); st.position.set(x, 0.3, z); const fl = put(new THREE.Mesh(ballGeo, petals[i % 5])); fl.scale.set(0.2, 0.08, 0.2); fl.position.set(x, 0.62, z); }
+      const flies = [0, 1, 2, 3, 4, 5].map(i => { const g = new THREE.Group(); mapGroup.add(g); const wm = new THREE.MeshLambertMaterial({ color: [0xff70a6, 0xffd23f, 0x4cc9f0][i % 3], transparent: true, opacity: 0.85 }); g.userData.w = [-1, 1].map(sx => part(g, ballGeo, wm, 0.22, 0.02, 0.16, sx * 0.18, 0, 0)); part(g, ballGeo, cmat(0x222222), 0.04, 0.04, 0.16, 0, 0, 0); return { g, x: (srnd() - 0.5) * 30, z: (srnd() - 0.5) * 30, ph: i * 1.1 }; });
+      mapAnims.push((dt, t) => { for (const f of flies) { const a = t * 0.5 + f.ph; f.g.position.set(f.x + Math.cos(a) * 4, 1.5 + Math.sin(t * 2 + f.ph) * 0.6, f.z + Math.sin(a) * 4); f.g.rotation.y = -a; const w = Math.sin(t * 18 + f.ph) * 0.8; f.g.userData.w[0].rotation.z = w; f.g.userData.w[1].rotation.z = -w; } });
+      addClouds();
+    },
+  },
+  fireworks: {
+    label: 'Fireworks Lake', season: [628, 706], until: 'Jul 6', sky: 0x0a0f2a, fog: [20, 90], hemi: [0x9ab0e8, 0x1a2030, 0.8], sun: 0.35, fx: 'fireflies',
+    spawn: [0, 22], ring: [0, 18, 6], slow: [[-14, 14, -16, 8]],
+    idle: ["Ooooh! Aaaah!", "Happy Fourth of July!", "Did you see that big blue one?", "Best fireworks ever!"],
+    build() {
+      addGround(M.farmGrass); addWalls(M.cliff); addEdgeRocks(M.rock, 20, 6);
+      const lake = put(new THREE.Mesh(boxGeo, waterMat)); lake.scale.set(28, 0.06, 24); lake.position.set(0, 0.05, -4);
+      // dock, boats, an island with a flagpole
+      addBox(0, 0.6, 10, 3, 0.3, 6, M.plank, true); addBox(0, 0.6, 6.5, 8, 0.3, 2, M.plank, true);
+      for (const [x, z] of [[-6, 2], [7, -2]]) { addBox(x, 0.5, z, 3, 0.8, 1.6, M.boat, true); }
+      addBox(0, 0.8, -8, 6, 1.6, 6, M.rock, true); addPillar(0, -8, 0.12, 8, M.white, 0.1, 1.6);
+      for (const [y, m] of [[8.6, M.blockR], [8.2, M.white], [7.8, M.blockB]]) { const fl = put(new THREE.Mesh(boxGeo, m)); fl.scale.set(0.05, 0.4, 1.6); fl.position.set(0, y, -7.2); }
+      // picnic tables, bunting and lanterns on the shore
+      for (const [x, z] of [[-10, 14], [10, 14], [-16, 4], [16, 4]]) { addBox(x, 0.9, z, 3, 0.2, 1.4, M.plank, true); addBox(x, 0.45, z - 1, 3, 0.15, 0.4, M.plank, true); addBox(x, 0.45, z + 1, 3, 0.15, 0.4, M.plank, true); }
+      const bunting = [M.blockR, M.white, M.blockB];
+      for (let i = 0; i < 24; i++) { const x = -18 + i * 1.6; const f = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(0.3, 0.6, 3))), bunting[i % 3])); f.rotation.x = Math.PI; f.position.set(x, 4 - Math.sin(i / 23 * Math.PI) * 0.8, 17); }
+      addPillar(-19, 17, 0.12, 4.4, M.trunk, 0.1); addPillar(19, 17, 0.12, 4.4, M.trunk, 0.1);
+      const taken = [[0, 10], [0, -8], [-10, 14], [10, 14], [-16, 4], [16, 4]];
+      scatter(12, 6, taken, (x, z) => Math.abs(x) > 16 || z > 10 || z < -18, (x, z) => addTree(x, z, 0.5, 6 + srnd() * 2, 2.8));
+      // fireworks: bursts of colored sparks over the lake
+      const bursts = [], cols = [0xff3b3b, 0xffffff, 0x3b7bff, 0xffd23f, 0x52ff8a, 0xff5ad8];
+      let next = 1;
+      mapAnims.push((dt, t) => {
+        if ((next -= dt) <= 0) {
+          next = 0.6 + Math.random() * 1.4;
+          const n = 60, pos = new Float32Array(n * 3), vel = [], c = new V((Math.random() - 0.5) * 30, 16 + Math.random() * 10, -10 - Math.random() * 14);
+          for (let i = 0; i < n; i++) { pos.set([c.x, c.y, c.z], i * 3); const v = new V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(5 + Math.random() * 3); vel.push(v); }
+          const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          const m = new THREE.PointsMaterial({ color: pick(cols), size: 0.45, transparent: true, opacity: 1, fog: false });
+          const p = new THREE.Points(g, m); p.frustumCulled = false; mapGroup.add(p);
+          bursts.push({ p, vel, life: 2 });
+          if (actx && state !== 'menu') setTimeout(() => { sfxTone(90, 40, 0.5, 'sawtooth', 0.06); sfxSlap(0.08); }, 300);
+        }
+        for (const b of bursts.slice()) {
+          b.life -= dt; const arr = b.p.geometry.attributes.position.array;
+          b.vel.forEach((v, i) => { v.y -= 3 * dt; arr[i * 3] += v.x * dt; arr[i * 3 + 1] += v.y * dt; arr[i * 3 + 2] += v.z * dt; });
+          b.p.geometry.attributes.position.needsUpdate = true; b.p.material.opacity = Math.max(0, b.life / 2);
+          if (b.life <= 0) { mapGroup.remove(b.p); b.p.geometry.dispose(); b.p.material.dispose(); bursts.splice(bursts.indexOf(b), 1); }
+        }
+      });
+    },
+  },
 };
 const hemiLight = new THREE.HemisphereLight(0xe8f6ff, 0x3d5a24, 0.85);
 scene.add(hemiLight);
@@ -1300,6 +1569,7 @@ function buildMap(key) {
   seed = 11;
   G = mp.gravity || 18; airDrag = mp.swim ? 1.3 : 0.15;
   slowZones = mp.slow || [];
+  mapAnims = [];
   mp.build();
   mergeStatic();
   addParticles(mp.fx);
@@ -1310,7 +1580,7 @@ function buildMap(key) {
 function mergeStatic() {
   const groups = new Map();
   for (const m of [...mapGroup.children]) {
-    if (!m.isMesh || m.isInstancedMesh || !m.visible) continue;
+    if (!m.isMesh || m.isInstancedMesh || !m.visible || m.userData.dyn) continue;
     m.updateMatrixWorld(true);
     const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
     g.applyMatrix4(m.matrixWorld);
@@ -1342,14 +1612,14 @@ function addParticles(kind) {
     pos[i * 3] = Math.cos(th) * Math.cos(ph) * r; pos[i * 3 + 1] = Math.sin(ph) * r + 5; pos[i * 3 + 2] = Math.sin(th) * Math.cos(ph) * r;
   }
   if (kind === 'fireflies') for (let i = 0; i < n; i++) pos[i * 3 + 1] = 0.5 + Math.random() * 5;
-  const col = { snow: 0xffffff, embers: 0xff8a3a, stars: 0xffffff, fireflies: 0xc6ff6b, bubbles: 0xdff6ff }[kind];
-  const m = new THREE.PointsMaterial({ color: col, size: kind === 'snow' ? 0.14 : kind === 'stars' ? 0.5 : 0.1, transparent: true, opacity: 0.9, fog: kind !== 'stars' });
+  const col = { snow: 0xffffff, embers: 0xff8a3a, stars: 0xffffff, fireflies: 0xc6ff6b, bubbles: 0xdff6ff, leaves: 0xe8833a, petals: 0xff8fb5 }[kind];
+  const m = new THREE.PointsMaterial({ color: col, size: kind === 'snow' ? 0.14 : kind === 'stars' ? 0.5 : kind === 'leaves' || kind === 'petals' ? 0.22 : 0.1, transparent: true, opacity: 0.9, fog: kind !== 'stars' });
   fxPoints = new THREE.Points(g, m); fxPoints.frustumCulled = false; mapGroup.add(fxPoints);
 }
 function updateParticles(dt, t) {
   if (!fxPoints) return;
   if (fxKind === 'stars') return;
-  const a = fxPoints.geometry.attributes.position, arr = a.array, snow = fxKind === 'snow';
+  const a = fxPoints.geometry.attributes.position, arr = a.array, snow = ['snow', 'leaves', 'petals'].includes(fxKind);
   if (fxKind === 'fireflies') {
     for (let i = 0; i < arr.length; i += 3) { arr[i] += Math.sin(t * 0.7 + i) * dt * 0.6; arr[i + 1] += Math.cos(t * 0.9 + i * 0.3) * dt * 0.3; arr[i + 2] += Math.cos(t * 0.6 + i) * dt * 0.6; }
     fxPoints.material.opacity = 0.6 + Math.sin(t * 3) * 0.3; a.needsUpdate = true; return;
@@ -1361,6 +1631,16 @@ function updateParticles(dt, t) {
     if (!snow && arr[i + 1] > 18) arr[i + 1] = 0;
   }
   a.needsUpdate = true;
+}
+function seasonToday() {
+  const m = location.search.match(/season=(\d{1,2})-(\d{1,2})/);
+  if (m) return +m[1] * 100 + +m[2];
+  const d = new Date(); return (d.getMonth() + 1) * 100 + d.getDate();
+}
+function mapAvailable(key) {
+  const sz = MAPS[key] && MAPS[key].season; if (!sz) return !!MAPS[key];
+  const v = seasonToday(), [a, b] = sz;
+  return a <= b ? v >= a && v <= b : v >= a || v <= b;
 }
 function blockedAt(x, z) {
   for (const b of boxes) if (b.min.y < 1.5 && x > b.min.x - R - 0.3 && x < b.max.x + R + 0.3 && z > b.min.z - R - 0.3 && z < b.max.z + R + 0.3) return true;
@@ -1376,7 +1656,7 @@ function findSpot(x, z, out) {
   for (let i = 0; i < 40 && blockedAt(x, z); i++) { x += (Math.random() - .5) * 4; z += (Math.random() - .5) * 4; x = clamp(x, -HALF + 2, HALF - 2); z = clamp(z, -HALF + 2, HALF - 2); }
   return out.set(x, R, z);
 }
-buildMap((() => { try { return localStorage.getItem('ribbit-map') || 'forest'; } catch (e) { return 'forest'; } })());
+buildMap('forest'); // the saved map is built at the end of startup, once every helper it may use exists
 
 // ---------- Physics ----------
 const tq = new V(), tn = new V();
@@ -2014,6 +2294,13 @@ const SONGS = {
   reef:    { bpm: 80,  root: 60, scale: 'lydian', lead: 'bell',   drums: 'soft',  prog: [0, 1, 5, 4], seed: 149, pad: true, echo: true },
   toys:    { bpm: 126, root: 67, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 3, 4, 0], seed: 151 },
   icecastle: { bpm: 92, root: 64, scale: 'minor', lead: 'bell',   drums: 'soft',  prog: [0, 5, 3, 6], seed: 163, pad: true, echo: true },
+  manor:   { bpm: 86,  root: 57, scale: 'phrygian', lead: 'bell', drums: 'soft',  prog: [0, 1, 0, 5], seed: 171, pad: true, echo: true },
+  farm:    { bpm: 104, root: 62, scale: 'major', lead: 'pluck',   drums: 'light', prog: [0, 3, 4, 0], seed: 173 },
+  santa:   { bpm: 120, root: 67, scale: 'major', lead: 'bell',    drums: 'light', prog: [0, 3, 4, 0], seed: 179, echo: true },
+  valentine: { bpm: 94, root: 65, scale: 'major', lead: 'marimba', drums: 'soft', prog: [0, 5, 3, 4], seed: 181, pad: true },
+  rainbow: { bpm: 116, root: 62, scale: 'major', lead: 'flute',   drums: 'light', prog: [0, 4, 5, 3], seed: 191 },
+  eggs:    { bpm: 108, root: 67, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 3, 1, 4], seed: 193 },
+  fireworks: { bpm: 112, root: 60, scale: 'major', lead: 'steel', drums: 'heavy', prog: [0, 4, 5, 3], seed: 197 },
 };
 const SCALES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], phrygian: [0, 1, 3, 5, 7, 8, 10], lydian: [0, 2, 4, 6, 7, 9, 11] };
 let musicOn = true;
@@ -3175,8 +3462,12 @@ function keyJump() {
 }
 
 // ---------- Menu wiring ----------
-for (const [key, mp] of Object.entries(MAPS)) {
-  const b = document.createElement('button'); b.type = 'button'; b.textContent = mp.label; b.dataset.map = key; b.id = 'map-' + key;
+const seasonal = Object.entries(MAPS).filter(([k, mp]) => mp.season && mapAvailable(k));
+if (seasonal.length) { const h = document.createElement('span'); h.className = 'season-label'; h.textContent = 'Limited time'; $('maps').append(h); }
+for (const [key, mp] of seasonal.concat(Object.entries(MAPS).filter(([k, mp]) => !mp.season))) {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.map = key; b.id = 'map-' + key;
+  if (mp.season) { b.className = 'seasonal'; b.innerHTML = ''; b.append(mp.label); const u = document.createElement('small'); u.textContent = ` until ${mp.until}`; b.append(u); }
+  else b.textContent = mp.label;
   b.setAttribute('aria-pressed', String(key === mapKey));
   b.addEventListener('click', () => {
     buildMap(key); placeIdle();
@@ -5308,9 +5599,15 @@ function frame(now) {
   for (const a of ais) drawAI(a, t);
   for (const r of remotes.values()) drawAI(r, t);
   updateParticles(dt, t);
+  for (const f of mapAnims) f(dt, t);
   renderer.render(scene, camera);
 }
 function placeIdle() { ais.forEach((a, i) => { const ang = i * 1.3; spawnAt(Math.sin(ang) * (MAPS[mapKey].spawnHigh ? 4.5 : 12), Math.cos(ang) * (MAPS[mapKey].spawnHigh ? 4.5 : 12), a.pos); a.vel.set(0, 0, 0); }); }
+(() => { // now switch to the map you played last (if it's still in season)
+  let k = 'forest'; try { k = localStorage.getItem('ribbit-map') || 'forest'; } catch (e) {}
+  if (MAPS[k] && mapAvailable(k) && k !== mapKey) buildMap(k);
+  document.querySelectorAll('#maps button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.map === mapKey)));
+})();
 placeIdle();
 requestAnimationFrame(frame);
 })();
