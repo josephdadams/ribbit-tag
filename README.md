@@ -79,6 +79,19 @@ On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freez
 - **King of the Lily Pad**: stand on the golden lily pad alone to score a point every second, and bump other frogs off it. The pad moves every 35 seconds. First to 60 wins.
 - **Free Play**: no tagging. Explore, climb, bounce, talk to the frogs, and catch flies.
 
+Tap **More modes** on the menu for 15 more:
+
+| Tag twists | Team games | Races and challenges | Party |
+| --- | --- | --- | --- |
+| **Hide and Seek**: seekers count to 20, found frogs help seek | **Mud Splat**: throw mud, three splats sends a frog home | **Hop Race**: through 8 glowing rings in order | **Musical Lily Pads**: when the music stops, find a pad |
+| **Bat Tag**: lights out, the lava frog glows | **Lily Pad Soccer**: push the ball onto their lily pad | **Floor Is Lava**: the lava rises, climb high | **Sardines**: find the hider, then hide with them |
+| **Shrink Tag**: each tag shrinks you, last big frog wins | **Pond Ball**: dodgeball, hit frogs sit out | **Bug Swarm**: everyone squashes bugs to save the lily pad | |
+| **Sticky Tongue Tag**: the lava frog tags from afar | | **Simon Says Frog**: only obey "Silver says" | |
+| **Keep Away**: hold the golden crown the longest | | | |
+| **Gravity Swap**: gravity changes every 20 seconds | | | |
+
+In Mud Splat and Pond Ball, throw with `F`, a quick tap on the screen, or `B` on a controller.
+
 ## Daily quests
 
 Every day brings three new quests, like "Catch 25 flies", "Unfreeze 4 frogs in Freeze Tag", or "Be king of the lily pad for 40 seconds". Finish one and claim its fly reward from **Daily quests** on the menu. New quests arrive at midnight.
@@ -113,6 +126,7 @@ Catch flies around each map, stay safe, tag other frogs, and win games to earn f
 ## Multiplayer
 
 - **Friends room:** everyone types the same room code on the menu and taps **Join**. The first player in picks the map and mode.
+- **Frogs online:** the menu shows how many people are playing Ribbit Tag right now and roughly where (public games, friends rooms, solo, or on the menu). Room codes are never shared.
 - **Play online:** joins a public lobby with anyone else playing (up to 6 people per lobby).
 
 Players connect directly to each other with WebRTC through [Trystero](https://github.com/dmotz/trystero), using public Nostr relays only to find each other. There is no game server. One device acts as the host and runs the computer frogs, tags, and scoring; if it leaves or falls asleep, another player takes over, and anyone can tap **Be host**.

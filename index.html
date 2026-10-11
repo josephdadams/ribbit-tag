@@ -157,6 +157,25 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .pl-help { margin-top: 10px; font-size: .85rem; line-height: 1.35; background: rgba(255,255,255,.05); border-radius: 12px; padding: 8px 10px; }
 .pl-help ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 .pl-help em { font-style: normal; text-decoration: underline; }
+.online { margin: 0 0 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: .88rem; }
+.online b { font-weight: 800; color: var(--leaf); }
+.online span:last-child { opacity: .75; }
+.online .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--leaf); box-shadow: 0 0 0 0 rgba(143,209,98,.6); animation: onlinePulse 2s infinite; }
+@keyframes onlinePulse { 70% { box-shadow: 0 0 0 7px rgba(143,209,98,0); } 100% { box-shadow: 0 0 0 0 rgba(143,209,98,0); } }
+@media (prefers-reduced-motion: reduce) { .online .dot { animation: none; } }
+.more-btn { width: 100%; margin-top: 10px; font: inherit; font-weight: 800; border: 2px dashed var(--leaf); background: transparent; color: var(--bone); border-radius: 14px; padding: 9px 14px; cursor: pointer; }
+.more-btn[aria-expanded="true"] { border-style: solid; }
+.more-btn:focus-visible { outline: 3px solid var(--bone); outline-offset: 2px; }
+.more-cat { margin: 12px 0 6px; font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; opacity: .7; }
+.more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mode.mini { padding: 8px 10px; background: var(--canopy); color: var(--bone); box-shadow: 0 4px 0 rgba(0,0,0,.35); }
+.mode.mini b { font-size: 1.05rem; }
+.mode.mini small { font-size: .74rem; opacity: .85; display: block; }
+#blind { position: fixed; inset: 0; z-index: 3; display: grid; place-content: center; text-align: center; gap: 6px; background: #05070a; color: var(--bone); pointer-events: none; }
+#blind b { font-family: var(--display); font-weight: 400; font-size: clamp(2rem, 8vw, 3.4rem); }
+#blind small { font-weight: 800; opacity: .7; }
+#splat { position: fixed; inset: 0; z-index: 3; pointer-events: none; transition: opacity .4s;
+  background: radial-gradient(circle at 30% 40%, rgba(90,60,30,.85) 0 12%, transparent 13%), radial-gradient(circle at 65% 55%, rgba(90,60,30,.8) 0 15%, transparent 16%), radial-gradient(circle at 48% 25%, rgba(110,75,40,.75) 0 8%, transparent 9%), radial-gradient(circle at 75% 20%, rgba(90,60,30,.7) 0 6%, transparent 7%); }
 #questsPanel { position: fixed; inset: 0; z-index: 4; display: grid; place-items: center; padding: 16px; background: rgba(10,26,16,.6); }
 .qp-card { width: min(460px, 100%); max-height: 100%; overflow-y: auto; background: var(--jungle); border: 3px solid var(--canopy); border-radius: 20px; padding: 16px; }
 .qp-card h2 { font-family: var(--display); font-weight: 400; font-size: 1.6rem; margin: 0; }
@@ -229,6 +248,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   <div id="players" hidden>
     <div class="pl-head"><h2 id="plTitle">Players</h2><span class="spacer"></span><button id="plClose" class="pill-btn" type="button">Close</button></div>
     <p class="pl-status" id="plStatus"></p>
+    <p class="pl-status" id="plOnline"></p>
     <ul class="pl-list" id="plHumans"></ul>
     <div class="pl-help" id="plHelp" hidden>
       <b>Can't see a friend?</b>
@@ -261,6 +281,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   <div class="card">
     <div>
       <h1>Ribbit <span>Tag</span></h1>
+      <p class="online"><span class="dot"></span><b id="onlineNow">Checking who is online…</b> <span id="onlineWhere"></span></p>
       <p class="tagline">Sticky frog hands, no hopping allowed. Push off the ground, fling through the jungle, and stay away from the lava frog.</p>
       <div class="row">
         <label class="label" for="roomIn">Room code</label>
@@ -280,6 +301,36 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <button class="mode feastmode" id="modeFeast" type="button"><b>Fly Feast</b><small>Catch the most flies in 90 seconds.</small></button>
         <button class="mode kingmode" id="modeKing" type="button"><b>King of the Lily Pad</b><small>Hold the golden pad alone to score. Bump others off!</small></button>
         <button class="mode freemode" id="modeFree" type="button"><b>Free Play</b><small>No tagging. Explore, climb and catch flies.</small></button>
+      </div>
+      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (15)</button>
+      <div id="moreModes" hidden>
+        <h3 class="more-cat">Tag twists</h3>
+        <div class="more-grid">
+          <button class="mode mini" data-mode="hide" id="mode-hide" type="button"><b>Hide and Seek</b><small>Count, hide, seek. Found frogs help find the rest.</small></button>
+          <button class="mode mini" data-mode="bat" id="mode-bat" type="button"><b>Bat Tag</b><small>Lights out! The lava frog glows in the dark.</small></button>
+          <button class="mode mini" data-mode="shrink" id="mode-shrink" type="button"><b>Shrink Tag</b><small>Every tag shrinks you. Last big frog wins.</small></button>
+          <button class="mode mini" data-mode="tongue" id="mode-tongue" type="button"><b>Sticky Tongue Tag</b><small>The lava frog tags from far away with its tongue.</small></button>
+          <button class="mode mini" data-mode="keepaway" id="mode-keepaway" type="button"><b>Keep Away</b><small>Hold the golden crown. Tag the golden frog to steal it.</small></button>
+          <button class="mode mini" data-mode="gravity" id="mode-gravity" type="button"><b>Gravity Swap</b><small>Tag, but gravity changes every 20 seconds.</small></button>
+        </div>
+        <h3 class="more-cat">Team games</h3>
+        <div class="more-grid">
+          <button class="mode mini" data-mode="mud" id="mode-mud" type="button"><b>Mud Splat</b><small>Throw mud at the other team. Three splats sends them home.</small></button>
+          <button class="mode mini" data-mode="soccer" id="mode-soccer" type="button"><b>Lily Pad Soccer</b><small>Push the big ball onto the other team’s lily pad.</small></button>
+          <button class="mode mini" data-mode="dodge" id="mode-dodge" type="button"><b>Pond Ball</b><small>Grab a ball and throw it. Hit frogs sit out.</small></button>
+        </div>
+        <h3 class="more-cat">Races and challenges</h3>
+        <div class="more-grid">
+          <button class="mode mini" data-mode="race" id="mode-race" type="button"><b>Hop Race</b><small>Race through 8 glowing rings in order.</small></button>
+          <button class="mode mini" data-mode="lava" id="mode-lava" type="button"><b>Floor Is Lava</b><small>The lava rises. Climb high and stay out of it!</small></button>
+          <button class="mode mini" data-mode="swarm" id="mode-swarm" type="button"><b>Bug Swarm</b><small>Everyone together: squash bugs before they reach the lily pad.</small></button>
+          <button class="mode mini" data-mode="simon" id="mode-simon" type="button"><b>Simon Says Frog</b><small>Only do it if Grandpa Silver says "Silver says"!</small></button>
+        </div>
+        <h3 class="more-cat">Party</h3>
+        <div class="more-grid">
+          <button class="mode mini" data-mode="musical" id="mode-musical" type="button"><b>Musical Lily Pads</b><small>When the music stops, find a lily pad.</small></button>
+          <button class="mode mini" data-mode="sardines" id="mode-sardines" type="button"><b>Sardines</b><small>Find the hider, then hide with them.</small></button>
+        </div>
       </div>
       <button class="wardrobe-btn quests-btn" id="questsBtn" type="button"><span>Daily quests</span><span class="wb-count" id="questCount">0/3</span></button>
       <button class="wardrobe-btn" id="wardrobeBtn" type="button"><span>Wardrobe</span><span class="wb-count"><svg class="ban" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="7.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(-25 7.5 9)"/><ellipse cx="16.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(25 16.5 9)"/><ellipse cx="12" cy="14" rx="3.6" ry="5.4" fill="#1b1b22"/><circle cx="10.6" cy="9.6" r="1.3" fill="#d62828"/><circle cx="13.4" cy="9.6" r="1.3" fill="#d62828"/></svg><span id="menuFlies">0</span></span></button>
@@ -346,6 +397,8 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   </div>
 </div>
 
+<div id="blind" hidden><b>Counting...</b><small>No peeking!</small></div>
+<div id="splat" hidden></div>
 <div id="questsPanel" hidden>
   <div class="qp-card">
     <div class="pl-head"><h2>Daily quests</h2><span class="spacer"></span><button id="questsClose" class="pill-btn" type="button">Close</button></div>
@@ -376,7 +429,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-8';
+const APP_VERSION = 'ribbit-9';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -1904,8 +1957,9 @@ const hands = [-1, 1].map(s => {
 
 function setLava(b, on) {
   b.it = on;
-  if (b.isPlayer) { handMat.color.setHex(on ? LAVA : skinHexOf(look)); handMat.emissive.setHex(on ? LAVA_GLOW : 0); $('hud').classList.toggle('lava', on); }
-  else { b.skin.color.setHex(on ? LAVA : b.skinHex); b.skin.emissive.setHex(on ? LAVA_GLOW : skinGlowOf(b.look)); }
+  const hot = mode === 'keepaway' ? 0xffc83d : LAVA, glow = mode === 'keepaway' ? 0x6a4400 : LAVA_GLOW;
+  if (b.isPlayer) { handMat.color.setHex(on ? hot : skinHexOf(look)); handMat.emissive.setHex(on ? glow : 0); $('hud').classList.toggle('lava', on && mode !== 'keepaway'); }
+  else { b.skin.color.setHex(on ? hot : b.skinHex); b.skin.emissive.setHex(on ? glow : skinGlowOf(b.look)); }
 }
 
 // ---------- Sound ----------
@@ -2083,6 +2137,7 @@ function flash(big, small = '', secs = 2.2, color = 'var(--bone)') {
 }
 
 function startRound(firstId, seed) {
+  setTimeout(() => { sendHere(); renderOnline(); }, 500);
   state = 'play'; chooseSong(); startMusic(); roundTime = 0; playerTaggedThisRound = false;
   resetModeState(); if (mode !== 'king') kingEnd();
   questEvent('mode', 1, mode); questEvent('map', 1, mapKey);
@@ -2099,9 +2154,12 @@ function startRound(firstId, seed) {
   if (mode === 'free') { if (net && isHost()) net.ev.send({ k: 'round', first: null }); flash('Free Play', 'No tagging. Explore, bounce, climb and catch flies!', 2.8, 'var(--leaf)'); return; }
   if (mode === 'feast') { feastStart(seed); return; }
   if (mode === 'king') { kingStart(); return; }
+  const m2 = MODE2[mode];
+  if (m2) m2.active = true;
+  if (m2 && !m2.tagBase) { m2.start(seed); return; }
   const ids = Array.isArray(firstId) ? firstId : firstId ? [firstId] : [];
   let firsts = ids.map(id => byId(id)).filter(Boolean);
-  if (!firsts.length) firsts = shuffled(ais).slice(0, mode === 'freeze' && bodies.length >= 8 ? 2 : 1);
+  if (!firsts.length) firsts = shuffled(ais).slice(0, (mode === 'freeze' || mode === 'hide') && bodies.length >= 8 ? 2 : 1);
   firsts.forEach(f => { setLava(f, true); f.frozen = 3; });
   const first = firsts[0];
   if (mode === 'potato') { potato.fuse = 16 + Math.random() * 10; potato.beepT = 0; }
@@ -2111,15 +2169,17 @@ function startRound(firstId, seed) {
   else if (mode === 'potato') flash(first === player ? 'You have the hot fly!' : `${first.name} has the hot fly!`, 'Tag someone to pass it before it pops!', 2.8, 'var(--lava)');
   else flash(first === player ? "You're lava!" : `${first.name} is lava!`, first === player ? 'Count to 3, then go get them!' : 'Run! You have 3 seconds.', 2.8, 'var(--lava)');
   ais.forEach(a => { a.follow = 0; a.talkCd = 3 + Math.random() * 3; });
-  talkCd = 0; if (!first.isPlayer && !first.isRemote) sayEvent(first, 'startLava');
+  talkCd = 0; if (!first.isPlayer && !first.isRemote && !m2) sayEvent(first, 'startLava');
+  if (m2 && m2.tagBase) m2.start(seed, firsts);
   setTimeout(() => { const o = pick(ais.filter(a => !a.it)); if (o && state === 'play') sayEvent(o, 'start'); }, 1500);
 }
 
 function doTag(a, b) {
   if (net && isHost()) net.ev.send({ k: 'tag', a: a === player ? myId : a.id, b: b === player ? myId : b.id });
   setLava(b, true);
-  b.frozen = mode === 'classic' ? 2 : mode === 'potato' ? 0.6 : 1;
-  if (mode === 'classic' || mode === 'potato') { setLava(a, false); a.immune = mode === 'potato' ? 1.5 : 3; }
+  b.frozen = CLASSICISH.includes(mode) ? (mode === 'potato' ? 0.6 : 2) : 1;
+  if (CLASSICISH.includes(mode)) { setLava(a, false); a.immune = mode === 'potato' ? 1.5 : 3; }
+  if (MODE2[mode] && MODE2[mode].onTag) MODE2[mode].onTag(a, b);
   b.vel.addScaledVector(tn.subVectors(b.pos, a.pos).setY(0).normalize(), 5).y += 4;
   if (b.isPlayer || a.isPlayer) { sfxTone(520, 120, 0.35); sfxSlap(0.35); } else sfxTone(300, 150, 0.15, 'triangle', 0.05);
   b.follow = 0;
@@ -2246,12 +2306,13 @@ function aiThink(ai, dt) {
     if (Math.hypot(ai.pos.x, ai.pos.z) > HALF - 8) dir.set(-ai.pos.x, 0, -ai.pos.z).normalize();
   }
   dir.normalize();
+  if (MODE2[mode] && MODE2[mode].speed) speed *= MODE2[mode].speed(ai);
   ai.vel.x = dir.x * speed; ai.vel.z = dir.z * speed; ai.vel.y = Math.max(ai.vel.y, jumpV);
   ai.hopT = quick ? 0.15 : (ai.it ? 0.28 : 0.34) + Math.random() * 0.3 + (state === 'play' ? 0 : 0.5);
   ai.swing = 1;
 }
 function drawAI(ai, t) {
-  ai.group.position.copy(ai.pos);
+  ai.group.position.copy(ai.pos); ai.group.scale.setScalar(ai.size || 1);
   animateAcc(ai, t);
   const hv = Math.hypot(ai.vel.x, ai.vel.z);
   if (hv > 0.5) {
@@ -2820,10 +2881,10 @@ function removeRemote(id) {
 const r2 = x => Math.round(x * 100) / 100;
 function snapshot() {
   const it = {};
-  for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0)];
+  for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0), r2(b.score || 0), r2(b.size || 1), b.hits || 0];
   return { n: ais.length, m: mapKey, mo: mode, st: state, rt: r2(roundTime), ot: r2(overT), d: diff,
     ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null,
-    pf: mode === 'potato' ? r2(potato.fuse) : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
+    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
 }
 let joinWait = false;
 function applySnapshot(s, from) {
@@ -2855,7 +2916,9 @@ function applySnapshot(s, from) {
     b.feastScore = fs || 0;
   }
   if (s.pf !== undefined) potato.fuse = s.pf;
-  for (const [id, row] of Object.entries(s.it)) { const b = byId(id); if (b) b.kingScore = row[6] || 0; }
+  for (const [id, row] of Object.entries(s.it)) { const b = byId(id); if (b) { b.kingScore = row[6] || 0; b.score = row[7] || 0; b.size = row[8] || 1; b.hits = row[9] || 0; } }
+  if (MODE2[mode]) { MODE2[mode].active = true; if (s.ms && MODE2[mode].apply && state !== 'menu') MODE2[mode].apply(s.ms); }
+  for (const [k, m] of Object.entries(MODE2)) if (k !== mode && m.active) { m.active = false; if (m.end) m.end(); }
   if (s.kp && mode === 'king') { if (!kingPad.group || kingPad.mapKey !== mapKey) kingBuild(); kingPlace(s.kp[0], s.kp[1], s.kp[2]); }
   else if (mode !== 'king') kingEnd();
   if (s.fe) {
@@ -2864,7 +2927,7 @@ function applySnapshot(s, from) {
   }
   if (mode !== 'potato' && potato.mesh) { scene.remove(potato.mesh); potato.mesh = null; }
   if (mode !== 'feast' && feast.group) { scene.remove(feast.group); feast.group = null; feast.flies = []; }
-  if (s.c && mode === 'ctf' && state !== 'menu') ctfApply(s.c); else if (mode !== 'ctf') ctfEnd();
+  if (s.c && mode === 'ctf' && state !== 'menu') ctfApply(s.c); else if (!TEAM_MODES.includes(mode)) ctfEnd();
 }
 async function joinNet(code, lobby) {
   let lib;
@@ -2911,12 +2974,13 @@ async function joinNet(code, lobby) {
     else if (e.k === 'q' && peerId === net.hostId) questEvent(String(e.ev), Math.min(10, +e.n || 1));
     else if (e.k === 'bump' && peerId === net.hostId) { player.vel.set(+e.x || 0, +e.y || 6, +e.z || 0); sfxSlap(0.35); rumble(200, 0.8); flash('Bumped!', 'Someone knocked you off the pad.', 1.4, '#ffd23f'); }
     else if (e.k === 'msg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 140), 2.6, /^(#[0-9a-f]{3,6}|var\(--[a-z]+\))$/i.test(e.color || '') ? e.color : 'var(--bone)');
-    else if (e.k === 'home' && peerId === net.hostId) { ctfRespawn(player, false); flash('Tagged!', 'Back to your base.', 2, TEAM_CSS[1 - (player.team || 0)]); }
+    else if (e.k === 'home' && peerId === net.hostId) { ctfRespawn(player, false); flash(e.msg ? String(e.msg).slice(0, 40) : 'Tagged!', 'Back to your base.', 2, TEAM_CSS[1 - (player.team || 0)]); }
+    else if (e.k === 'm2' && e.d && MODE2[mode] && MODE2[mode].onEvent) MODE2[mode].onEvent(e.d, peerId);
     else if (e.k === 'ctfmsg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 120), 2.6, TEAM_CSS[e.team] || 'var(--bone)');
     else if (e.k === 'tag' && peerId === net.hostId) { const a = byId(e.a), b = byId(e.b); if (a && b) doTag(a, b); }
     else if (e.k === 'tagreq' && isHost() && state === 'play') {
       const a = remotes.get(peerId), b = byId(String(e.b));
-      if (a && b && a !== b && a.it && a.frozen <= 0 && !b.it && !b.iced && !b.out && b.immune <= 0 && a.pos.distanceTo(b.pos) < 3.5) { if (mode === 'freeze') freezeHit(a, b); else doTag(a, b); }
+      if (a && b && a !== b && a.it && a.frozen <= 0 && !b.it && !b.iced && !b.out && b.immune <= 0 && a.pos.distanceTo(b.pos) < (mode === 'tongue' ? 5 : 3.5)) { if (mode === 'freeze') freezeHit(a, b); else doTag(a, b); }
     }
     else if (e.k === 'follow' && isHost()) {
       const a = ais[e.ai], r = remotes.get(peerId);
@@ -2966,7 +3030,7 @@ function netFrame(dt) {
   for (const r of remotes.values()) {
     bv.copy(r.pos); bv.y += 1.3; bv.project(camera);
     const d = r.pos.distanceTo(player.pos);
-    if (bv.z > 1 || d > 40 || (r.bubbleT || 0) > 0) { r.tag.hidden = true; continue; }
+    if (bv.z > 1 || d > 40 || (r.bubbleT || 0) > 0 || (mode === 'hide' && player.it && !r.it) || (mode === 'sardines' && r === MODE2.sardines.hider)) { r.tag.hidden = true; continue; }
     r.tag.hidden = false; r.tag.classList.toggle('lava', r.it);
     r.tag.style.transform = `translate(${(bv.x + 1) / 2 * innerWidth}px, ${(1 - bv.y) / 2 * innerHeight}px) translate(-50%, -100%)`;
   }
@@ -2983,7 +3047,7 @@ function armPush(dy, fingerSpeed, turn = 0) {
   if (gap > REACH) return false;
   const wall = wallGap < REACH * 0.85;
   const boost = clamp(0.7 + fingerSpeed * 0.8, 0.7, 2.2);
-  const push = dy * 0.018 * boost * (820 / Math.max(400, innerHeight));
+  const push = (MODE2[mode] && MODE2[mode].pushMul ? MODE2[mode].pushMul() : 1) * dy * 0.018 * boost * (820 / Math.max(400, innerHeight));
   const fx = -Math.sin(player.yaw + turn), fz = -Math.cos(player.yaw + turn), v = player.vel;
   if (push > 0) {
     v.x += fx * push; v.z += fz * push;
@@ -3022,6 +3086,7 @@ const endPointer = e => {
   if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 14 || performance.now() - p.t0 > 350) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
+  if (['mud', 'dodge'].includes(mode) && state === 'play') { tryThrow(ray.ray.direction.clone()); return; }
   const hit = ray.intersectObjects(ais.map(a => a.group).concat(mysteryActive ? [mysteryActive.group] : []), true)[0];
   if (hit && hit.object.userData.mystery) {
     const m = mysteries[hit.object.userData.mystery];
@@ -3067,6 +3132,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Escape') { if (!$('players').hidden) togglePlayers(false); else if (talkOpen) $('talk').hidden = true; else $('menuBtn').click(); return; }
   if (e.code === 'KeyH') { claimHost(); return; }
   if (e.code === 'KeyP') { togglePlayers(); return; }
+  if (e.code === 'KeyF') { tryThrow(); return; }
   if (e.code === 'KeyM') { setMusic(!musicOn); return; }
   if (e.code === 'KeyT' || e.code === 'Enter') { e.preventDefault(); openTalk(talkOpen ? talkTarget : null); $('sayInput').focus(); return; }
   if (talkOpen && e.code === 'Tab') { $('talkNext').click(); return; }
@@ -3167,6 +3233,8 @@ $('modePotato').addEventListener('click', () => begin('potato'));
 $('modeFeast').addEventListener('click', () => begin('feast'));
 $('modeFree').addEventListener('click', () => begin('free'));
 $('modeKing').addEventListener('click', () => begin('king'));
+document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode)));
+$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (15)'; });
 $('menuBtn').addEventListener('click', () => {
   state = 'menu'; pointers.clear(); showBest();
   $('menu').hidden = false; $('hud').hidden = true;
@@ -3174,6 +3242,7 @@ $('menuBtn').addEventListener('click', () => {
   $('talk').hidden = true; talkTarget = null; togglePlayers(false);
   ais.forEach(a => { a.bubble.hidden = true; a.bubbleT = 0; a.follow = 0; });
   try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
+  setTimeout(() => { sendHere(); renderOnline(); }, 300);
   leaveNet(); joinWait = false; ctfEnd(); kingEnd(); resetModeState(); showQuestBadge(); if (potato.mesh) { scene.remove(potato.mesh); potato.mesh = null; } if (feast.group) { scene.remove(feast.group); feast.group = null; } if (mysteryActive) mysteryVanish(mysteryActive, 'off'); Object.values(mysteries).forEach(m => { m.bubble.hidden = true; }); chooseSong();
 });
 $('roomIn').addEventListener('input', e => {
@@ -3393,6 +3462,7 @@ function playerRow(b, me) {
   if (mode === 'feast' && state !== 'menu') { st.textContent = `${b.feastScore || 0} ${(b.feastScore || 0) === 1 ? 'fly' : 'flies'}`; st.style.background = '#ffd23f'; st.style.color = '#0a1a10'; }
   if (mode === 'free' && state !== 'menu') st.textContent = 'Playing';
   if (mode === 'king' && state !== 'menu') { st.textContent = `${Math.floor(b.kingScore || 0)}s`; st.style.background = '#ffd23f'; st.style.color = '#0a1a10'; }
+  if (MODE2[mode] && MODE2[mode].row && state !== 'menu') { st.textContent = MODE2[mode].row(b); st.style.background = TEAM_MODES.includes(mode) ? TEAM_CSS[b.team || 0] : b.out ? '#9aa0a6' : 'var(--bone)'; st.style.color = '#0a1a10'; }
   if (mode === 'ctf' && state !== 'menu') {
     st.textContent = ctf.flags.some(F => F.carrier === b) ? 'Has lotus' : TEAM_NAMES[b.team || 0];
     st.style.background = TEAM_CSS[b.team || 0]; st.style.color = '#0a1a10';
@@ -3603,7 +3673,7 @@ function markTeam(b) {
   if (b === player || !b.group) return;
   if (!b.teamRing) { b.teamRing = new THREE.Mesh(ctfGeo.ring, teamRingMats[0]); b.teamRing.rotation.x = Math.PI / 2; b.teamRing.position.y = -0.12; b.group.add(b.teamRing); }
   b.teamRing.material = teamRingMats[b.team || 0];
-  b.teamRing.visible = mode === 'ctf' && state !== 'menu';
+  b.teamRing.visible = TEAM_MODES.includes(mode) && state !== 'menu';
 }
 function applyTeams() { for (const b of bodies) { const t = ctf.teams[idOf(b)]; b.team = t === undefined ? (b.team || 0) : t; markTeam(b); } }
 function ctfAssignTeams(keep) {
@@ -3751,7 +3821,11 @@ function setOut(b, on) {
   if (b.acc) b.acc.visible = !on;
 }
 function resetModeState() {
-  for (const b of bodies) { setIce(b, false); setOut(b, false); b.feastScore = 0; }
+  for (const m of Object.values(MODE2)) if (m.active) { m.active = false; if (m.end) m.end(); }
+  if (lantern) mapLighting();
+  G = MAPS[mapKey].gravity || 18;
+  for (const b of bodies) { setIce(b, false); setOut(b, false); b.feastScore = 0; b.score = 0; b.size = 1; b.hits = 0; b.simonCaller = false; }
+  overlay('blind', false);
   if (potato.mesh && mode !== 'potato') { scene.remove(potato.mesh); potato.mesh = null; }
   if (feast.group && mode !== 'feast') { scene.remove(feast.group); feast.group = null; feast.flies = []; }
 }
@@ -3892,6 +3966,7 @@ function feastNearest(from) {
 }
 // where a computer frog wants to go in the newer modes (null = use the normal chase/flee brain)
 function modeGoal(ai) {
+  if (MODE2[mode] && MODE2[mode].goal) return MODE2[mode].goal(ai);
   if (mode === 'ctf') return ctfTarget(ai);
   if (mode === 'feast') { const f = feastNearest(ai.pos); return f ? f.pos : null; }
   if (mode === 'king' && kingPad.group) return kingPad.pos;
@@ -4144,12 +4219,857 @@ function pollGamepad(dt) {
       if (pressed(PAD.RB)) $('talkNext').click();
     }
     if (pressed(PAD.Y)) togglePlayers();
-    if (pressed(PAD.B)) padBack();
+    if (pressed(PAD.B)) { if ($('talk').hidden && $('players').hidden && tryThrow()) {} else padBack(); }
     if (pressed(PAD.BACK)) claimHost();
     if (pressed(PAD.START)) $('menuBtn').click();
   }
   padPrev = p.buttons.map((_, i) => b(i));
 }
+
+// ---------- Even more modes ----------
+// Each mode is an object: start(seed, firsts), update(dt, t, host), and optional goal(ai) for computer frogs,
+// hud() for the top bar, row(b) for the player list, snap()/apply(ms) for multiplayer, onTag(a, b), onEvent(d, from), end().
+// "tagBase" modes reuse the normal tag rules (pick a lava frog, touch to tag); "ownTags" modes handle touching themselves.
+const CLASSICISH = ['classic', 'potato', 'bat', 'shrink', 'tongue', 'gravity'];
+const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge'];
+Object.assign(MODE_NAMES, { hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
+  mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines' });
+function m2Send(d, target) { if (net && isHost()) net.ev.send({ k: 'm2', d }, target ? { target } : undefined); }
+function m2Ask(d) { if (net && !isHost()) net.ev.send({ k: 'm2', d }, { target: net.hostId }); }
+function alive() { return bodies.filter(b => !b.out); }
+function mapCenter() { const mp = MAPS[mapKey]; return new V(mp.ring[0], MAPS[mapKey].spawnHigh ? 8 : 0, mp.ring[1]); }
+function seeded(seed) { let s = (seed % 2147483646) + 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+function freeSpot(r, near, spread, minGap, taken) { // a clear spot on the ground near a point
+  for (let i = 0; i < 40; i++) {
+    const x = clamp(near.x + (r() - 0.5) * spread, -HALF + 3, HALF - 3), z = clamp(near.z + (r() - 0.5) * spread, -HALF + 3, HALF - 3);
+    if (blockedAt(x, z) || (water && z > water.z) || slowZones.some(([x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) continue;
+    if (taken && taken.some(p => Math.hypot(p.x - x, p.z - z) < minGap)) continue;
+    return new V(x, near.y || 0, z);
+  }
+  return new V(clamp(near.x + (r() - 0.5) * spread, -HALF + 3, HALF - 3), near.y || 0, clamp(near.z + (r() - 0.5) * spread, -HALF + 3, HALF - 3));
+}
+function sendHome(b, msg) {
+  if (b.isRemote) { if (net) net.ev.send({ k: 'home', id: b.id, msg }, { target: b.id }); b.frozen = 1.5; b.immune = 2; }
+  else { ctfRespawn(b, false); if (b === player && msg) flash(msg, 'Back to your base.', 1.8, 'var(--lava)'); }
+}
+function teamStart(name, sub) {
+  buildCtfScene(); ctf.flags.forEach(F => { F.mesh.visible = false; }); ctf.score = [0, 0];
+  if (isHost()) ctfAssignTeams(false); else applyTeams();
+  for (const b of bodies) { b.hits = 0; ctfRespawn(b, true); }
+  flash(`${name}: you're on ${TEAM_NAMES[player.team || 0]}`, sub, 3, TEAM_CSS[player.team || 0]);
+}
+function teamTick() { if (isHost() && bodies.some(b => ctf.teams[idOf(b)] === undefined)) ctfAssignTeams(true); if (!ctf.group || ctf.mapKey !== mapKey) { buildCtfScene(); ctf.flags.forEach(F => { F.mesh.visible = false; }); } }
+function teamSnap() { return { tm: ctf.teams, sc: ctf.score }; }
+function teamApply(ms) {
+  if (!ctf.group || ctf.mapKey !== mapKey) { buildCtfScene(); ctf.flags.forEach(F => { F.mesh.visible = false; }); }
+  const before = player.team; ctf.teams = ms.tm || {}; ctf.score = ms.sc || [0, 0]; applyTeams();
+  if (before !== undefined && before !== player.team) ctfRespawn(player, true);
+}
+function teamWin(team, big, small) {
+  state = 'over'; overT = 6;
+  announce(big || `${TEAM_NAMES[team]} team wins!`, small || `${ctf.score[0]} to ${ctf.score[1]}. New game soon.`, TEAM_CSS[team], 5, bodies.filter(b => b.team === team));
+  if (player.team === team) addFlies(10);
+}
+function camForward() { return new V(0, 0, -1).applyQuaternion(camera.quaternion); }
+function overlay(id, on, text) { const el = $(id); el.hidden = !on; if (text !== undefined) el.querySelector('b').textContent = text; }
+function splatScreen() { const el = $('splat'); el.hidden = false; el.style.opacity = 1; clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = 0; setTimeout(() => { el.hidden = true; }, 400); }, 700); rumble(150, 0.6); }
+
+// ---- projectiles (mud balls and pond balls): the host decides hits, everyone draws them ----
+const proj = { list: [], seq: 0, mats: { mud: new THREE.MeshLambertMaterial({ color: 0x6b4a2b }), ball: new THREE.MeshLambertMaterial({ color: 0xe63946, emissive: 0x3a0000 }) } };
+function spawnProj(id, owner, p, v, kind, ballIdx) {
+  const m = new THREE.Mesh(ballGeo, proj.mats[kind]); m.scale.setScalar(kind === 'ball' ? 0.32 : 0.22); m.position.copy(p); scene.add(m);
+  proj.list.push({ id, owner, pos: p.clone(), vel: v.clone(), kind, mesh: m, life: 3, ballIdx });
+}
+function removeProj(pr) { scene.remove(pr.mesh); proj.list.splice(proj.list.indexOf(pr), 1); }
+function clearProj() { for (const pr of proj.list.slice()) removeProj(pr); }
+function throwFrom(owner, d, kind, ballIdx) { // host only
+  const dir = new V(d[0], d[1], d[2]); if (dir.lengthSq() < 1e-4) return; dir.normalize();
+  const p = owner.pos.clone().add(new V(0, 0.6, 0)).addScaledVector(dir, 0.8);
+  const v = dir.multiplyScalar(17).add(new V(0, 3, 0));
+  const id = ++proj.seq;
+  spawnProj(id, owner, p, v, kind, ballIdx);
+  m2Send({ t: 'proj', id, o: idOf(owner), p: [p.x, p.y, p.z].map(r2), v: [v.x, v.y, v.z].map(r2), kind, bi: ballIdx });
+  sfxTone(500, 250, 0.1, 'triangle', 0.05);
+}
+function updateProj(dt, onHit, onLand) {
+  for (const pr of proj.list.slice()) {
+    pr.vel.y -= 14 * dt; pr.pos.addScaledVector(pr.vel, dt); pr.mesh.position.copy(pr.pos); pr.life -= dt;
+    if (!isHost()) { if (pr.pos.y < 0.2 || pr.life <= 0) removeProj(pr); continue; }
+    let done = false;
+    for (const b of bodies) {
+      if (b === pr.owner || b.out || b.team === pr.owner.team || b.pos.distanceTo(pr.pos) > 0.95) continue;
+      onHit(pr, b); done = true; break;
+    }
+    const hitWall = boxes.some(bx => pr.pos.x > bx.min.x && pr.pos.x < bx.max.x && pr.pos.y > bx.min.y && pr.pos.y < bx.max.y && pr.pos.z > bx.min.z && pr.pos.z < bx.max.z);
+    if (!done && (pr.pos.y < 0.25 || hitWall || pr.life <= 0)) { if (onLand) onLand(pr); done = true; }
+    if (done) { removeProj(pr); m2Send({ t: 'projx', id: pr.id }); }
+  }
+}
+function projEvent(d) {
+  if (d.t === 'proj') spawnProj(d.id, byId(d.o) || player, new V(...d.p), new V(...d.v), d.kind === 'ball' ? 'ball' : 'mud', d.bi);
+  else if (d.t === 'projx') { const pr = proj.list.find(x => x.id === d.id); if (pr) removeProj(pr); }
+}
+// the throw button (F, a quick tap, or B on a controller)
+let throwCd = 0;
+function tryThrow(dirV) {
+  if (state !== 'play' || !['mud', 'dodge'].includes(mode) || player.frozen > 0 || player.out || throwCd > 0) return false;
+  if (mode === 'dodge' && !MODE2.dodge.balls.some(bl => bl.holder === player)) { flash('No ball!', 'Grab a red ball first.', 1, 'var(--bone)'); return false; }
+  throwCd = mode === 'mud' ? 0.55 : 0.4;
+  const d = (dirV || camForward()); const arr = [d.x, d.y + 0.08, d.z].map(r2);
+  if (isHost()) MODE2[mode].throwBy(player, arr); else m2Ask({ t: 'throw', d: arr });
+  return true;
+}
+
+// ---- shared lighting helpers (Bat Tag darkens the map) ----
+let lantern = null;
+function mapLighting() {
+  const mp = MAPS[mapKey];
+  scene.background.setHex(mp.sky); scene.fog.color.setHex(mp.sky); scene.fog.near = mp.fog[0]; scene.fog.far = mp.fog[1];
+  hemiLight.color.setHex(mp.hemi[0]); hemiLight.groundColor.setHex(mp.hemi[1]); hemiLight.intensity = mp.hemi[2]; sun.intensity = mp.sun;
+  if (lantern) lantern.visible = false;
+}
+
+const MODE2 = {
+  // ===== Tag twists =====
+  hide: { tagBase: true, infectLike: true, count: 0,
+    start(seed, firsts) {
+      this.count = 20;
+      firsts.forEach(f => { f.frozen = 20; });
+      const seekers = firsts;
+      for (const a of ais) if (!a.it) { // hiders find somewhere far from the seekers
+        let best = null, bd = -1;
+        for (let i = 0; i < 8; i++) {
+          const c = Math.random() < 0.35 && ledges.length ? (() => { const l = pick(ledges); return new V((l.min.x + l.max.x) / 2, l.max.y + R, (l.min.z + l.max.z) / 2); })() : findSpot((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, new V());
+          const d = Math.min(...seekers.map(s => flat(s.pos, c)));
+          if (d > bd) { bd = d; best = c; }
+        }
+        a.hideSpot = best;
+      }
+      flash(player.it ? "You're the seeker!" : `${seekers.map(s => s.name).join(' and ')} ${seekers.length > 1 ? 'are' : 'is'} seeking!`, player.it ? 'Count to 20, then go find everyone.' : 'Hide! You have 20 seconds.', 3, '#c8a8ff');
+    },
+    update(dt, t, host) {
+      if (this.count > 0) this.count -= dt;
+      overlay('blind', player.it && this.count > 0, player.it ? `Counting... ${Math.ceil(Math.max(0, this.count))}` : '');
+      if (!host || state !== 'play') return;
+      const hiders = bodies.filter(b => !b.it && !b.out);
+      if (!hiders.length) { state = 'over'; overT = 6; announce('Everyone was found!', 'The seekers win. New round soon.', '#c8a8ff', 5, bodies.filter(b => b.it)); }
+      else if (roundTime >= 180) { state = 'over'; overT = 6; announce('The hiders win!', `${hiders.length} frog${hiders.length > 1 ? 's' : ''} stayed hidden. New round soon.`, 'var(--leaf)', 5, hiders); if (!player.it) addFlies(5); }
+    },
+    onTag(a, b) { if (b === player) flash('Found you!', 'Now you seek too. Find the others!', 2.2, '#c8a8ff'); },
+    goal(ai) {
+      if (ai.it) {
+        if (ai.frozen > 0) return null;
+        const near = bodies.some(b => !b.it && !b.out && b.pos.distanceTo(ai.pos) < 12);
+        if (near) return null; // close enough: chase normally
+        if (!ai.patrol || flat(ai.patrol, ai.pos) < 2 || Math.random() < 0.02) ai.patrol = findSpot((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, new V());
+        return ai.patrol;
+      }
+      if (bodies.some(b => b.it && b.frozen <= 0 && b.pos.distanceTo(ai.pos) < 8)) return null; // run!
+      if (ai.hideSpot && flat(ai.hideSpot, ai.pos) > 1.5) return ai.hideSpot;
+      ai.hopT = 0.8; return ai.pos; // stay put
+    },
+    hud() {
+      const left = bodies.filter(b => !b.it && !b.out).length;
+      return { chip: player.it ? (this.count > 0 ? `COUNTING ${Math.ceil(this.count)}` : 'SEEKER') : 'HIDING', bg: player.it ? '#c8a8ff' : 'var(--leaf)',
+        info: `Hiders left ${left} · ${fmt(Math.max(0, 180 - roundTime))} left`, radar: player.it ? 'hide' : undefined };
+    },
+    row(b) { return b.it ? 'Seeker' : 'Hiding'; },
+    snap() { return { c: r2(this.count) }; }, apply(ms) { this.count = ms.c; },
+    end() { overlay('blind', false); },
+  },
+  bat: { tagBase: true,
+    start() { flash('Bat Tag!', 'Lights out. The lava frog glows. Follow your lantern!', 3, '#ffb36a'); },
+    update(dt, t) {
+      if (!lantern) { lantern = new THREE.PointLight(0xfff0c8, 1.3, 11, 1.4); camera.add(lantern); }
+      lantern.visible = true;
+      scene.background.setHex(0x040308); scene.fog.color.setHex(0x040308); scene.fog.near = 2; scene.fog.far = 20;
+      hemiLight.intensity = 0.07; sun.intensity = 0.03;
+      for (const b of bodies) if (b.it && b.skin) b.skin.emissive.setHex(Math.sin(t * 6) > 0 ? 0xff6a00 : 0xcc3a00);
+    },
+    end() { mapLighting(); },
+  },
+  shrink: { tagBase: true,
+    start() { for (const b of bodies) b.size = 1; flash('Shrink Tag!', 'Every tag makes that frog smaller and faster. Last full-size frog wins!', 3, 'var(--lava)'); },
+    onTag(a, b) { b.size = Math.max(0.45, (b.size || 1) * 0.78); if (b === player) flash('Shrunk!', "You're smaller, but faster.", 1.6, 'var(--lava)'); },
+    update(dt, t, host) {
+      if (!host || state !== 'play') return;
+      const full = bodies.filter(b => (b.size || 1) > 0.99);
+      if (full.length <= 1) {
+        const w = full[0] || bodies.slice().sort((x, y) => (y.size || 1) - (x.size || 1))[0];
+        state = 'over'; overT = 6;
+        announce(w === player ? "You're the last big frog!" : `${w.name} is the last big frog!`, 'Everyone else got shrunk. New round soon.', 'var(--leaf)', 5, w);
+        if (w === player) addFlies(10);
+      }
+    },
+    speed(ai) { return Math.pow(1 / (ai.size || 1), 0.35); },
+    pushMul() { return Math.pow(1 / (player.size || 1), 0.35); },
+    row(b) { return `${Math.round((b.size || 1) * 100)}% size`; },
+    end() { for (const b of bodies) b.size = 1; },
+  },
+  tongue: { tagBase: true, cd: new Map(), tongues: [],
+    start() { flash('Sticky Tongue Tag!', 'The lava frog can tag from far away with its tongue!', 3, '#ff6f91'); },
+    lick(a, b) {
+      const m = new THREE.Mesh(boxGeo, cmat(0xff6f91)); scene.add(m);
+      this.tongues.push({ a, b, m, life: 0.25 });
+      sfxTone(900, 300, 0.12, 'sine', 0.08);
+    },
+    update(dt, t, host) {
+      for (const tg of this.tongues.slice()) {
+        tg.life -= dt;
+        const p0 = tg.a.pos.clone().add(new V(0, 0.4, 0)), p1 = tg.b.pos.clone().add(new V(0, 0.2, 0)), mid = p0.clone().add(p1).multiplyScalar(0.5);
+        tg.m.position.copy(mid); tg.m.lookAt(p1); tg.m.scale.set(0.08, 0.08, p0.distanceTo(p1));
+        if (tg.life <= 0) { scene.remove(tg.m); this.tongues.splice(this.tongues.indexOf(tg), 1); }
+      }
+      if (!host || state !== 'play') return;
+      for (const a of bodies) {
+        if (!a.it || a.frozen > 0 || a.isRemote || (this.cd.get(a) || 0) > t) continue;
+        const fy = a === player ? player.yaw : a.yaw;
+        for (const b of bodies) {
+          if (b.it || b.immune > 0 || b.out || b === a) continue;
+          const d = a.pos.distanceTo(b.pos); if (d > 3.8 || d < 1.3) continue;
+          let rel = Math.atan2(-(b.pos.x - a.pos.x), -(b.pos.z - a.pos.z)) - fy; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+          if (Math.abs(rel) > 0.8) continue;
+          this.cd.set(a, t + 1.4); this.lick(a, b); m2Send({ t: 'lick', a: idOf(a), b: idOf(b) }); doTag(a, b); break;
+        }
+      }
+    },
+    onEvent(d) { if (d.t === 'lick') { const a = byId(d.a), b = byId(d.b); if (a && b) this.lick(a, b); } },
+    end() { for (const tg of this.tongues) scene.remove(tg.m); this.tongues = []; },
+  },
+  keepaway: { tagBase: true, ownTags: true,
+    start(seed, firsts) {
+      for (const b of bodies) b.score = 0;
+      const g = firsts[0]; g.frozen = 0;
+      flash(g === player ? 'You have the golden crown!' : `${g.name} has the golden crown!`, 'Hold it as long as you can. Tag the golden frog to steal it!', 3, '#ffd23f');
+    },
+    update(dt, t, host) {
+      if (!host || state !== 'play') return;
+      const g = bodies.find(b => b.it); if (!g) return;
+      g.score = (g.score || 0) + dt;
+      for (const b of bodies) {
+        if (b === g || b.out || b.frozen > 0 || g.immune > 0 || b.pos.distanceTo(g.pos) > 1.3) continue;
+        setLava(g, false); setLava(b, true); b.immune = 2; g.frozen = 0.8;
+        if (b === player) { flash('Stolen!', 'You have the golden crown. Run!', 1.6, '#ffd23f'); addFlies(1); }
+        else if (g === player) flash('Crown stolen!', `${b.name} took it. Get it back!`, 1.6, '#ffd23f');
+        questFor(b, 'tag'); sfxTone(700, 1100, 0.2, 'triangle', 0.08);
+        m2Send({ t: 'steal' });
+        break;
+      }
+      const lead = bodies.reduce((w, b) => (b.score || 0) > (w.score || 0) ? b : w, bodies[0]);
+      if ((lead.score || 0) >= 45 || roundTime >= 180) {
+        state = 'over'; overT = 6;
+        announce(lead === player ? 'You win Keep Away!' : `${lead.name} wins Keep Away!`, `${Math.floor(lead.score)} seconds with the crown. New round soon.`, '#ffd23f', 5, lead);
+        if (lead === player) addFlies(10);
+      }
+    },
+    goal(ai) {
+      const g = bodies.find(b => b.it); if (!g) return null;
+      if (ai !== g) return g.pos;
+      let near = null, nd = 1e9; for (const b of bodies) if (b !== ai && !b.out) { const d = b.pos.distanceTo(ai.pos); if (d < nd) { nd = d; near = b; } }
+      if (!near) return null;
+      const away = ai.pos.clone().sub(near.pos).setY(0).normalize().multiplyScalar(8).add(ai.pos);
+      away.x = clamp(away.x + (Math.random() - 0.5) * 4, -HALF + 3, HALF - 3); away.z = clamp(away.z + (Math.random() - 0.5) * 4, -HALF + 3, HALF - 3);
+      return away;
+    },
+    hud() {
+      const g = bodies.find(b => b.it), lead = bodies.reduce((w, b) => (b.score || 0) > (w.score || 0) ? b : w, bodies[0]);
+      return { chip: player.it ? 'GOLDEN!' : `${Math.floor(player.score || 0)}s`, bg: '#ffd23f',
+        info: `Leader: ${lead === player ? 'You' : lead.name} ${Math.floor(lead.score || 0)}s · first to 45 · ${fmt(Math.max(0, 180 - roundTime))}`,
+        radar: g && g !== player ? { pos: g.pos, label: `Golden frog` } : 'hide' };
+    },
+    row(b) { return `${Math.floor(b.score || 0)}s${b.it ? ' · crown' : ''}`; },
+  },
+  gravity: { tagBase: true, t: 20, g: 18,
+    start() { this.t = 20; this.g = 18; G = 18; flash('Gravity Swap!', 'Every 20 seconds, gravity changes. Hold on to your hats!', 3, '#a8e0ff'); },
+    update(dt, t, host) {
+      G = this.g;
+      if (!host || state !== 'play') return;
+      if ((this.t -= dt) <= 0) {
+        this.t = 20;
+        const opts = [[18, 'Normal gravity'], [6, 'Moon gravity! Floaty!'], [32, 'Super heavy gravity!'], [11, 'Light gravity']].filter(o => o[0] !== this.g);
+        const [g, name] = pick(opts); this.g = g;
+        announce(name, 'Gravity just changed.', '#a8e0ff', 2);
+      }
+    },
+    hud() { return { info: `Gravity ${this.g === 6 ? 'Moon' : this.g === 32 ? 'Heavy' : this.g === 11 ? 'Light' : 'Normal'} · changes in ${Math.ceil(this.t)}s` }; },
+    snap() { return { g: this.g, t: r2(this.t) }; }, apply(ms) { this.g = ms.g; this.t = ms.t; },
+    end() { G = MAPS[mapKey].gravity || 18; },
+  },
+  // ===== Team games =====
+  mud: { team: true,
+    start() { clearProj(); teamStart('Mud Splat', 'Throw mud with F, a quick tap, or B. Three splats sends a frog home!'); },
+    throwBy(owner, d) { throwFrom(owner, d, 'mud'); },
+    update(dt, t, host) {
+      teamTick(); throwCd -= dt;
+      updateProj(dt, (pr, b) => {
+        b.hits = (b.hits || 0) + 1;
+        sfxSlap(0.3);
+        if (b === player) splatScreen(); else if (b.isRemote) m2Send({ t: 'splat' }, b.id);
+        if (b.hits >= 3) {
+          b.hits = 0; ctf.score[pr.owner.team]++; questFor(pr.owner, 'tag');
+          sendHome(b, 'Splatted!');
+          if (pr.owner === player) { flash('Splat!', `${b.name} goes back to base.`, 1.4, TEAM_CSS[player.team]); addFlies(1); }
+          if (ctf.score[pr.owner.team] >= 15) teamWin(pr.owner.team);
+        }
+      });
+      if (!host || state !== 'play') return;
+      for (const a of ais) { // computer frogs lob mud at the nearest enemy
+        if (a.frozen > 0 || (a.throwT = (a.throwT || 1) - dt) > 0) continue;
+        let tg = null, td = 15; for (const b of bodies) if (b.team !== a.team && !b.out) { const d = b.pos.distanceTo(a.pos); if (d < td) { td = d; tg = b; } }
+        if (!tg) continue;
+        a.throwT = 1.4 + Math.random() * 1.4;
+        const aim = tg.pos.clone().addScaledVector(tg.vel, td / 17).sub(a.pos); aim.y += td * 0.1;
+        throwFrom(a, [aim.x, aim.y, aim.z].map(r2), 'mud');
+      }
+      if (roundTime >= 180) teamWin(ctf.score[0] >= ctf.score[1] ? 0 : 1);
+    },
+    goal(ai) {
+      let tg = null, td = 1e9; for (const b of bodies) if (b.team !== ai.team && !b.out) { const d = b.pos.distanceTo(ai.pos); if (d < td) { td = d; tg = b; } }
+      if (!tg) return null;
+      if (td < 7) { const side = ai.pos.clone().sub(tg.pos).setY(0).normalize(); return ai.pos.clone().add(new V(-side.z, 0, side.x).multiplyScalar(Math.random() < 0.5 ? 3 : -3)); }
+      return tg.pos;
+    },
+    hud() { return { chip: `${TEAM_NAMES[player.team || 0].toUpperCase()} · ${3 - (player.hits || 0)} HP`, bg: TEAM_CSS[player.team || 0], info: `Green ${ctf.score[0]} – ${ctf.score[1]} Blue · first to 15 · ${fmt(Math.max(0, 180 - roundTime))}`, radar: 'hide' }; },
+    row(b) { return `${TEAM_NAMES[b.team || 0]} · ${3 - (b.hits || 0)} HP`; },
+    snap() { return teamSnap(); }, apply(ms) { teamApply(ms); },
+    onEvent(d, from) {
+      if (d.t === 'throw' && isHost()) { const o = remotes.get(from); if (o && !o.out && o.frozen <= 0 && (o.throwCd || 0) < performance.now()) { o.throwCd = performance.now() + 450; this.throwBy(o, d.d); } }
+      else if (d.t === 'splat') splatScreen();
+      else projEvent(d);
+    },
+    end() { clearProj(); },
+  },
+  soccer: { team: true, ball: null,
+    start() {
+      teamStart('Lily Pad Soccer', "Push the big ball onto the other team's lily pad!");
+      this.ensure(); this.reset();
+    },
+    ensure() {
+      if (!this.ball) { this.ball = { pos: new V(), vel: new V(), grounded: false, wall: false, mesh: new THREE.Mesh(ballGeo, new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x222222 })) }; this.ball.mesh.scale.setScalar(0.75); }
+      if (!this.ball.mesh.parent) scene.add(this.ball.mesh);
+    },
+    reset() { const c = ctf.bases[0].clone().add(ctf.bases[1]).multiplyScalar(0.5); this.ball.pos.set(c.x, Math.max(ctf.bases[0].y, ctf.bases[1].y) + 3, c.z); this.ball.vel.set(0, 0, 0); },
+    update(dt, t, host) {
+      teamTick();
+      const B = this.ball; if (!B) return;
+      B.mesh.position.copy(B.pos); B.mesh.rotation.x += B.vel.z * dt; B.mesh.rotation.z -= B.vel.x * dt;
+      if (!host || state !== 'play') return;
+      const vy = B.vel.y; B.vel.y -= G * dt; B.pos.addScaledVector(B.vel, dt);
+      B.grounded = false; collide(B);
+      if (B.grounded && vy < -3) B.vel.y = -vy * 0.55;
+      if (B.grounded) { const f = Math.exp(-0.9 * dt); B.vel.x *= f; B.vel.z *= f; }
+      for (const b of bodies) {
+        if (b.out || (b.kickT || 0) > t || b.pos.distanceTo(B.pos) > 1.35) continue;
+        const dirv = B.pos.clone().sub(b.pos).setY(0); if (dirv.lengthSq() < 1e-4) dirv.set(Math.random() - 0.5, 0, Math.random() - 0.5);
+        dirv.normalize(); const sp = Math.hypot(b.vel.x, b.vel.z);
+        B.vel.x = dirv.x * (5 + sp * 0.9); B.vel.z = dirv.z * (5 + sp * 0.9); B.vel.y = 3 + Math.max(0, b.vel.y) * 0.5;
+        b.kickT = t + 0.25; b.lastKick = t; this.lastToucher = b;
+        if (b === player) sfxSlap(0.25);
+      }
+      for (let tm = 0; tm < 2; tm++) {
+        if (flat(B.pos, ctf.bases[tm]) < 2.6 && Math.abs(B.pos.y - ctf.bases[tm].y) < 3) {
+          const scorer = 1 - tm; ctf.score[scorer]++;
+          const who = this.lastToucher; if (who && who.team === scorer) questFor(who, 'capture');
+          announce(`${TEAM_NAMES[scorer]} scores!`, `${ctf.score[0]} to ${ctf.score[1]}`, TEAM_CSS[scorer], 2.4);
+          sfxTone(520, 1040, 0.4, 'triangle', 0.14);
+          if (ctf.score[scorer] >= 5) teamWin(scorer); else this.reset();
+          break;
+        }
+      }
+      if (roundTime >= 240) teamWin(ctf.score[0] >= ctf.score[1] ? 0 : 1);
+    },
+    goal(ai) {
+      const B = this.ball; if (!B) return null;
+      const goal = ctf.bases[1 - (ai.team || 0)];
+      const behind = B.pos.clone().sub(goal).setY(0).normalize().multiplyScalar(1.6).add(B.pos);
+      return flat(ai.pos, behind) < 1.6 ? B.pos : behind;
+    },
+    hud() { return { chip: `${TEAM_NAMES[player.team || 0].toUpperCase()} TEAM`, bg: TEAM_CSS[player.team || 0], info: `Green ${ctf.score[0]} – ${ctf.score[1]} Blue · first to 5`, radar: this.ball ? { pos: this.ball.pos, label: 'Ball' } : 'hide' }; },
+    row(b) { return TEAM_NAMES[b.team || 0]; },
+    snap() { const B = this.ball; return Object.assign(teamSnap(), { b: B ? [B.pos.x, B.pos.y, B.pos.z, B.vel.x, B.vel.y, B.vel.z].map(r2) : null }); },
+    apply(ms) {
+      teamApply(ms);
+      this.ensure();
+      if (ms.b) { this.ball.pos.lerp(new V(ms.b[0], ms.b[1], ms.b[2]), 0.5); this.ball.vel.set(ms.b[3], ms.b[4], ms.b[5]); }
+    },
+    end() { if (this.ball) scene.remove(this.ball.mesh); },
+  },
+  dodge: { team: true, balls: [],
+    start() {
+      clearProj(); teamStart('Pond Ball', 'Grab a red ball, throw it with F, a quick tap, or B. Hit someone and they sit out!');
+      for (const bl of this.balls) scene.remove(bl.mesh);
+      const c = ctf.bases[0].clone().add(ctf.bases[1]).multiplyScalar(0.5), side = new V(-(ctf.bases[1].z - ctf.bases[0].z), 0, ctf.bases[1].x - ctf.bases[0].x).normalize();
+      this.balls = [];
+      for (let i = 0; i < 6; i++) {
+        const m = new THREE.Mesh(ballGeo, proj.mats.ball); m.scale.setScalar(0.32); scene.add(m);
+        const p = c.clone().addScaledVector(side, (i - 2.5) * 2.6); p.y = c.y + 0.35;
+        this.balls.push({ pos: p, holder: null, flying: false, mesh: m });
+      }
+      for (const b of bodies) setOut(b, false);
+    },
+    throwBy(owner, d) {
+      const i = this.balls.findIndex(bl => bl.holder === owner); if (i < 0) return;
+      const bl = this.balls[i]; bl.holder = null; bl.flying = true;
+      throwFrom(owner, d, 'ball', i);
+    },
+    update(dt, t, host) {
+      teamTick(); throwCd -= dt;
+      this.balls.forEach(bl => {
+        bl.mesh.visible = !bl.flying;
+        if (bl.holder) bl.mesh.position.set(bl.holder.pos.x, bl.holder.pos.y + 1.2, bl.holder.pos.z);
+        else bl.mesh.position.set(bl.pos.x, bl.pos.y + Math.sin(t * 3 + bl.pos.x) * 0.06, bl.pos.z);
+      });
+      updateProj(dt, (pr, b) => {
+        setOut(b, true); sfxSlap(0.4);
+        if (b === player) { splatScreen(); flash("You're out!", 'Sit tight. A teammate hit brings you back.', 2, 'var(--lava)'); }
+        questFor(pr.owner, 'tag'); if (pr.owner === player) { flash('Hit!', `${b.name} is out.`, 1.3, TEAM_CSS[player.team]); addFlies(1); }
+        const back = bodies.find(x => x.team === pr.owner.team && x.out); // a hit brings back a teammate
+        if (back) { setOut(back, false); if (!back.isRemote) ctfRespawn(back, true); else if (net) net.ev.send({ k: 'home', id: back.id, msg: "You're back in!" }, { target: back.id }); if (back === player) flash("You're back in!", 'A teammate got a hit.', 1.6, 'var(--leaf)'); }
+        this.land(pr);
+        for (let tm = 0; tm < 2; tm++) if (bodies.filter(x => x.team === tm).every(x => x.out)) { teamWin(1 - tm, `${TEAM_NAMES[1 - tm]} team wins Pond Ball!`, 'The other team is all out. New game soon.'); break; }
+      }, pr => this.land(pr));
+      if (!host || state !== 'play') return;
+      for (const bl of this.balls) { // pick-ups
+        if (bl.holder || bl.flying) continue;
+        for (const b of bodies) if (!b.out && !this.balls.some(x => x.holder === b) && flat(b.pos, bl.pos) < 1.3 && Math.abs(b.pos.y - bl.pos.y) < 1.5) { bl.holder = b; if (b === player) sfxTone(600, 900, 0.1, 'triangle', 0.06); break; }
+      }
+      for (const a of ais) { // computer frogs throw when they have a ball
+        if (a.out || a.frozen > 0 || !this.balls.some(bl => bl.holder === a) || (a.throwT = (a.throwT || 0.8) - dt) > 0) continue;
+        let tg = null, td = 16; for (const b of bodies) if (b.team !== a.team && !b.out) { const d = b.pos.distanceTo(a.pos); if (d < td) { td = d; tg = b; } }
+        if (!tg) continue;
+        a.throwT = 0.8 + Math.random() * 1.2;
+        const aim = tg.pos.clone().addScaledVector(tg.vel, td / 17).sub(a.pos); aim.y += td * 0.1;
+        this.throwBy(a, [aim.x, aim.y, aim.z].map(r2));
+      }
+    },
+    land(pr) { const bl = this.balls[pr.ballIdx]; if (bl) { bl.flying = false; bl.pos.set(clamp(pr.pos.x, -HALF + 2, HALF - 2), Math.max(0.35, pr.pos.y), clamp(pr.pos.z, -HALF + 2, HALF - 2)); } },
+    goal(ai) {
+      if (ai.out) return null;
+      if (!this.balls.some(bl => bl.holder === ai)) {
+        let best = null, bd = 1e9; for (const bl of this.balls) if (!bl.holder && !bl.flying) { const d = flat(bl.pos, ai.pos); if (d < bd) { bd = d; best = bl; } }
+        return best ? best.pos : ctf.bases[ai.team || 0];
+      }
+      let tg = null, td = 1e9; for (const b of bodies) if (b.team !== ai.team && !b.out) { const d = b.pos.distanceTo(ai.pos); if (d < td) { td = d; tg = b; } }
+      return tg && td > 9 ? tg.pos : null;
+    },
+    hud() {
+      const holding = this.balls.some(bl => bl.holder === player), mine = bodies.filter(b => b.team === player.team && !b.out).length, theirs = bodies.filter(b => b.team !== player.team && !b.out).length;
+      let near = null, nd = 1e9; for (const bl of this.balls) if (!bl.holder && !bl.flying) { const d = flat(bl.pos, player.pos); if (d < nd) { nd = d; near = bl; } }
+      return { chip: player.out ? 'OUT' : holding ? 'GOT A BALL!' : `${TEAM_NAMES[player.team || 0].toUpperCase()} TEAM`, bg: player.out ? '#9aa0a6' : TEAM_CSS[player.team || 0],
+        info: `Your team ${mine} in · Other team ${theirs} in`, radar: !holding && !player.out && near ? { pos: near.pos, label: 'Ball' } : 'hide' };
+    },
+    row(b) { return b.out ? 'Out' : this.balls.some(bl => bl.holder === b) ? 'Has ball' : TEAM_NAMES[b.team || 0]; },
+    snap() { return Object.assign(teamSnap(), { bl: this.balls.map(bl => [r2(bl.pos.x), r2(bl.pos.y), r2(bl.pos.z), bl.holder ? idOf(bl.holder) : null, bl.flying ? 1 : 0]) }); },
+    apply(ms) {
+      teamApply(ms);
+      if (!ms.bl) return;
+      if (this.balls.length !== ms.bl.length) { for (const bl of this.balls) scene.remove(bl.mesh); this.balls = ms.bl.map(() => { const m = new THREE.Mesh(ballGeo, proj.mats.ball); m.scale.setScalar(0.32); scene.add(m); return { pos: new V(), holder: null, flying: false, mesh: m }; }); }
+      ms.bl.forEach((r, i) => { const bl = this.balls[i]; bl.pos.set(r[0], r[1], r[2]); bl.holder = r[3] ? byId(r[3]) : null; bl.flying = !!r[4]; });
+    },
+    onEvent(d, from) {
+      if (d.t === 'throw' && isHost()) { const o = remotes.get(from); if (o && !o.out && (o.throwCd || 0) < performance.now()) { o.throwCd = performance.now() + 350; this.throwBy(o, d.d); } }
+      else projEvent(d);
+    },
+    end() { clearProj(); for (const bl of this.balls) scene.remove(bl.mesh); this.balls = []; for (const b of bodies) setOut(b, false); },
+  },
+  // ===== Races and challenges =====
+  race: { seed: 0, rings: [], group: null,
+    build(seed) {
+      if (this.group) scene.remove(this.group);
+      this.group = new THREE.Group(); scene.add(this.group); this.seed = seed; this.mapKey = mapKey;
+      const r = seeded(seed), pts = [], high = ledges.filter(l => l.max.y > 1.5 && l.max.y < 14 && l.max.x - l.min.x > 1.6);
+      for (let i = 0; i < 3 && high.length; i++) { const l = high[Math.floor(r() * high.length)]; pts.push(new V((l.min.x + l.max.x) / 2, l.max.y + 1.4, (l.min.z + l.max.z) / 2)); }
+      while (pts.length < 8) { const p = freeSpot(r, new V(0, 0, 0), 52, 6, pts); p.y = (MAPS[mapKey].spawnHigh ? 8 : 0) + 1.4; pts.push(p); }
+      const start = MAPS[mapKey].spawn, order = []; let cur = new V(start[0], 0, start[1]); const left = pts.slice();
+      while (left.length) { let bi = 0; left.forEach((p, i) => { if (flat(p, cur) < flat(left[bi], cur)) bi = i; }); cur = left.splice(bi, 1)[0]; order.push(cur); }
+      this.rings = order.map((p, i) => {
+        const m = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.14, 6, 24), new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x333333 }));
+        m.position.copy(p); const nx = order[i + 1] || order[i - 1]; m.lookAt(nx.x, p.y, nx.z); this.group.add(m);
+        return { pos: p, mesh: m };
+      });
+    },
+    start(seed) {
+      this.build(seed || Math.floor(Math.random() * 1e9));
+      for (const b of bodies) b.score = 0;
+      if (net && isHost()) net.ev.send({ k: 'round', first: null, seed: this.seed });
+      flash('Hop Race!', 'Go through all 8 glowing rings in order. First frog through the last ring wins!', 3, '#ffd23f');
+    },
+    update(dt, t, host) {
+      if (!this.group || this.mapKey !== mapKey) this.build(this.seed || 1);
+      const next = player.score || 0;
+      this.rings.forEach((rg, i) => { rg.mesh.material.color.setHex(i === next ? 0xffd23f : i < next ? 0x52d273 : 0xffffff); rg.mesh.material.emissive.setHex(i === next ? 0x7a5a00 : 0x222222); rg.mesh.rotation.z = i === next ? t : 0; });
+      if (!host || state !== 'play') return;
+      for (const b of bodies) {
+        const i = b.score || 0, rg = this.rings[i]; if (!rg) continue;
+        if (b.pos.distanceTo(rg.pos) < 2.2) {
+          b.score = i + 1;
+          if (b === player) { sfxTone(700 + i * 60, 1100 + i * 60, 0.15, 'triangle', 0.1); addFlies(1); }
+          if (b.score >= this.rings.length) {
+            state = 'over'; overT = 6;
+            announce(b === player ? 'You win the Hop Race!' : `${b.name} wins the Hop Race!`, `Through all ${this.rings.length} rings in ${fmt(roundTime)}. New race soon.`, '#ffd23f', 5, b);
+            if (b === player) addFlies(10);
+            return;
+          }
+        }
+      }
+    },
+    goal(ai) { const rg = this.rings[ai.score || 0]; return rg ? rg.pos : null; },
+    hud() {
+      const rg = this.rings[player.score || 0];
+      const lead = bodies.reduce((w, b) => (b.score || 0) > (w.score || 0) ? b : w, bodies[0]);
+      return { chip: `RING ${Math.min(8, (player.score || 0) + 1)}/8`, bg: '#ffd23f', info: `Leader: ${lead === player ? 'You' : lead.name} (${lead.score || 0}/8) · ${fmt(roundTime)}`, radar: rg ? { pos: rg.pos, label: `Ring ${(player.score || 0) + 1}` } : 'hide' };
+    },
+    row(b) { return `${b.score || 0}/8 rings`; },
+    snap() { return { s: this.seed }; }, apply(ms) { if (ms.s && (ms.s !== this.seed || !this.group || this.mapKey !== mapKey)) this.build(ms.s); },
+    end() { if (this.group) scene.remove(this.group); this.group = null; },
+  },
+  lava: { ly: -0.6, mesh: null, grace: 6,
+    start() {
+      this.ly = (MAPS[mapKey].spawnHigh ? 0 : 0) - 0.6; this.grace = 6;
+      if (!this.mesh) { this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2 + 2, HALF * 2 + 2), new THREE.MeshLambertMaterial({ color: 0xff5a1f, emissive: 0xc83a00, transparent: true, opacity: 0.92 })); this.mesh.rotation.x = -Math.PI / 2; }
+      scene.add(this.mesh);
+      for (const b of bodies) setOut(b, false);
+      flash('The floor is lava!', 'It rises slowly. Climb high and stay out of it!', 3, 'var(--lava)');
+    },
+    update(dt, t, host) {
+      if (this.mesh) { this.mesh.position.y = this.ly; this.mesh.material.emissive.setHex(Math.sin(t * 3) > 0 ? 0xd84a00 : 0xb83000); if (!this.mesh.parent) scene.add(this.mesh); }
+      if (!host || state !== 'play') return;
+      if ((this.grace -= dt) <= 0) this.ly += dt * 0.055;
+      for (const b of bodies) if (!b.out && b.pos.y - R < this.ly + 0.05) {
+        setOut(b, true); sfxTone(300, 80, 0.4, 'sawtooth', 0.08);
+        if (b === player) flash('Melted!', 'You touched the lava. Watch the others!', 2, 'var(--lava)');
+        else if (b.isRemote) net && net.ev.send({ k: 'msg', big: 'Melted!', small: 'You touched the lava.', color: 'var(--lava)' }, { target: b.id });
+      }
+      const left = alive(), maxTop = Math.max(6, ...ledges.map(l => l.max.y)) - 0.5;
+      if (left.length <= 1 || this.ly >= maxTop) {
+        state = 'over'; overT = 6;
+        if (left.length === 1) announce(left[0] === player ? 'You survived the lava!' : `${left[0].name} survived the lava!`, 'Last frog standing. New round soon.', 'var(--leaf)', 5, left[0]);
+        else if (left.length) announce('The lava stopped!', `${left.length} frogs made it. New round soon.`, 'var(--leaf)', 5, left);
+        else announce('Everyone melted!', 'New round soon.', 'var(--lava)', 5);
+        if (left.includes(player)) addFlies(8);
+      }
+    },
+    goal(ai) {
+      if (ai.out) return null;
+      if (!ai.lavaGoal || (ai.lavaGoalT = (ai.lavaGoalT || 0) - 1) <= 0 || ai.lavaGoal.y < this.ly + 1.2) {
+        ai.lavaGoalT = 12;
+        let best = null, bs = 1e9;
+        for (const l of ledges) {
+          if (l.max.y < this.ly + 1.5) continue;
+          const c = new V((l.min.x + l.max.x) / 2, l.max.y + R, (l.min.z + l.max.z) / 2);
+          const s = flat(c, ai.pos) - l.max.y * 2.2 + Math.random() * 4;
+          if (s < bs) { bs = s; best = c; }
+        }
+        ai.lavaGoal = best;
+      }
+      if (ai.lavaGoal && flat(ai.lavaGoal, ai.pos) < 1 && Math.abs(ai.lavaGoal.y - ai.pos.y) < 1) { ai.hopT = 0.6; return ai.pos; }
+      return ai.lavaGoal;
+    },
+    hud() { const n = alive().length; return { chip: player.out ? 'MELTED' : `${Math.max(0, (player.pos.y - R - this.ly)).toFixed(1)} m UP`, bg: player.out ? '#9aa0a6' : 'var(--lava)', info: `${n} frog${n === 1 ? '' : 's'} left · lava at ${Math.max(0, this.ly).toFixed(1)} m${this.grace > 0 ? ` · rising in ${Math.ceil(this.grace)}` : ''}`, radar: 'hide' }; },
+    row(b) { return b.out ? 'Melted' : `${Math.max(0, b.pos.y - R).toFixed(1)} m`; },
+    snap() { return { ly: r2(this.ly), g: r2(this.grace) }; }, apply(ms) { if (!this.mesh) this.start(); this.ly = ms.ly; this.grace = ms.g; },
+    end() { if (this.mesh) scene.remove(this.mesh); for (const b of bodies) setOut(b, false); },
+  },
+  swarm: { hp: 10, wave: 0, bugs: [], toSpawn: 0, spawnT: 0, pause: 0, pool: [], pad: null,
+    bugMesh() {
+      const g = new THREE.Group();
+      part(g, ballGeo, cmat(0x2a2a30), 0.35, 0.25, 0.45, 0, 0, 0);
+      part(g, ballGeo, new THREE.MeshLambertMaterial({ color: 0x3a8a5a, emissive: 0x0a3a1a }), 0.32, 0.18, 0.38, 0, 0.12, 0.04);
+      for (const sx of [-1, 1]) part(g, ballGeo, cmat(0xff3b1f), 0.07, 0.07, 0.07, sx * 0.14, 0.08, -0.4);
+      const wm = new THREE.MeshLambertMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0.55, depthWrite: false });
+      g.userData.wings = [-1, 1].map(sx => part(g, ballGeo, wm, 0.4, 0.02, 0.18, sx * 0.4, 0.25, 0.05));
+      scene.add(g); return g;
+    },
+    start() {
+      this.hp = 10; this.wave = 0; this.bugs = []; this.toSpawn = 0; this.pause = 3; this.spawnT = 0;
+      for (const b of bodies) b.score = 0;
+      if (!this.pad) { this.pad = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.3, 0.14, 20), new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0x6a4e00 })); }
+      const c = mapCenter(); this.pad.position.set(c.x, c.y + 0.07, c.z); scene.add(this.pad); this.center = c;
+      flash('Bug Swarm!', 'Giant bugs want our lily pad. Touch them to squash them! Everyone is on the same team.', 3.2, '#52d273');
+    },
+    update(dt, t, host) {
+      if (this.pad && !this.pad.parent) scene.add(this.pad);
+      // draw bugs from the list (host) or snapshot (everyone else)
+      while (this.pool.length < this.bugs.length) this.pool.push(this.bugMesh());
+      this.pool.forEach((m, i) => {
+        const bg = this.bugs[i]; m.visible = !!bg;
+        if (!bg) return;
+        m.position.set(bg.pos.x, bg.pos.y + Math.sin(t * 4 + i) * 0.15, bg.pos.z);
+        if (this.center) m.lookAt(this.center.x, bg.pos.y, this.center.z);
+        const f = Math.sin(t * 50) * 0.5; m.userData.wings[0].rotation.z = f; m.userData.wings[1].rotation.z = -f;
+      });
+      if (this.pad) this.pad.material.emissive.setHex(this.hurtT > t ? 0xaa1a00 : 0x6a4e00);
+      if (!host || state !== 'play') return;
+      const c = this.center || mapCenter();
+      if (!this.bugs.length && !this.toSpawn) {
+        if ((this.pause -= dt) <= 0) {
+          if (this.wave >= 5) { state = 'over'; overT = 6; announce('The lily pad is safe!', 'All 5 waves squashed. Great teamwork!', 'var(--leaf)', 5, bodies); addFlies(10); return; }
+          this.wave++; this.toSpawn = 3 + this.wave * 2; this.pause = 4;
+          announce(`Wave ${this.wave}!`, `${this.toSpawn} bugs incoming.`, '#52d273', 2);
+        }
+      }
+      if (this.toSpawn > 0 && (this.spawnT -= dt) <= 0) {
+        this.spawnT = 1.4 - this.wave * 0.15; this.toSpawn--;
+        const a = Math.random() * Math.PI * 2;
+        this.bugs.push({ pos: new V(clamp(c.x + Math.cos(a) * 28, -HALF + 1, HALF - 1), c.y + 1 + Math.random() * 1.6, clamp(c.z + Math.sin(a) * 28, -HALF + 1, HALF - 1)), speed: 1.6 + this.wave * 0.35 });
+      }
+      for (const bg of this.bugs.slice()) {
+        const to = c.clone().sub(bg.pos).setY(0), d = to.length();
+        bg.pos.addScaledVector(to.normalize(), bg.speed * dt);
+        const squasher = bodies.find(b => !b.out && b.pos.distanceTo(bg.pos) < 1.5);
+        if (squasher) {
+          this.bugs.splice(this.bugs.indexOf(bg), 1); squasher.score = (squasher.score || 0) + 1; questFor(squasher, 'tag');
+          if (squasher === player) { addFlies(1); sfxSlap(0.35); sfxTone(400, 120, 0.15, 'square', 0.06); }
+        } else if (d < 2.3) {
+          this.bugs.splice(this.bugs.indexOf(bg), 1); this.hp--; this.hurtT = t + 0.4; sfxTone(200, 80, 0.3, 'sawtooth', 0.08);
+          if (this.hp <= 0) { state = 'over'; overT = 6; announce('The bugs got the lily pad!', `You held out until wave ${this.wave}. Try again!`, 'var(--lava)', 5); return; }
+        }
+      }
+    },
+    goal(ai) { let best = null, bd = 1e9; for (const bg of this.bugs) { const d = bg.pos.distanceTo(ai.pos); if (d < bd) { bd = d; best = bg; } } return best ? best.pos : (this.center || null); },
+    hud() {
+      let near = null, nd = 1e9; for (const bg of this.bugs) { const d = bg.pos.distanceTo(player.pos); if (d < nd) { nd = d; near = bg; } }
+      return { chip: `PAD ${'♥'.repeat(Math.max(0, Math.ceil(this.hp / 2)))}`, bg: '#52d273', info: `Wave ${this.wave}/5 · ${this.bugs.length + this.toSpawn} bugs left · You squashed ${player.score || 0}`, radar: near ? { pos: near.pos, label: 'Bug' } : 'hide' };
+    },
+    row(b) { return `${b.score || 0} squashed`; },
+    snap() { return { hp: this.hp, w: this.wave, ts: this.toSpawn, bugs: this.bugs.map(bg => [bg.pos.x, bg.pos.y, bg.pos.z].map(r2)) }; },
+    apply(ms) {
+      if (!this.pad) this.start();
+      this.hp = ms.hp; this.wave = ms.w; this.toSpawn = ms.ts; this.center = mapCenter();
+      this.bugs = (ms.bugs || []).map(p => ({ pos: new V(p[0], p[1], p[2]) }));
+    },
+    end() { if (this.pad) scene.remove(this.pad); this.bugs = []; this.pool.forEach(m => { m.visible = false; }); },
+  },
+  simon: { phase: 'pause', t: 3, cmd: null, real: true, n: 0, rec: new Map(),
+    CMDS: [
+      { id: 'climb', text: 'Climb something!', did: r => r.maxY - r.y0 > 1.2 },
+      { id: 'tree', text: 'Touch a tree!', did: r => r.tree },
+      { id: 'freeze', text: 'Freeze!', did: r => r.moved < 0.8 },
+      { id: 'jump', text: 'Jump!', did: r => r.jumped },
+      { id: 'middle', text: 'Go to the middle!', did: (r, b) => flat(b.pos, mapCenter()) < 7 },
+    ],
+    caller() { return ais.find(a => a.name === 'Silver') || null; },
+    start() {
+      this.phase = 'pause'; this.t = 3; this.n = 0; this.cmd = null;
+      for (const b of bodies) setOut(b, false);
+      const c = this.caller(); if (c) { c.simonCaller = true; c.frozen = 999; const m = mapCenter(); c.pos.set(m.x, m.y + R, m.z); }
+      flash('Simon Says Frog!', 'Do what Grandpa Silver says, but only if he says "Silver says"!', 3.2, '#c9ced4');
+    },
+    players() { return bodies.filter(b => !b.out && !b.simonCaller); },
+    update(dt, t, host) {
+      if (this.phase === 'go') for (const b of this.players()) { // record what everyone does
+        const r = this.rec.get(b); if (!r) continue;
+        r.maxY = Math.max(r.maxY, b.pos.y); r.moved += Math.hypot(b.pos.x - r.lx, b.pos.z - r.lz); r.lx = b.pos.x; r.lz = b.pos.z;
+        if (b.vel.y > 6) r.jumped = true;
+        if (!r.tree) for (const tr of trees) if (tr.y0 < 1 && Math.hypot(b.pos.x - tr.x, b.pos.z - tr.z) < tr.r + 1.1) { r.tree = true; break; }
+      }
+      if (!host || state !== 'play') return;
+      if ((this.t -= dt) > 0) return;
+      if (this.phase === 'pause') {
+        const list = trees.filter(tr => tr.y0 < 1).length >= 3 ? this.CMDS : this.CMDS.filter(c => c.id !== 'tree');
+        this.cmd = pick(list); this.real = Math.random() < 0.7; this.n++;
+        this.phase = 'go'; this.t = this.cmd.id === 'freeze' ? 4 : 5;
+        this.rec.clear(); for (const b of this.players()) this.rec.set(b, { y0: b.pos.y, maxY: b.pos.y, moved: 0, lx: b.pos.x, lz: b.pos.z, jumped: false, tree: false });
+        for (const a of ais) a.simonDo = !a.simonCaller && (this.real ? Math.random() < 0.85 : Math.random() < 0.25);
+        const line = (this.real ? 'Silver says: ' : '') + this.cmd.text;
+        announce(line, '', '#c9ced4', this.t);
+        const c = this.caller(); if (c) say(c, line);
+      } else {
+        const outs = [];
+        for (const b of this.players()) {
+          const r = this.rec.get(b); if (!r) continue;
+          const did = this.cmd.did(r, b);
+          if (did !== this.real) outs.push(b);
+        }
+        for (const b of outs) { setOut(b, true); if (b === player) flash("You're out!", this.real ? `You didn't ${this.cmd.text.toLowerCase().replace('!', '')}.` : 'He didn’t say "Silver says"!', 2.2, 'var(--lava)'); }
+        if (outs.length && outs.length < 4) announce(`Out: ${outs.map(b => b === player ? 'You' : b.name).join(', ')}`, '', 'var(--lava)', 2);
+        const left = this.players();
+        if (left.length <= 1 || this.n >= 12) {
+          state = 'over'; overT = 6;
+          if (left.length === 1) announce(left[0] === player ? 'You win Simon Says!' : `${left[0].name} wins Simon Says!`, 'Best listener in the pond. New round soon.', 'var(--leaf)', 5, left[0]);
+          else if (left.length) announce(`${left.length} frogs win!`, 'They followed every command. New round soon.', 'var(--leaf)', 5, left);
+          else announce('Everyone is out!', 'New round soon.', 'var(--lava)', 5);
+          if (left.includes(player)) addFlies(8);
+          return;
+        }
+        this.phase = 'pause'; this.t = 2.5;
+      }
+    },
+    goal(ai) {
+      if (ai.simonCaller) { ai.hopT = 1; return ai.pos; }
+      if (ai.out) return null;
+      if (this.phase !== 'go' || !this.cmd) { ai.hopT = 0.6; return ai.pos; }
+      const wants = ai.simonDo, id = this.cmd.id;
+      if (id === 'freeze') { if (wants) { ai.hopT = 1; return ai.pos; } return null; }
+      if (!wants) { ai.hopT = 0.7; return ai.pos; }
+      if (id === 'middle') return mapCenter();
+      if (id === 'jump') { if (ai.grounded) ai.vel.y = 7.5; ai.hopT = 0.8; return ai.pos; }
+      if (id === 'tree') { let best = null, bd = 1e9; for (const tr of trees) if (tr.y0 < 1) { const d = Math.hypot(tr.x - ai.pos.x, tr.z - ai.pos.z); if (d < bd) { bd = d; best = tr; } } return best ? new V(best.x, 0.5, best.z) : null; }
+      if (id === 'climb') { let best = null, bd = 1e9; for (const l of ledges) if (l.max.y > ai.pos.y + 1.2 && l.max.y < ai.pos.y + 2.4) { const c = new V((l.min.x + l.max.x) / 2, l.max.y + R, (l.min.z + l.max.z) / 2); const d = flat(c, ai.pos); if (d < bd) { bd = d; best = c; } } return best; }
+      return null;
+    },
+    hud() { return { chip: player.out ? 'OUT' : this.phase === 'go' ? `${Math.ceil(this.t)}...` : 'LISTEN!', bg: player.out ? '#9aa0a6' : '#c9ced4', info: `${this.phase === 'go' && this.cmd ? (this.real ? 'Silver says: ' : '') + this.cmd.text + ' · ' : ''}${this.players().length} frogs left`, radar: 'hide' }; },
+    row(b) { return b.simonCaller ? 'Caller' : b.out ? 'Out' : 'Playing'; },
+    snap() { return { p: this.phase, c: this.cmd ? this.cmd.id : null, r: this.real ? 1 : 0, t: r2(this.t) }; },
+    apply(ms) { this.phase = ms.p; this.cmd = this.CMDS.find(c => c.id === ms.c) || null; this.real = !!ms.r; this.t = ms.t; const c = this.caller(); if (c) c.simonCaller = true; },
+    end() { for (const b of bodies) { b.simonCaller = false; setOut(b, false); } },
+  },
+  // ===== Party =====
+  musical: { phase: 'play', t: 10, pads: [], meshes: [],
+    start() {
+      this.phase = 'play'; this.t = 8 + Math.random() * 6; this.pads = [];
+      for (const b of bodies) setOut(b, false);
+      flash('Musical Lily Pads!', 'Hop around while the music plays. When it stops, jump on a lily pad!', 3.2, '#ff70a6');
+    },
+    makePads() {
+      const r = Math.random, n = Math.max(1, alive().length - 1), c = mapCenter(), list = [];
+      for (let i = 0; i < n; i++) { const p = freeSpot(r, c, 22, 3.4, list); p.y = c.y; list.push(p); }
+      this.pads = list.map(p => ({ pos: p, owner: null }));
+    },
+    draw(t) {
+      while (this.meshes.length < this.pads.length) { const m = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, 0.12, 14, 1, false, 0.3, Math.PI * 2 - 0.6), new THREE.MeshLambertMaterial({ color: 0x3fa34d, emissive: 0x0a2a0a })); scene.add(m); this.meshes.push(m); }
+      this.meshes.forEach((m, i) => {
+        const pd = this.pads[i]; m.visible = !!pd && this.phase === 'stop';
+        if (!pd) return;
+        m.position.set(pd.pos.x, pd.pos.y + 0.08, pd.pos.z);
+        m.material.emissive.setHex(pd.owner ? 0x7a5a00 : (Math.sin(t * 8) > 0 ? 0x2a6a2a : 0x0a2a0a));
+      });
+    },
+    update(dt, t, host) {
+      this.draw(t);
+      if (music.master) music.master.gain.value = musicOn && this.phase === 'play' ? 0.3 : 0;
+      if (!host || state !== 'play') return;
+      if (this.phase === 'stop') for (const pd of this.pads) {
+        if (pd.owner) continue;
+        const b = alive().find(x => !this.pads.some(q => q.owner === x) && flat(x.pos, pd.pos) < 1.6 && Math.abs(x.pos.y - R - pd.pos.y) < 1.2);
+        if (b) { pd.owner = b; if (b === player) { sfxTone(660, 990, 0.15, 'triangle', 0.1); flash('Safe!', 'You got a lily pad.', 1.2, 'var(--leaf)'); } }
+      }
+      if ((this.t -= dt) > 0) return;
+      if (this.phase === 'play') {
+        this.phase = 'stop'; this.t = 7; this.makePads();
+        sfxTone(500, 70, 0.5, 'sawtooth', 0.12);
+        announce('The music stopped!', `Get on a lily pad! There are only ${this.pads.length}.`, '#ff70a6', 2.5);
+        for (const a of ais) a.musicalDelay = 0.3 + Math.random() * 1.2;
+      } else if (this.phase === 'stop') {
+        const outs = alive().filter(b => !this.pads.some(pd => pd.owner === b));
+        for (const b of outs) { setOut(b, true); if (b === player) flash("You're out!", "You didn't get a lily pad.", 2, 'var(--lava)'); }
+        if (outs.length) announce(`Out: ${outs.map(b => b === player ? 'You' : b.name).join(', ')}`, '', 'var(--lava)', 2);
+        const left = alive();
+        if (left.length <= 1) {
+          state = 'over'; overT = 6;
+          announce(left[0] === player ? 'You win Musical Lily Pads!' : `${left[0] ? left[0].name : 'Nobody'} wins Musical Lily Pads!`, 'New round soon.', 'var(--leaf)', 5, left[0]);
+          if (left[0] === player) addFlies(10);
+          return;
+        }
+        this.phase = 'play'; this.t = 7 + Math.random() * 7; this.pads = [];
+      }
+    },
+    goal(ai) {
+      if (ai.out) return null;
+      if (this.phase === 'stop') {
+        if ((ai.musicalDelay -= 0.3) > 0) return ai.pos;
+        let best = null, bd = 1e9; for (const pd of this.pads) if (!pd.owner) { const d = flat(pd.pos, ai.pos); if (d < bd) { bd = d; best = pd; } }
+        if (this.pads.some(pd => pd.owner === ai)) { ai.hopT = 1; return ai.pos; }
+        return best ? best.pos : null;
+      }
+      if (!ai.mpT || flat(ai.mpT, ai.pos) < 2 || Math.random() < 0.05) ai.mpT = freeSpot(Math.random, mapCenter(), 20, 0, null);
+      return ai.mpT;
+    },
+    hud() { const n = alive().length; return { chip: player.out ? 'OUT' : this.phase === 'play' ? 'DANCE!' : this.pads.some(pd => pd.owner === player) ? 'SAFE!' : 'GET A PAD!', bg: player.out ? '#9aa0a6' : '#ff70a6', info: `${n} frogs left${this.phase === 'stop' ? ` · ${Math.ceil(this.t)}s to find a pad` : ''}`, radar: this.phase === 'stop' && !player.out && !this.pads.some(pd => pd.owner === player) ? (() => { let best = null, bd = 1e9; for (const pd of this.pads) if (!pd.owner) { const d = flat(pd.pos, player.pos); if (d < bd) { bd = d; best = pd; } } return best ? { pos: best.pos, label: 'Lily pad' } : 'hide'; })() : 'hide' }; },
+    row(b) { return b.out ? 'Out' : this.pads.some(pd => pd.owner === b) ? 'Safe' : 'Playing'; },
+    snap() { return { p: this.phase, t: r2(this.t), pads: this.pads.map(pd => [r2(pd.pos.x), r2(pd.pos.y), r2(pd.pos.z), pd.owner ? idOf(pd.owner) : null]) }; },
+    apply(ms) { this.phase = ms.p; this.t = ms.t; this.pads = (ms.pads || []).map(r => ({ pos: new V(r[0], r[1], r[2]), owner: r[3] ? byId(r[3]) : null })); },
+    end() { this.meshes.forEach(m => scene.remove(m)); this.meshes = []; this.pads = []; if (music.master) music.master.gain.value = musicOn ? 0.22 : 0; for (const b of bodies) setOut(b, false); },
+  },
+  sardines: { hider: null, found: [], count: 0,
+    start() {
+      const pool = bodies.filter(b => !b.isRemote || isHost());
+      this.hider = pick(ais.length ? ais.concat(Math.random() < 0.25 ? [player] : []) : [player]); this.found = []; this.count = 15;
+      for (const b of bodies) { b.sardFound = false; if (b !== this.hider) b.frozen = 15; }
+      if (!this.hider.isPlayer && !this.hider.isRemote) {
+        let best = null, bd = -1;
+        for (let i = 0; i < 8; i++) { const c = findSpot((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, new V()); const d = flat(c, player.pos); if (d > bd) { bd = d; best = c; } }
+        this.hider.hideSpot = best;
+      }
+      if (net && isHost()) net.ev.send({ k: 'round', first: null });
+      flash(this.hider === player ? "You're the hider!" : 'Sardines!', this.hider === player ? 'Hide somewhere good! Everyone who finds you squeezes in.' : 'Count to 15, then find the hider. When you find them, hide with them!', 3.2, '#8fb8ff');
+    },
+    update(dt, t, host) {
+      if (this.count > 0) this.count -= dt;
+      overlay('blind', this.hider !== player && this.count > 0 && !player.sardFound, `Counting... ${Math.ceil(Math.max(0, this.count))}`);
+      if (!host || state !== 'play' || !this.hider) return;
+      const H = this.hider;
+      for (const b of bodies) {
+        if (b === H || b.sardFound || b.frozen > 0) continue;
+        const near = [H, ...this.found].some(x => x.pos.distanceTo(b.pos) < 1.5);
+        if (!near) continue;
+        b.sardFound = true; this.found.push(b); b.frozen = 999;
+        const a = this.found.length * 1.1; b.pos.set(H.pos.x + Math.cos(a) * 1.1, H.pos.y, H.pos.z + Math.sin(a) * 1.1); b.vel.set(0, 0, 0);
+        if (b.isRemote && net) net.ev.send({ k: 'msg', big: 'Found them!', small: 'Squeeze in and stay quiet.', color: '#8fb8ff' }, { target: b.id });
+        if (b === player) flash('Found them!', 'Squeeze in and stay quiet.', 2, '#8fb8ff');
+        if (this.found.length === 1) questFor(b, 'win');
+      }
+      const seekers = bodies.filter(b => b !== H);
+      if (seekers.length && seekers.every(b => b.sardFound)) {
+        state = 'over'; overT = 6;
+        const first = this.found[0], last = this.found[this.found.length - 1];
+        announce(`Everyone found ${H === player ? 'you' : H.name}!`, `${first === player ? 'You' : first.name} found them first. ${last === player ? 'You were' : last.name + ' was'} last.`, '#8fb8ff', 5);
+        if (first === player) addFlies(8);
+      } else if (roundTime >= 180) {
+        state = 'over'; overT = 6;
+        announce(`${H === player ? 'You' : H.name} wins Sardines!`, 'Not everyone found the hiding spot. New round soon.', 'var(--leaf)', 5, H);
+        if (H === player) addFlies(10);
+      }
+    },
+    goal(ai) {
+      const H = this.hider;
+      if (ai === H) { if (ai.hideSpot && flat(ai.hideSpot, ai.pos) > 1.5) return ai.hideSpot; ai.hopT = 1; return ai.pos; }
+      if (ai.sardFound || ai.frozen > 0) { ai.hopT = 1; return ai.pos; }
+      if (H && H.pos.distanceTo(ai.pos) < 9) return H.pos;
+      if (!ai.patrol || flat(ai.patrol, ai.pos) < 2 || Math.random() < 0.02) ai.patrol = findSpot((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, new V());
+      return ai.patrol;
+    },
+    hud() {
+      const H = this.hider, left = bodies.filter(b => b !== H && !b.sardFound).length;
+      return { chip: H === player ? 'HIDER' : player.sardFound ? 'SQUEEZED IN' : this.count > 0 ? `COUNTING ${Math.ceil(this.count)}` : 'SEEKING', bg: '#8fb8ff', info: `${left} still searching · ${fmt(Math.max(0, 180 - roundTime))} left`, radar: 'hide' };
+    },
+    row(b) { return b === this.hider ? 'Hider' : b.sardFound ? 'Found it' : 'Searching'; },
+    snap() { return { h: this.hider ? idOf(this.hider) : null, f: this.found.map(idOf), c: r2(this.count) }; },
+    apply(ms) { this.hider = ms.h ? byId(ms.h) : null; this.found = (ms.f || []).map(byId).filter(Boolean); for (const b of bodies) b.sardFound = this.found.includes(b); this.count = ms.c; },
+    end() { overlay('blind', false); for (const b of bodies) { b.sardFound = false; } this.hider = null; this.found = []; },
+  },
+};
+
+// ---------- Frogs online ----------
+// Every open copy of the game joins one shared "presence" room and says, every 20 seconds, roughly where it is:
+// on the menu, solo, in a public lobby, or in a friends room. Room codes are never shared.
+const presence = { room: null, here: null, peers: new Map() };
+const myWhere = () => state === 'menu' ? 'menu' : !net ? 'solo' : net.isPublic ? 'public' : 'friends';
+function sendHere(target) { try { if (presence.here) presence.here.send({ w: myWhere() }, target ? { target } : undefined); } catch (e) {} }
+function renderOnline() {
+  const now = Date.now();
+  for (const [id, p] of presence.peers) if (now - p.t > 70000) presence.peers.delete(id);
+  const counts = { menu: 0, solo: 0, public: 0, friends: 0 };
+  counts[myWhere()]++;
+  for (const p of presence.peers.values()) if (counts[p.w] !== undefined) counts[p.w]++;
+  const total = counts.menu + counts.solo + counts.public + counts.friends;
+  const parts = [counts.public && `${counts.public} in public games`, counts.friends && `${counts.friends} in friends rooms`, counts.solo && `${counts.solo} playing solo`, counts.menu && `${counts.menu} on the menu`].filter(Boolean);
+  const text = presence.room ? `${total} frog${total === 1 ? '' : 's'} online now` : 'Checking who is online…';
+  $('onlineNow').textContent = text; $('onlineWhere').textContent = presence.room ? parts.join(' · ') : '';
+  $('plOnline').textContent = presence.room ? `${text}: ${parts.join(', ')}` : '';
+}
+async function startPresence() {
+  let lib;
+  try { lib = await import(TRYSTERO); } catch (e) { $('onlineNow').textContent = 'Offline'; return; }
+  const room = lib.joinRoom({ appId: 'asher-ribbit-tag-v1', relayConfig: { redundancy: 16 } }, 'presence-v1');
+  presence.room = room; presence.here = room.makeAction('here');
+  room.onPeerJoin = id => { presence.peers.set(id, { w: 'menu', t: Date.now() }); sendHere(id); renderOnline(); };
+  room.onPeerLeave = id => { presence.peers.delete(id); renderOnline(); };
+  presence.here.onMessage = (d, { peerId }) => { presence.peers.set(peerId, { w: d && ['menu', 'solo', 'public', 'friends'].includes(d.w) ? d.w : 'menu', t: Date.now() }); renderOnline(); };
+  setInterval(() => { sendHere(); renderOnline(); }, 20000);
+  renderOnline();
+}
+setTimeout(startPresence, 1500);
 
 // ---------- Loop ----------
 let last = performance.now(), hudT = 0, menuAng = 0;
@@ -4175,9 +5095,9 @@ function update(dt, t) {
     if (!player.it && !player.iced && !player.out && ['infection', 'classic', 'freeze', 'potato'].includes(mode)) questEvent('safe', dt);
     questEvent('height', player.pos.y - R);
     tagReqCd -= dt;
-    if (net && !host && player.it && !player.out && player.frozen <= 0 && tagReqCd <= 0 && ['infection', 'classic', 'potato', 'freeze'].includes(mode)) {
+    if (net && !host && player.it && !player.out && player.frozen <= 0 && tagReqCd <= 0 && ['infection', 'classic', 'potato', 'freeze', 'hide', 'bat', 'shrink', 'tongue', 'gravity'].includes(mode)) {
       for (const b of bodies) {
-        if (b === player || b.it || b.immune > 0 || b.iced || b.out || player.pos.distanceTo(b.pos) >= 1.3) continue;
+        if (b === player || b.it || b.immune > 0 || b.iced || b.out || player.pos.distanceTo(b.pos) >= (mode === 'tongue' ? 3.6 : 1.3)) continue;
         net.ev.send({ k: 'tagreq', b: b.id }, { target: net.hostId }); tagReqCd = 0.4; break;
       }
     }
@@ -4187,6 +5107,7 @@ function update(dt, t) {
     else if (mode === 'feast') feastUpdate(dt, t);
     else if (mode === 'free') { /* just play */ }
     else if (mode === 'king') kingUpdate(dt, t);
+    else if (MODE2[mode] && (MODE2[mode].update(dt, t, host), !MODE2[mode].tagBase || MODE2[mode].ownTags)) { /* the mode handles it */ }
     else if (host) outer: for (const a of bodies) {
       if (!a.it || a.frozen > 0 || a.isRemote || a.out) continue;
       for (const b of bodies) {
@@ -4202,7 +5123,7 @@ function update(dt, t) {
   const climbing = player.wall && player.vel.y > 1;
   const targetPitch = clamp(-0.12 + player.vel.y * 0.025 + (climbing ? 0.25 : 0), -0.4, 0.45);
   player.pitch += (targetPitch - player.pitch) * Math.min(1, dt * 4);
-  camera.position.set(player.pos.x, player.pos.y + 0.28, player.pos.z);
+  camera.position.set(player.pos.x, player.pos.y + 0.28 * (player.size || 1), player.pos.z);
   camera.rotation.set(player.pitch, player.yaw, 0);
 
   // hands
@@ -4297,6 +5218,18 @@ function update(dt, t) {
       radar.querySelector('.arrow').style.transform = `rotate(${-rel}rad)`;
       $('radarTxt').textContent = `${tgt.name} ${Math.round(bd)} m`;
     } else radar.hidden = true;
+    const mh = MODE2[mode] && MODE2[mode].hud && state !== 'menu' ? MODE2[mode].hud() : null;
+    if (mh) {
+      if (mh.chip) { st.textContent = mh.chip; st.className = 'chip'; st.style.background = mh.bg || 'var(--bone)'; st.style.color = 'var(--ink)'; }
+      if (mh.info) $('info').textContent = mh.info + (net ? ` · ${roomLabel()} · ${remotes.size + 1} player${remotes.size ? 's' : ''}` : '');
+      if (mh.radar === 'hide') radar.hidden = true;
+      else if (mh.radar) {
+        const g = mh.radar.pos, ang = Math.atan2(-(g.x - player.pos.x), -(g.z - player.pos.z));
+        let rel = ang - player.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+        radar.hidden = false; radar.className = 'hunt'; radar.querySelector('.arrow').style.transform = `rotate(${-rel}rad)`;
+        $('radarTxt').textContent = `${mh.radar.label} ${Math.round(flat(g, player.pos))} m`;
+      }
+    }
   }
 }
 const maxQuality = Math.min(window.devicePixelRatio || 1, 1.25);
