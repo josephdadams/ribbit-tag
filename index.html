@@ -546,7 +546,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-20';
+const APP_VERSION = 'ribbit-21';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -1189,11 +1189,11 @@ function aiDriveInput(h, ai, dt) { // [throttle, steer] for a computer frog at t
   else if (Math.abs(h.speed) < 1.2 && !h.air) { // stuck against something: reverse and turn away
     ai.stuckT += dt;
     if (ai.stuckT > 0.7) { ai.stuckT = 0; ai.stuckN++; ai.backT = 1 + Math.random() * 0.5; ai.backSteer = -(Math.sign(str) || 1); }
-  } else ai.stuckT = Math.max(0, ai.stuckT - dt * 0.5);
+  } else { ai.stuckT = Math.max(0, ai.stuckT - dt * 0.5); if (h.speed > 8) ai.stuckN = Math.max(0, ai.stuckN - dt * 0.25); } // driving well makes up for bumps
   if (ai.frozen > 0) thr = 0;
   // time to get out?
   const high = goal.y - h.pos.y > 2.5;
-  if (ai.stuckN > 4 || (reason === 'goal' && dist < 6) || (reason === 'chase' && dist < 7 && high) ||
+  if (ai.stuckN > 5 || (reason === 'goal' && dist < 6) || (reason === 'chase' && dist < 7 && high) ||
       (reason === 'ride' && ai.hogT > (mode === 'free' ? 40 : 20)) || ai.hogSafeT > 8) { aiLeaveHog(ai); return null; }
   if (flat(player.pos, h.pos) < 9 && Math.random() < dt * 0.4) honk();
   return [thr, str];
@@ -7026,11 +7026,12 @@ $('frAddBtn').addEventListener('click', () => {
 $('frSave').addEventListener('click', addFriend);
 $('frIn').addEventListener('keydown', e => { if (e.key === 'Enter') addFriend(); });
 renderFriends();
-async function startPresence() {
-  let lib;
-  try { lib = await import(TRYSTERO); } catch (e) { $('onlineNow').textContent = 'Offline'; return; }
-  const room = lib.joinRoom({ appId: 'asher-ribbit-tag-v1', relayConfig: { redundancy: 16 } }, 'presence-v1');
-  presence.room = room; presence.here = room.makeAction('here'); presence.hi = room.makeAction('hi');
+// Like friends rooms, the presence room looks three ways at once (Nostr, BitTorrent, MQTT), so friends on different
+// networks still find each other. Finding nobody at all usually means the servers missed us: reconnect, waiting longer each time.
+function joinPresence(libs) {
+  const room = joinMulti(libs, 'presence-v1');
+  presence.room = room; presence.joinT = Date.now();
+  presence.here = room.makeAction('here'); presence.hi = room.makeAction('hi');
   presence.hi.onMessage = (x, { peerId }) => { gotHi(x, peerId); };
   room.onPeerJoin = id => { presence.peers.set(id, { w: 'menu', t: Date.now() }); sendHere(id); renderOnline(); };
   room.onPeerLeave = id => { presence.peers.delete(id); renderOnline(); };
@@ -7041,7 +7042,20 @@ async function startPresence() {
     await readPeer(p);
     renderOnline();
   };
-  setInterval(() => { sendHere(); renderOnline(); }, 20000);
+}
+async function startPresence() {
+  let libs = [];
+  try { libs = await loadNetLibs(true); } catch (e) {}
+  if (!libs.length) { $('onlineNow').textContent = 'Offline'; return; }
+  joinPresence(libs);
+  let wait = 45000;
+  setInterval(() => {
+    if (!presence.peers.size && Date.now() - presence.joinT > wait) {
+      try { presence.room.leave(); } catch (e) {}
+      joinPresence(libs); wait = Math.min(wait * 2, 300000);
+    } else if (presence.peers.size) wait = 45000;
+    sendHere(); renderOnline();
+  }, 20000);
   renderOnline();
 }
 setTimeout(startPresence, 1500);
