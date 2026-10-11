@@ -3122,7 +3122,59 @@ function updateTalk(dt) {
 // Friends who type the same room code connect straight to each other (WebRTC via Trystero, public relays only
 // for the handshake). The host, the lowest peer id, runs the computer frogs, tags and rounds; everyone sends
 // their own position. No chat between people, only between people and frogs.
-const TRYSTERO = 'https://cdn.jsdelivr.net/npm/trystero@0.25.4/+esm';
+const TRYSTERO = 'https://cdn.jsdelivr.net/npm/@trystero-p2p/nostr@0.25.4/+esm';
+// Friends rooms look for each other three separate ways at once (Nostr relays, BitTorrent trackers, MQTT brokers)
+// and talk over whichever finds the other device first, so one set of free servers being down can't split a game.
+const NET_PATHS = [
+  ['nostr', TRYSTERO, { relayConfig: { redundancy: 16 } }],
+  ['torrent', 'https://cdn.jsdelivr.net/npm/@trystero-p2p/torrent@0.25.4/+esm', { appId: 'asher-ribbit-tag-v1-bt' }],
+  ['mqtt', 'https://cdn.jsdelivr.net/npm/@trystero-p2p/mqtt@0.25.4/+esm', { appId: 'asher-ribbit-tag-v1-mq' }]]; // own app ids keep each path's connections separate
+let netLibs = null;
+async function loadNetLibs(all) {
+  const want = all ? NET_PATHS : NET_PATHS.slice(0, 1);
+  if (netLibs && netLibs.length >= want.length) return netLibs.slice(0, want.length);
+  const libs = await Promise.all(want.map(([name, url, cfg]) => import(url).then(lib => ({ name, lib, cfg }), () => null)));
+  netLibs = libs.filter(Boolean);
+  return netLibs;
+}
+// One room made of several: a peer counts as here while any path still sees them, and each message goes out once
+function joinMulti(libs, name) {
+  const rooms = [];
+  for (const { name: path, lib, cfg } of libs) {
+    try { rooms.push({ path, lib, r: lib.joinRoom(Object.assign({ appId: 'asher-ribbit-tag-v1' }, cfg), name) }); } catch (e) {}
+  }
+  const peers = new Map();
+  const M = { onPeerJoin: null, onPeerLeave: null, paths: id => [...(peers.get(id) || [])],
+    sockets: () => rooms.reduce((all, { lib }) => { try { return all.concat(Object.values(lib.getRelaySockets ? lib.getRelaySockets() : {})); } catch (e) { return all; } }, []),
+    leave: () => rooms.forEach(({ r }) => { try { r.leave(); } catch (e) {} }) };
+  rooms.forEach(({ path, r }) => {
+    r.onPeerJoin = id => {
+      let via = peers.get(id); const fresh = !via;
+      if (!via) peers.set(id, via = new Set());
+      via.add(path);
+      if (fresh && M.onPeerJoin) M.onPeerJoin(id);
+    };
+    r.onPeerLeave = id => {
+      const via = peers.get(id); if (!via) return;
+      via.delete(path);
+      if (!via.size) { peers.delete(id); if (M.onPeerLeave) M.onPeerLeave(id); }
+    };
+  });
+  M.makeAction = key => {
+    const acts = rooms.map(({ path, r }) => ({ path, a: r.makeAction(key) }));
+    const act = { onMessage: null, send(data, opts) {
+      const ids = opts && opts.target ? [opts.target] : [...peers.keys()];
+      for (const id of ids) {
+        const via = peers.get(id); if (!via) continue;
+        const pick = acts.find(x => via.has(x.path)); if (!pick) continue;
+        try { const p = pick.a.send(data, { target: id }); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+      }
+    } };
+    acts.forEach(({ a }) => { a.onMessage = (d, meta) => { if (act.onMessage) act.onMessage(d, meta); }; });
+    return act;
+  };
+  return M;
+}
 const HATS = [0xff8c42, 0xf72585, 0x4cc9f0, 0xb5e48c, 0xffffff, 0x8338ec, 0xffb703];
 let net = null, myId = 'me', netT = 0;
 const remotes = new Map();
@@ -3251,13 +3303,15 @@ function applySnapshot(s, from) {
   if (s.c && mode === 'ctf' && state !== 'menu') ctfApply(s.c); else if (!TEAM_MODES.includes(mode)) ctfEnd();
 }
 const HOST_LOCK = 1e15; // a profile with this hp is a room's real host
+let joinSeq = 0;
 async function joinNet(code, lobby, role = 'auto') {
-  let lib;
-  try { lib = await import(TRYSTERO); } catch (e) { flash('No connection', "Couldn't reach the internet, so this is a solo game.", 3); return; }
-  // check 16 matchmaking servers instead of 5 (a few public ones are always down), so friends overlap on a working one
-  const room = lib.joinRoom({ appId: 'asher-ribbit-tag-v1', relayConfig: { redundancy: 16 } }, lobby ? 'public-' + lobby : 'room-' + code);
-  myId = lib.selfId; player.id = myId;
-  net = { room, code, role, lobby: lobby || 0, isPublic: !!lobby, hostId: role === 'guest' ? null : myId, relays: lib.getRelaySockets, joinedAt: performance.now(),
+  const seq = ++joinSeq;
+  const libs = await loadNetLibs(!lobby);
+  if (seq !== joinSeq || net) return; // went back to the menu (or in again) while loading
+  if (!libs.length) { flash('No connection', "Couldn't reach the internet, so this is a solo game.", 3); return; }
+  const room = joinMulti(libs, lobby ? 'public-' + lobby : 'room-' + code);
+  myId = libs[0].lib.selfId; player.id = myId;
+  net = { room, code, role, lobby: lobby || 0, isPublic: !!lobby, hostId: role === 'guest' ? null : myId, relays: room.sockets, joinedAt: performance.now(),
     pos: room.makeAction('pos'), snap: room.makeAction('snap'), ev: room.makeAction('ev'), prof: room.makeAction('prof') };
   const profile = myProfile;
   room.onPeerJoin = id => {
@@ -3315,6 +3369,7 @@ async function joinNet(code, lobby, role = 'auto') {
   };
 }
 function leaveNet() {
+  joinSeq++;
   if (!net) return;
   try { net.room.leave(); } catch (e) {}
   for (const id of [...remotes.keys()]) removeRemote(id);
@@ -3538,6 +3593,7 @@ function begin(m, lobby = 0, role) {
   if (!code || net) { startRound(); return; }
   if (!lobby && role === 'host') { // my game: start now, friends join me
     joinNet(code, 0, 'host');
+    keepLooking(code, 'host');
     startRound();
     setTimeout(() => flash(`You're hosting ${code}`, 'Friends type this code and tap Join to play your game.', 3.5, 'var(--leaf)'), 3200);
     return;
@@ -3548,7 +3604,7 @@ function begin(m, lobby = 0, role) {
     spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], player.pos); player.vel.set(0, 0, 0);
     flash(`Joining ${code}…`, 'Looking for the host. This can take a few seconds.', 8, 'var(--leaf)');
     joinNet(code, 0, 'guest');
-    setTimeout(() => { if (net && net.code === code && !net.hostId) flash('No host yet', `Ask the host to type ${code} and tap a game mode. You'll join as soon as they do.`, 5); }, 15000);
+    keepLooking(code, 'guest');
     return;
   }
   // Joining a room: hop into whatever game the room is already playing. If nobody answers, start it ourselves.
@@ -3574,6 +3630,27 @@ function begin(m, lobby = 0, role) {
   if (!lobby) setTimeout(() => { if (net && net.code === code && !remotes.size) flash('Nobody here yet', 'Tap Players to check the room code and connection.', 3.5); }, 25000);
 }
 const PUBLIC_MAX = 6, PUBLIC_LOBBIES = 9;
+// Nobody found yet? Reconnect from scratch every so often: fresh server connections and a fresh "I'm here" to everyone.
+// Guests keep trying until the host shows up; a host with an empty room refreshes too, so late friends still find it.
+function keepLooking(code, role) {
+  let tries = 0;
+  const check = () => {
+    if (state === 'menu' || !net || net.code !== code) return;
+    if (net.role !== role) role = net.role; // a host who found someone else hosting this code became a guest
+    const found = net.role === 'guest' ? !!net.hostId : remotes.size > 0;
+    if (!found) {
+      tries++;
+      role = net.role;
+      leaveNet(); joinNet(code, 0, role);
+      if (role === 'guest') {
+        joinWait = true;
+        flash(tries < 3 ? `Still looking for ${code}…` : 'No host yet', tries < 3 ? 'Reconnecting to find the host.' : `Make sure the host typed ${code} and tapped a game mode. Still trying!`, 3.5, 'var(--leaf)');
+      }
+    }
+    setTimeout(check, !found && role === 'guest' ? 15000 : 30000);
+  };
+  setTimeout(check, role === 'guest' ? 15000 : 30000);
+}
 $('modeInfection').addEventListener('click', () => begin('infection', 0, 'host'));
 $('joinBtn').addEventListener('click', () => begin(mode, 0, 'guest'));
 $('onlineBtn').addEventListener('click', () => begin(mode, 1));
@@ -3839,16 +3916,23 @@ function playerRow(b, me) {
 }
 function relayCount() {
   try {
-    const socks = Object.values(net.relays ? net.relays() : {});
-    return [socks.filter(w => w && w.readyState === 1).length, socks.length];
+    const socks = net.relays ? net.relays() : [];
+    return [socks.filter(w => w && (w.readyState === 1 || w.connected === true)).length, socks.length];
   } catch (e) { return [0, 0]; }
+}
+function pathSummary() {
+  if (!net || !net.room.paths || !remotes.size) return '';
+  const n = {};
+  for (const id of remotes.keys()) for (const p of net.room.paths(id)) n[p] = (n[p] || 0) + 1;
+  const parts = Object.entries(n).map(([p, c]) => `${p} ${c}`);
+  return parts.length ? ` · linked via ${parts.join(', ')}` : '';
 }
 function renderPlayers() {
   if (net) {
     const [ok, total] = relayCount();
     $('plStatus').textContent = total === 0 ? 'Connecting to matchmaking…'
       : ok === 0 ? "Can't reach the matchmaking servers. This network may block it."
-      : `Matchmaking: ${ok} of ${total} servers connected · version ${APP_VERSION}`;
+      : `Matchmaking: ${ok} of ${total} servers connected${pathSummary()} · version ${APP_VERSION}`;
     if ((net.splitT || 0) > 6) $('plStatus').textContent = "Some devices here can't reach each other, so you may be in separate games. Everyone: Menu, then Join again.";
     $('plStatus').className = 'pl-status' + ((total && ok === 0) || (net.splitT || 0) > 6 ? ' bad' : '');
   } else $('plStatus').textContent = `Version ${APP_VERSION}`;

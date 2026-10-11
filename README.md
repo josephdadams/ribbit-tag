@@ -157,7 +157,7 @@ Catch flies around each map, stay safe, tag other frogs, and win games to earn f
 - **Frogs online:** the menu shows how many people are playing Ribbit Tag right now and roughly where (public games, friends rooms, solo, or on the menu). Room codes are never shared.
 - **Play online:** joins a public lobby with anyone else playing (up to 6 people per lobby).
 
-Players connect directly to each other with WebRTC through [Trystero](https://github.com/dmotz/trystero), using public Nostr relays only to find each other. There is no game server. The host's device runs the computer frogs, tags, and scoring. In public lobbies there's no fixed host: if the host leaves or its device sleeps, another player takes over, and anyone can tap **Be host**.
+Players connect directly to each other with WebRTC through [Trystero](https://github.com/dmotz/trystero), using free public servers only to find each other. Friends rooms search three ways at once (Nostr relays, BitTorrent trackers, and MQTT brokers) and connect over whichever finds the other device first, and a guest who can't find the host keeps reconnecting until they do. There is no game server. The host's device runs the computer frogs, tags, and scoring. In public lobbies there's no fixed host: if the host leaves or its device sleeps, another player takes over, and anyone can tap **Be host**.
 
 Kid safety: players cannot send each other messages, and in public lobbies everyone's typed name is replaced with a random one like "Frog 4821".
 
