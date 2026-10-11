@@ -642,6 +642,11 @@ function steps(list, m, size = 2.6, post) {
   }
 }
 
+Object.assign(M, { // the Backrooms
+  brWall: lam(0xd8c46c), brStripe: lam(0xc2ad57), brCarpet: lam(0x9a884a), brDamp: lam(0x86763c), brCeil: lam(0xe6ddb4),
+  brLight: fx(0xfffbe2), brTrim: lam(0xa8944e), brExit: fx(0x3ddc6a), brBox: lam(0xb08a55),
+});
+
 const MAPS = {
   forest: {
     label: 'Forest', sky: 0xa9d9e6, fog: [16, 64], hemi: [0xe8f6ff, 0x3d5a24, 0.85], sun: 0.75,
@@ -1305,6 +1310,55 @@ const MAPS = {
         const h = 5 + srnd() * 3; addPillar(x, z, 0.3, h * 0.35, M.trunk, 0.25);
         for (let k = 0; k < 3; k++) { const c = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(1.8 - k * 0.45, h * 0.35, 7))), M.snow)); c.position.set(x, h * 0.35 + k * h * 0.22 + h * 0.15, z); }
         blobs.push({ c: new V(x, h * 0.55, z), r: 1.3 });
+      });
+    },
+  },
+  backrooms: {
+    label: 'The Backrooms', sky: 0xcbb764, fog: [5, 34], hemi: [0xfff3c2, 0x8f7d3e, 1.05], sun: 0.3,
+    spawn: [0, 2], ring: [0, 2, 10],
+    idle: ["Where even are we?", "Every room looks the same!", "Bzzzz... the lights are humming!", "Ew, the carpet is soggy!", "I think we've been here before...", "Is that an exit sign?"],
+    build() {
+      addGround(M.brCarpet); addWalls(M.brWall);
+      const CEIL = 9;
+      addBox(0, CEIL + 0.5, 0, HALF * 2 + 2, 1, HALF * 2 + 2, M.brCeil); // low ceiling: grab it and swing along
+      for (let k = -HALF; k <= HALF; k += 2) { // drop-ceiling tile grid
+        const gx = put(new THREE.Mesh(boxGeo, M.brTrim)); gx.scale.set(0.06, 0.04, HALF * 2); gx.position.set(k, CEIL - 0.02, 0);
+        const gz = put(new THREE.Mesh(boxGeo, M.brTrim)); gz.scale.set(HALF * 2, 0.04, 0.06); gz.position.set(0, CEIL - 0.02, k);
+      }
+      // soggy carpet patches
+      addPatches(M.brDamp, 9, 1.2, 3);
+      // a maze of yellow walls on a 6 m grid; they stop short of the ceiling so you can climb up and run along the tops
+      const WALL = 5.6, CELL = 6, N = 4; // grid lines at -24..24
+      const clear = (x, z) => Math.abs(x) < 6 && Math.abs(z) < 6; // keep the starting room open
+      const wall = (x, z, w, d) => {
+        addBox(x, WALL / 2, z, w, WALL, d, M.brWall, true);
+        const st = put(new THREE.Mesh(boxGeo, M.brStripe)); st.scale.set(w + 0.02, 0.35, d + 0.02); st.position.set(x, 1.1, z); // wallpaper border
+        const tr = put(new THREE.Mesh(boxGeo, M.brTrim)); tr.scale.set(w + 0.04, 0.18, d + 0.04); tr.position.set(x, 0.09, z); // baseboard
+      };
+      for (let i = -N; i <= N; i++) for (let j = -N; j < N; j++) {
+        // a wall along x = i*CELL from z = j*CELL to (j+1)*CELL, and one along z the same way
+        const a = i * CELL, b = j * CELL + CELL / 2;
+        if (srnd() < 0.42 && !clear(a, b) && Math.abs(a) < HALF - 2) wall(a, b, 0.6, CELL - (srnd() < 0.35 ? 2.4 : 0));
+        if (srnd() < 0.42 && !clear(b, a) && Math.abs(a) < HALF - 2) wall(b, a, CELL - (srnd() < 0.35 ? 2.4 : 0), 0.6);
+      }
+      // square columns that go all the way up: climb them to reach the ceiling
+      for (const [x, z] of [[-9, -9], [9, 9], [-15, 15], [15, -15], [21, 3], [-21, -3], [3, -21], [-3, 21]]) addBox(x, CEIL / 2, z, 1.4, CEIL, 1.4, M.brWall, true);
+      // a few odd things: a stack of boxes, a lone office chair, and an exit sign that leads nowhere
+      for (let i = 0; i < 4; i++) addBox(-18 + (i % 2) * 0.3, 0.6 + i * 1.2, -18, 1.6, 1.2, 1.6, M.brBox, true);
+      addBox(12, 0.9, -6, 1.2, 0.2, 1.2, M.pupil, true); addPillar(12, -6, 0.08, 0.8, M.pupil, 0.08); addBox(12, 1.5, -6.55, 1.2, 1.2, 0.15, M.pupil, true);
+      const exitSign = put(new THREE.Mesh(boxGeo, M.brExit)); exitSign.scale.set(1.6, 0.5, 0.1); exitSign.position.set(0, 4.6, -HALF + 0.05);
+      // fluorescent panels in the ceiling; a few of them flicker
+      const flick = [];
+      for (let x = -24; x <= 24; x += 6) for (let z = -24; z <= 24; z += 6) {
+        const fl = srnd() < 0.12;
+        const m = fl ? new THREE.MeshLambertMaterial({ color: 0xfffbe2, emissive: 0xfffbe2, emissiveIntensity: 0.6 }) : M.brLight;
+        const pnl = put(new THREE.Mesh(boxGeo, m)); pnl.scale.set(1.2, 0.08, 2.4); pnl.position.set(x + 3, CEIL - 0.04, z + 3);
+        if (fl) { pnl.userData.dyn = true; flick.push({ m, ph: srnd() * 10 }); }
+      }
+      let humT = 3;
+      mapAnims.push((dt, t) => {
+        for (const f of flick) { const on = Math.sin(t * 13 + f.ph) + Math.sin(t * 3.1 + f.ph * 2) > -0.6; f.m.emissiveIntensity = on ? 0.6 : 0.05; f.m.color.setHex(on ? 0xfffbe2 : 0x8a8466); }
+        if ((humT -= dt) <= 0) { humT = 5 + Math.random() * 6; if (actx && state === 'play') sfxTone(118, 120, 1.6, 'sawtooth', 0.012); }
       });
     },
   },
@@ -2300,6 +2354,7 @@ const SONGS = {
   reef:    { bpm: 80,  root: 60, scale: 'lydian', lead: 'bell',   drums: 'soft',  prog: [0, 1, 5, 4], seed: 149, pad: true, echo: true },
   toys:    { bpm: 126, root: 67, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 3, 4, 0], seed: 151 },
   icecastle: { bpm: 92, root: 64, scale: 'minor', lead: 'bell',   drums: 'soft',  prog: [0, 5, 3, 6], seed: 163, pad: true, echo: true },
+  backrooms: { bpm: 72, root: 58, scale: 'lydian', lead: 'bell',  drums: 'soft',  prog: [0, 1, 0, 5], seed: 167, pad: true, echo: true },
   manor:   { bpm: 86,  root: 57, scale: 'phrygian', lead: 'bell', drums: 'soft',  prog: [0, 1, 0, 5], seed: 171, pad: true, echo: true },
   farm:    { bpm: 104, root: 62, scale: 'major', lead: 'pluck',   drums: 'light', prog: [0, 3, 4, 0], seed: 173 },
   santa:   { bpm: 120, root: 67, scale: 'major', lead: 'bell',    drums: 'light', prog: [0, 3, 4, 0], seed: 179, echo: true },
