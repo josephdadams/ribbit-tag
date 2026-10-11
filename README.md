@@ -145,11 +145,11 @@ Catch flies around each map, stay safe, tag other frogs, and win games to earn f
 
 ## Multiplayer
 
-- **Friends room:** everyone types the same room code on the menu and taps **Join**. The first player in picks the map and mode.
+- **Friends room:** the host types a room code (or taps **New code**), picks a map, and taps a game mode to start their game. Everyone else types the same code and taps **Join** to play in the host's game. Guests never take over or start a separate game; if the host leaves, they wait for them to come back.
 - **Frogs online:** the menu shows how many people are playing Ribbit Tag right now and roughly where (public games, friends rooms, solo, or on the menu). Room codes are never shared.
 - **Play online:** joins a public lobby with anyone else playing (up to 6 people per lobby).
 
-Players connect directly to each other with WebRTC through [Trystero](https://github.com/dmotz/trystero), using public Nostr relays only to find each other. There is no game server. One device acts as the host and runs the computer frogs, tags, and scoring; if it leaves or falls asleep, another player takes over, and anyone can tap **Be host**.
+Players connect directly to each other with WebRTC through [Trystero](https://github.com/dmotz/trystero), using public Nostr relays only to find each other. There is no game server. The host's device runs the computer frogs, tags, and scoring. In public lobbies there's no fixed host: if the host leaves or its device sleeps, another player takes over, and anyone can tap **Be host**.
 
 Kid safety: players cannot send each other messages, and in public lobbies everyone's typed name is replaced with a random one like "Frog 4821".
 

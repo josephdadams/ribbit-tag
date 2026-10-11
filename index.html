@@ -299,7 +299,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       </div>
             <button class="mode join" id="joinBtn" type="button" hidden><b id="joinTitle">Join</b><small>Plays whatever map and mode your friends are on.</small></button>
       <button class="mode online" id="onlineBtn" type="button"><b>Play online</b><small>Join a public game with other Ribbit Tag players. No chat, and names are hidden.</small></button>
-      <p class="note" id="modesNote">To play with friends, everyone types the same room code and taps Join. The first one in picks the map and mode.</p>
+      <p class="note" id="modesNote">To play with friends: the host types a room code and taps a mode. Everyone else types the same code and taps Join.</p>
       <div class="modes">
         <button class="mode lava" id="modeInfection" type="button"><b>Infection</b><small>Every tag makes more lava. Be the last frog standing.</small></button>
         <button class="mode" id="modeClassic" type="button"><b>Classic Tag</b><small>One lava frog. Get tagged and pass it on.</small></button>
@@ -441,7 +441,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-14';
+const APP_VERSION = 'ribbit-16';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -3126,12 +3126,29 @@ const isHost = () => !net || net.hostId === myId;
 function byId(id) { return id === myId ? player : ais.find(a => a.id === id) || remotes.get(id) || null; }
 function hashHat(id) { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) | 0; return HATS[Math.abs(h) % HATS.length]; }
 let myHostPri = 0;
+function pickHostRoles() { // friends rooms: the host is whoever tapped a mode with this code; guests never take over
+  const now = performance.now();
+  const hosts = (net.role === 'host' ? [{ id: myId, since: net.joinedAt }] : []).concat(
+    [...remotes.values()].filter(r => (r.hostPri || 0) >= HOST_LOCK && now - Math.max(r.netT || 0, r.seenT || 0) < 20000).map(r => ({ id: r.id, since: r.since === undefined ? Infinity : r.since })));
+  hosts.sort((a, b) => a.since - b.since || (a.id < b.id ? -1 : 1));
+  const was = net.hostId; net.hostId = hosts.length ? hosts[0].id : null;
+  if (was === net.hostId) return;
+  const h = net.hostId && remotes.get(net.hostId);
+  if (net.role === 'host' && net.hostId !== myId) { // someone was already hosting this code: join them instead
+    net.role = 'guest'; joinWait = true;
+    try { net.prof.send(myProfile()); } catch (e) {}
+    flash(`${h ? h.name : 'Someone'} is already hosting ${net.code}`, 'Joining their game instead.', 3, 'var(--leaf)');
+  } else if (net.role === 'guest' && net.hostId) { joinWait = true; }
+  else if (net.role === 'guest' && was && !net.hostId) flash('The host left', 'Waiting for them to come back. Tap Menu to host your own game.', 4, 'var(--lava)');
+}
 function pickHost() {
+  if (net.role && net.role !== 'auto') return pickHostRoles();
   // Whoever pressed "Be host" most recently hosts; otherwise the lowest id. Only players we've heard from
   // lately count, so a tablet that fell asleep hands the job on.
   const now = performance.now();
-  const cands = [{ id: myId, hp: myHostPri, since: net.joinedAt }, ...[...remotes.values()].filter(r => now - r.netT < 2500)
-    .map(r => ({ id: r.id, hp: r.hostPri || 0, since: r.since === undefined ? Infinity : r.since }))];
+  const seen = r => now - Math.max(r.netT || 0, r.seenT || 0) < 8000;
+  const cands = [{ id: myId, hp: document.hidden ? -1 : myHostPri, since: document.hidden ? Infinity : net.joinedAt },
+    ...[...remotes.values()].filter(r => seen(r) && !r.away).map(r => ({ id: r.id, hp: r.hostPri || 0, since: r.since === undefined ? Infinity : r.since }))];
   cands.sort((a, b) => b.hp - a.hp || a.since - b.since || (a.id < b.id ? -1 : 1));
   const was = net.hostId; net.hostId = cands[0].id;
   if (!was || was === net.hostId) return;
@@ -3142,7 +3159,7 @@ function pickHost() {
   } else {
     if (was === myId) {
       ais.forEach(a => { a.netPos = (a.netPos || new V()).copy(a.pos); a.netT = performance.now(); });
-      joinWait = true; // their game was there first: hop into it on their next update
+      if (remotes.size <= 1) joinWait = true; // we'd been playing alone: hop into their game on their next update
     }
     const h = remotes.get(net.hostId);
     if (h && was !== myId) flash(`${h.name} is the host`, '', 1.6);
@@ -3151,7 +3168,7 @@ function pickHost() {
 // "age" is how long I've been in the room; the other side turns it into their own clock, so device clocks don't matter
 function publicName(id) { let h = 7; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return 'Frog ' + (1000 + h % 9000); }
 const roomLabel = () => net ? (net.isPublic ? `Public lobby ${net.lobby}` : `Room ${net.code}`) : '';
-function myProfile() { return { name: net && net.isPublic ? publicName(myId) : (playerName || 'Frog'), look, hp: myHostPri, v: APP_VERSION, age: Math.round(performance.now() - net.joinedAt) }; }
+function myProfile() { return { away: document.hidden, name: net && net.isPublic ? publicName(myId) : (playerName || 'Frog'), look, hp: net && net.role === 'host' ? HOST_LOCK : myHostPri, v: APP_VERSION, age: Math.round(performance.now() - net.joinedAt) }; }
 function claimHost() {
   if (!net || isHost() && myHostPri) return;
   myHostPri = Date.now();
@@ -3227,13 +3244,14 @@ function applySnapshot(s, from) {
   if (mode !== 'feast' && feast.group) { scene.remove(feast.group); feast.group = null; feast.flies = []; }
   if (s.c && mode === 'ctf' && state !== 'menu') ctfApply(s.c); else if (!TEAM_MODES.includes(mode)) ctfEnd();
 }
-async function joinNet(code, lobby) {
+const HOST_LOCK = 1e15; // a profile with this hp is a room's real host
+async function joinNet(code, lobby, role = 'auto') {
   let lib;
   try { lib = await import(TRYSTERO); } catch (e) { flash('No connection', "Couldn't reach the internet, so this is a solo game.", 3); return; }
   // check 16 matchmaking servers instead of 5 (a few public ones are always down), so friends overlap on a working one
   const room = lib.joinRoom({ appId: 'asher-ribbit-tag-v1', relayConfig: { redundancy: 16 } }, lobby ? 'public-' + lobby : 'room-' + code);
   myId = lib.selfId; player.id = myId;
-  net = { room, code, lobby: lobby || 0, isPublic: !!lobby, hostId: myId, relays: lib.getRelaySockets, joinedAt: performance.now(),
+  net = { room, code, role, lobby: lobby || 0, isPublic: !!lobby, hostId: role === 'guest' ? null : myId, relays: lib.getRelaySockets, joinedAt: performance.now(),
     pos: room.makeAction('pos'), snap: room.makeAction('snap'), ev: room.makeAction('ev'), prof: room.makeAction('prof') };
   const profile = myProfile;
   room.onPeerJoin = id => {
@@ -3250,6 +3268,9 @@ async function joinNet(code, lobby) {
   net.prof.onMessage = (p, { peerId }) => {
     const r = addRemote(peerId); r.setName(net.isPublic ? publicName(peerId) : p && p.name);
     r.hostPri = p && Number.isFinite(+p.hp) ? +p.hp : 0;
+    r.seenT = performance.now();
+    const wasAway = r.away; r.away = !!(p && p.away);
+    if (p && Number.isFinite(+p.age) && wasAway && !r.away) r.since = performance.now() - Math.max(0, +p.age); // back from away: they're the newest now
     if (p && Number.isFinite(+p.age) && r.since === undefined) r.since = performance.now() - Math.max(0, +p.age);
     const v = p && typeof p.v === 'string' ? p.v.slice(0, 20) : 'old';
     if (r.version !== v) {
@@ -3267,7 +3288,7 @@ async function joinNet(code, lobby) {
     if (wasQuiet) pickHost();
     if (r.pos.y < -10) r.pos.copy(r.netPos);
   };
-  net.snap.onMessage = (s, { peerId }) => applySnapshot(s, peerId);
+  net.snap.onMessage = (s, { peerId }) => { const r = remotes.get(peerId); if (r) r.seenT = performance.now(); applySnapshot(s, peerId); };
   net.ev.onMessage = (e, { peerId }) => {
     if (e.k === 'round' && peerId === net.hostId) startRound(e.first, e.seed);
     else if (e.k === 'q' && peerId === net.hostId) questEvent(String(e.ev), Math.min(10, +e.n || 1));
@@ -3301,17 +3322,27 @@ function predict(out, p, v, age) {
   out.set(p.x + v.x * t, Math.max(R, p.y + v.y * t - (air ? 0.5 * G * t * t : 0)), p.z + v.z * t);
 }
 let tagReqCd = 0;
+function netTick() {
+  if (!net) return;
+  try {
+    net.pos.send([player.pos.x, player.pos.y, player.pos.z, player.vel.x, player.vel.y, player.vel.z].map(r2).concat([net.hostId]));
+    if (isHost() && !document.hidden) net.snap.send(snapshot());
+    const now = performance.now();
+    if (now - (net.lastHostCheck || 0) > 1000) { net.lastHostCheck = now; pickHost(); }
+  } catch (e) {}
+}
+setInterval(netTick, 50);
+// a device that sleeps or switches apps steps aside as host, and comes back as the newest player
+document.addEventListener('visibilitychange', () => {
+  if (!net) return;
+  if (!document.hidden && net.role === 'auto') { net.joinedAt = performance.now(); myHostPri = 0; }
+  try { net.prof.send(myProfile()); } catch (e) {}
+  pickHost();
+});
 function netFrame(dt) {
   if (!net) return;
   const now = performance.now();
-  netT -= dt;
-  if (netT <= 0) {
-    netT = 1 / 20;
-    net.pos.send([player.pos.x, player.pos.y, player.pos.z, player.vel.x, player.vel.y, player.vel.z].map(r2).concat([net.hostId]));
-    if (isHost()) net.snap.send(snapshot());
-  }
-  net.hostCheck = (net.hostCheck || 0) - dt;
-  if (net.hostCheck <= 0) { net.hostCheck = 1; pickHost(); }
+  // (sending happens in netTick, on its own timer)
   // smooth everyone we don't simulate toward where they were reported, nudged ahead by their speed
   const k = 1 - Math.exp(-dt * 18);
   for (const r of remotes.values()) {
@@ -3413,14 +3444,14 @@ addEventListener('keydown', e => {
   const talkOpen = !$('talk').hidden;
   if (wardrobeOpen) { if (e.code === 'Escape') closeWardrobe(); return; }
   if (state === 'menu') {
-    if (e.code === 'Digit1') begin('infection');
-    else if (e.code === 'Digit2') begin('classic');
-    else if (e.code === 'Digit3') begin('ctf');
-    else if (e.code === 'Digit4') begin('freeze');
-    else if (e.code === 'Digit5') begin('potato');
-    else if (e.code === 'Digit6') begin('feast');
-    else if (e.code === 'Digit7') begin('free');
-    else if (e.code === 'Digit8') begin('king');
+    if (e.code === 'Digit1') begin('infection', 0, 'host');
+    else if (e.code === 'Digit2') begin('classic', 0, 'host');
+    else if (e.code === 'Digit3') begin('ctf', 0, 'host');
+    else if (e.code === 'Digit4') begin('freeze', 0, 'host');
+    else if (e.code === 'Digit5') begin('potato', 0, 'host');
+    else if (e.code === 'Digit6') begin('feast', 0, 'host');
+    else if (e.code === 'Digit7') begin('free', 0, 'host');
+    else if (e.code === 'Digit8') begin('king', 0, 'host');
     else if (e.code === 'KeyQ') $('questsBtn').click();
     else if (e.code === 'KeyR') openWardrobe();
     else if (e.code === 'KeyO') begin(mode, 1);
@@ -3486,7 +3517,7 @@ function setDiff(d) {
   document.querySelectorAll('#diff button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.d === d)));
 }
 document.querySelectorAll('#diff button').forEach(b => b.addEventListener('click', () => setDiff(+b.dataset.d)));
-function begin(m, lobby = 0) {
+function begin(m, lobby = 0, role) {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   mode = m; initAudio();
   try { if (voicesOn && window.speechSynthesis) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch (e) {}
@@ -3499,6 +3530,21 @@ function begin(m, lobby = 0) {
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
   const code = lobby ? 'PUBLIC' + lobby : cleanCode($('roomIn').value);
   if (!code || net) { startRound(); return; }
+  if (!lobby && role === 'host') { // my game: start now, friends join me
+    joinNet(code, 0, 'host');
+    startRound();
+    setTimeout(() => flash(`You're hosting ${code}`, 'Friends type this code and tap Join to play your game.', 3.5, 'var(--leaf)'), 3200);
+    return;
+  }
+  if (!lobby) { // guest: wait for the host's game
+    state = 'play'; joinWait = true; roundTime = 0;
+    bodies.forEach(b => setLava(b, false));
+    spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], player.pos); player.vel.set(0, 0, 0);
+    flash(`Joining ${code}…`, 'Looking for the host. This can take a few seconds.', 8, 'var(--leaf)');
+    joinNet(code, 0, 'guest');
+    setTimeout(() => { if (net && net.code === code && !net.hostId) flash('No host yet', `Ask the host to type ${code} and tap a game mode. You'll join as soon as they do.`, 5); }, 15000);
+    return;
+  }
   // Joining a room: hop into whatever game the room is already playing. If nobody answers, start it ourselves.
   state = 'play'; joinWait = true; roundTime = 0;
   bodies.forEach(b => setLava(b, false));
@@ -3522,25 +3568,25 @@ function begin(m, lobby = 0) {
   if (!lobby) setTimeout(() => { if (net && net.code === code && !remotes.size) flash('Nobody here yet', 'Tap Players to check the room code and connection.', 3.5); }, 25000);
 }
 const PUBLIC_MAX = 6, PUBLIC_LOBBIES = 9;
-$('modeInfection').addEventListener('click', () => begin('infection'));
-$('joinBtn').addEventListener('click', () => begin(mode));
+$('modeInfection').addEventListener('click', () => begin('infection', 0, 'host'));
+$('joinBtn').addEventListener('click', () => begin(mode, 0, 'guest'));
 $('onlineBtn').addEventListener('click', () => begin(mode, 1));
 function updateJoinUI() {
   const code = cleanCode($('roomIn').value);
   $('joinBtn').hidden = !code;
   $('joinTitle').textContent = `Join ${code}`;
   $('modesNote').textContent = code
-    ? `Or start ${code} yourself with a mode below. If friends are already in it, you'll join their game either way.`
-    : 'To play with friends, everyone types the same room code and taps Join. The first one in picks the map and mode.';
+    ? `Hosting? Pick a map and tap a mode below to start ${code} as your game. Joining? Tap Join to play in the host's game.`
+    : 'To play with friends: the host types a room code and taps a mode. Everyone else types the same code and taps Join.';
 }
-$('modeClassic').addEventListener('click', () => begin('classic'));
-$('modeCtf').addEventListener('click', () => begin('ctf'));
-$('modeFreeze').addEventListener('click', () => begin('freeze'));
-$('modePotato').addEventListener('click', () => begin('potato'));
-$('modeFeast').addEventListener('click', () => begin('feast'));
-$('modeFree').addEventListener('click', () => begin('free'));
-$('modeKing').addEventListener('click', () => begin('king'));
-document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode)));
+$('modeClassic').addEventListener('click', () => begin('classic', 0, 'host'));
+$('modeCtf').addEventListener('click', () => begin('ctf', 0, 'host'));
+$('modeFreeze').addEventListener('click', () => begin('freeze', 0, 'host'));
+$('modePotato').addEventListener('click', () => begin('potato', 0, 'host'));
+$('modeFeast').addEventListener('click', () => begin('feast', 0, 'host'));
+$('modeFree').addEventListener('click', () => begin('free', 0, 'host'));
+$('modeKing').addEventListener('click', () => begin('king', 0, 'host'));
+document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode, 0, 'host')));
 $('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (16)'; });
 $('menuBtn').addEventListener('click', () => {
   state = 'menu'; pointers.clear(); showBest();
@@ -5655,9 +5701,9 @@ function update(dt, t) {
       : mode === 'infection'
       ? `Survivors ${bodies.filter(b => !b.it).length} · ${fmt(roundTime)}`
       : `Safe time ${fmt(stats.safe)} · Tagged ${stats.tagged}×`;
-    if (net) $('info').textContent += ` · ${roomLabel()} · ${remotes.size ? remotes.size + 1 + ' players' : 'waiting for friends'}`;
+    if (net) $('info').textContent += ` · ${roomLabel()} · ${net.role === 'guest' && !net.hostId ? 'waiting for the host' : remotes.size ? remotes.size + 1 + ' players' : 'waiting for friends'}`;
     if (net) { // do we all agree on who's hosting? If not, some devices can't reach each other
-      const now = performance.now(), split = [...remotes.values()].some(r => now - r.netT < 2500 && r.hostClaim && r.hostClaim !== net.hostId);
+      const now = performance.now(), split = [...remotes.values()].some(r => now - r.netT < 4000 && !r.away && r.hostClaim && r.hostClaim !== net.hostId);
       net.splitT = split ? (net.splitT || 0) + 0.2 : 0;
       if (net.splitT > 6 && !net.splitWarned) { net.splitWarned = true; flash('Some devices can\u2019t reach each other', 'You may be in separate games. Everyone tap Menu, then Join again. Same Wi-Fi helps.', 6, 'var(--lava)'); }
       if (!split) net.splitWarned = false;
@@ -5665,7 +5711,7 @@ function update(dt, t) {
     $('playersBtn').textContent = net ? `Players ${remotes.size + 1}` : 'Players';
     if (!$('players').hidden) renderPlayers();
     const hb = $('hostBtn');
-    hb.hidden = !net || !remotes.size;
+    hb.hidden = !net || !remotes.size || net.role !== 'auto';
     if (net) { const me = isHost(); hb.textContent = me ? "You're host" : 'Be host'; hb.disabled = me; hb.classList.toggle('on', me); }
     // radar: point at the nearest lava frog, or the nearest survivor when you are lava
     let tgt = null, bd = 1e9;
