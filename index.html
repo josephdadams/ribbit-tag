@@ -432,7 +432,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-11';
+const APP_VERSION = 'ribbit-12';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -2848,9 +2848,12 @@ function pickHost() {
     ais.forEach(a => { if (a.netPos) a.pos.copy(a.netPos); });
     flash("You're the host", 'Your device runs the computer frogs now.', 1.8, 'var(--leaf)');
   } else {
-    if (was === myId) ais.forEach(a => { a.netPos = (a.netPos || new V()).copy(a.pos); a.netT = performance.now(); });
+    if (was === myId) {
+      ais.forEach(a => { a.netPos = (a.netPos || new V()).copy(a.pos); a.netT = performance.now(); });
+      joinWait = true; // their game was there first: hop into it on their next update
+    }
     const h = remotes.get(net.hostId);
-    if (h) flash(`${h.name} is the host`, '', 1.6);
+    if (h && was !== myId) flash(`${h.name} is the host`, '', 1.6);
   }
 }
 // "age" is how long I've been in the room; the other side turns it into their own clock, so device clocks don't matter
@@ -2968,6 +2971,7 @@ async function joinNet(code, lobby) {
     const r = remotes.get(peerId) || addRemote(peerId);
     const wasQuiet = performance.now() - r.netT > 2500;
     r.netPos.set(p[0], p[1], p[2]); r.netVel.set(p[3], p[4], p[5]); r.netT = performance.now();
+    r.hostClaim = typeof p[6] === 'string' ? p[6].slice(0, 40) : null;
     if (wasQuiet) pickHost();
     if (r.pos.y < -10) r.pos.copy(r.netPos);
   };
@@ -3011,7 +3015,7 @@ function netFrame(dt) {
   netT -= dt;
   if (netT <= 0) {
     netT = 1 / 20;
-    net.pos.send([player.pos.x, player.pos.y, player.pos.z, player.vel.x, player.vel.y, player.vel.z].map(r2));
+    net.pos.send([player.pos.x, player.pos.y, player.pos.z, player.vel.x, player.vel.y, player.vel.z].map(r2).concat([net.hostId]));
     if (isHost()) net.snap.send(snapshot());
   }
   net.hostCheck = (net.hostCheck || 0) - dt;
@@ -3203,19 +3207,22 @@ function begin(m, lobby = 0) {
   state = 'play'; joinWait = true; roundTime = 0;
   bodies.forEach(b => setLava(b, false));
   spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], player.pos); player.vel.set(0, 0, 0);
-  flash(lobby ? `Finding a game…` : `Joining ${code}…`, lobby ? `Checking public lobby ${lobby}.` : 'Looking for your friends.', 6, 'var(--leaf)');
+  flash(lobby ? `Finding a game…` : `Joining ${code}…`, lobby ? `Checking public lobby ${lobby}.` : 'Looking for your friends. This can take a few seconds.', 11, 'var(--leaf)');
   joinNet(code, lobby);
-  setTimeout(() => {
+  let extra = 0;
+  const giveUp = () => {
     if (!net || net.code !== code) return;
+    if (joinWait && remotes.size && extra++ < 2) { setTimeout(giveUp, 4000); return; } // someone is connecting: give them a moment
     // public lobby too full? try the next one
     if (lobby && remotes.size + 1 > PUBLIC_MAX && lobby < PUBLIC_LOBBIES) { leaveNet(); joinWait = false; begin(m, lobby + 1); return; }
     if (!joinWait) return;
     joinWait = false;
     if (!isHost()) return;
     startRound();
-    if (!remotes.size) setTimeout(() => flash(lobby ? `You opened public lobby ${lobby}` : `You started ${code}`,
-      lobby ? `Players who tap Play online will join your ${MAPS[mapKey].label} game. Computer frogs play until they do.` : `Friends who join will play ${MAPS[mapKey].label} with you.`, 4, 'var(--leaf)'), 3000);
-  }, 6000);
+    if (!remotes.size) setTimeout(() => flash(lobby ? `You opened public lobby ${lobby}` : `Nobody answered yet, so you started ${code}`,
+      lobby ? `Players who tap Play online will join your ${MAPS[mapKey].label} game. Computer frogs play until they do.` : `If a friend's game shows up, you'll hop into it automatically.`, 4, 'var(--leaf)'), 3000);
+  };
+  setTimeout(giveUp, 12000);
   if (!lobby) setTimeout(() => { if (net && net.code === code && !remotes.size) flash('Nobody here yet', 'Tap Players to check the room code and connection.', 3.5); }, 25000);
 }
 const PUBLIC_MAX = 6, PUBLIC_LOBBIES = 9;
@@ -3494,7 +3501,8 @@ function renderPlayers() {
     $('plStatus').textContent = total === 0 ? 'Connecting to matchmaking…'
       : ok === 0 ? "Can't reach the matchmaking servers. This network may block it."
       : `Matchmaking: ${ok} of ${total} servers connected · version ${APP_VERSION}`;
-    $('plStatus').className = 'pl-status' + (total && ok === 0 ? ' bad' : '');
+    if ((net.splitT || 0) > 6) $('plStatus').textContent = "Some devices here can't reach each other, so you may be in separate games. Everyone: Menu, then Join again.";
+    $('plStatus').className = 'pl-status' + ((total && ok === 0) || (net.splitT || 0) > 6 ? ' bad' : '');
   } else $('plStatus').textContent = `Version ${APP_VERSION}`;
   $('plHelp').hidden = !net || net.isPublic || remotes.size > 0 && [...remotes.values()].every(r => r.version === APP_VERSION);
   const humans = $('plHumans'), bots = $('plBots');
@@ -5189,7 +5197,13 @@ function update(dt, t) {
       : mode === 'infection'
       ? `Survivors ${bodies.filter(b => !b.it).length} · ${fmt(roundTime)}`
       : `Safe time ${fmt(stats.safe)} · Tagged ${stats.tagged}×`;
-    if (net) $('info').textContent += ` · ${roomLabel()} · ${remotes.size + 1} player${remotes.size ? 's' : ''}`;
+    if (net) $('info').textContent += ` · ${roomLabel()} · ${remotes.size ? remotes.size + 1 + ' players' : 'waiting for friends'}`;
+    if (net) { // do we all agree on who's hosting? If not, some devices can't reach each other
+      const now = performance.now(), split = [...remotes.values()].some(r => now - r.netT < 2500 && r.hostClaim && r.hostClaim !== net.hostId);
+      net.splitT = split ? (net.splitT || 0) + 0.2 : 0;
+      if (net.splitT > 6 && !net.splitWarned) { net.splitWarned = true; flash('Some devices can\u2019t reach each other', 'You may be in separate games. Everyone tap Menu, then Join again. Same Wi-Fi helps.', 6, 'var(--lava)'); }
+      if (!split) net.splitWarned = false;
+    }
     $('playersBtn').textContent = net ? `Players ${remotes.size + 1}` : 'Players';
     if (!$('players').hidden) renderPlayers();
     const hb = $('hostBtn');
@@ -5235,7 +5249,7 @@ function update(dt, t) {
     const mh = MODE2[mode] && MODE2[mode].hud && state !== 'menu' ? MODE2[mode].hud() : null;
     if (mh) {
       if (mh.chip) { st.textContent = mh.chip; st.className = 'chip'; st.style.background = mh.bg || 'var(--bone)'; st.style.color = 'var(--ink)'; }
-      if (mh.info) $('info').textContent = mh.info + (net ? ` · ${roomLabel()} · ${remotes.size + 1} player${remotes.size ? 's' : ''}` : '');
+      if (mh.info) $('info').textContent = mh.info + (net ? ` · ${roomLabel()} · ${remotes.size ? remotes.size + 1 + ' players' : 'waiting for friends'}` : '');
       if (mh.radar === 'hide') radar.hidden = true;
       else if (mh.radar) {
         const g = mh.radar.pos, ang = Math.atan2(-(g.x - player.pos.x), -(g.z - player.pos.z));
