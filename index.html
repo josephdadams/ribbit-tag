@@ -159,10 +159,10 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .pl-help em { font-style: normal; text-decoration: underline; }
 #update { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 5; font: inherit; font-weight: 800; border: 0;
   border-radius: 999px; padding: 10px 18px; background: var(--leaf); color: var(--ink); cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,.35); max-width: calc(100% - 32px); }
-.bubble.daisy { background: #e9e2ff; color: #3a2d6b; font-style: italic; }
-.bubble.daisy::after { border-top-color: #e9e2ff; }
-.bubble.nametag.daisy { background: rgba(215,200,255,.75); color: #2a1f4f; letter-spacing: .12em; font-style: normal; }
-.pl-list li.daisy-row { background: rgba(215,200,255,.12); color: #d7c8ff; font-style: italic; }
+.bubble.myst { color: #1b1530; font-style: italic; }
+.bubble.myst::after { display: none; }
+.bubble.nametag.myst { color: #1b1530; letter-spacing: .12em; font-style: normal; opacity: .85; }
+.pl-list li.myst-row { background: rgba(215,200,255,.1); font-style: italic; }
 .pl-list li.pl-empty { display: block; background: none; }
 .pl-empty { font-weight: 600; opacity: .7; font-size: .88rem; padding: 4px 2px; }
 #hostBtn { pointer-events: auto; border: 0; cursor: pointer; background: var(--canopy); color: var(--bone); }
@@ -294,8 +294,8 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         </div>
       </div>
       <div class="row">
-        <span class="label">Daisy09 sightings</span>
-        <div class="seg" id="daisySeg">
+        <span class="label">Mystery frogs</span>
+        <div class="seg" id="mysterySeg">
           <button type="button" data-d="1" aria-pressed="true" id="dzOn">On</button>
           <button type="button" data-d="0" aria-pressed="false" id="dzOff">Off</button>
         </div>
@@ -347,7 +347,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-3';
+const APP_VERSION = 'ribbit-4';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -1342,10 +1342,16 @@ const HAT_BUILD = {
     part(a, boxGeo, cmat(0xffd23f), 0.02, 0.18, 0.02, 0.2, 0.73, -0.1);
   },
   cone(a) { part(a, GEO.cone, cmat(0xff6b1a), 0.22, 0.5, 0.22, 0, 0.98, -0.1); part(a, GEO.cyl, cmat(0xffffff), 0.155, 0.07, 0.155, 0, 1.0, -0.1); },
-  daisy(a) {
+  clover(a) {
+    const f = new THREE.Group(); f.position.set(0.18, 0.76, -0.14); f.rotation.set(0.3, 0, -0.3); a.add(f);
+    for (let i = 0; i < 4; i++) { const an = i / 4 * Math.PI * 2 + Math.PI / 4; part(f, ballGeo, cmat(0x2fae4a), 0.06, 0.012, 0.06, Math.cos(an) * 0.055, 0, Math.sin(an) * 0.055); }
+    part(f, GEO.cyl, cmat(0x2f8a3a), 0.008, 0.12, 0.008, 0.02, -0.06, 0.02, 0, 0, 0.4);
+  },
+  moonflower(a) {
     const f = new THREE.Group(); f.position.set(0.22, 0.72, -0.12); f.rotation.y = Math.PI / 2; a.add(f);
-    for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; part(f, ballGeo, cmat(0xffffff), 0.05, 0.022, 0.012, Math.cos(an) * 0.065, Math.sin(an) * 0.065, 0, 0, 0, an); }
-    part(f, ballGeo, cmat(0xffd23f), 0.035, 0.035, 0.02, 0, 0, -0.005);
+    const glow = new THREE.MeshLambertMaterial({ color: 0xf0ecff, emissive: 0x8a7fd0 });
+    for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; part(f, ballGeo, glow, 0.05, 0.022, 0.012, Math.cos(an) * 0.065, Math.sin(an) * 0.065, 0, 0, 0, an); }
+    part(f, ballGeo, cmat(0xd7c8ff), 0.035, 0.035, 0.02, 0, 0, -0.005);
   },
   mushroom(a) {
     part(a, GEO.dome, cmat(0xe0303a), 0.36, 0.24, 0.36, 0, 0.7, -0.12);
@@ -1388,6 +1394,7 @@ const FACE_BUILD = {
   whiskers(a) { for (const sx of [-1, 1]) for (const k of [-1, 0, 1]) part(a, boxGeo, cmat(0x111111), 0.16, 0.008, 0.008, sx * 0.17, 0.42 + k * 0.025, -0.47, 0, 0, sx * k * 0.15); },
   monocle(a) { part(a, GEO.ring, goldMat, 0.075, 0.075, 0.075, 0.1, 0.55, -0.42); part(a, boxGeo, goldMat, 0.006, 0.2, 0.006, 0.17, 0.45, -0.41); },
   ninja(a) { part(a, boxGeo, cmat(0x1b1b1f), 0.38, 0.14, 0.05, 0, 0.42, -0.44); part(a, GEO.ring, cmat(0x1b1b1f), 0.3, 0.3, 0.3, 0, 0.62, -0.12, Math.PI / 2); },
+  glowyeyes(a) { const g = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xffffff }); for (const sx of [-1, 1]) part(a, ballGeo, g, 0.07, 0.07, 0.04, sx * 0.1, 0.56, -0.44); },
   tongue(a) { const tg = new THREE.Group(); tg.position.set(0.02, 0.36, -0.43); a.add(tg); part(tg, ballGeo, cmat(0xff6f91), 0.06, 0.02, 0.16, 0, 0, -0.12); a.userData.tongue = tg; },
   blush(a) { for (const sx of [-1, 1]) part(a, ballGeo, cmat(0xff8fab), 0.06, 0.035, 0.015, sx * 0.17, 0.45, -0.42); },
   freckles(a) { for (const sx of [-1, 1]) for (const [dx, dy] of [[0, 0], [0.035, 0.02], [0.03, -0.025]]) part(a, ballGeo, cmat(0x7a5a3a), 0.012, 0.012, 0.008, sx * (0.14 + dx), 0.47 + dy, -0.43); },
@@ -1516,7 +1523,10 @@ const SHOP = [
   { slot: 'back', id: 'butterfly', name: 'Butterfly wings', cost: 60 },
   { slot: 'back', id: 'wings', name: 'Angel wings', cost: 80 },
   { slot: 'back', id: 'jetpack', name: 'Jetpack', cost: 100 },
-  { slot: 'hat', id: 'daisy', name: 'Daisy', cost: 0, secret: true },
+  { slot: 'hat', id: 'moonflower', name: 'Moonflower', cost: 0, secret: true, hint: 'Some say a humming ghost frog named LUMI88 knows where to find it...' },
+  { slot: 'hat', id: 'clover', name: 'Lucky clover', cost: 0, secret: true, hint: 'Only the luckiest frogs ever catch the one who has it...' },
+  { slot: 'face', id: 'glowyeyes', name: 'Glowing eyes', cost: 0, secret: true, hint: 'Something watches from the dark places. Look back at it...' },
+  { slot: 'skin', id: 'glitch', name: 'Glitch', cost: 0, color: 0x00ff88, secret: true, glitch: true, hint: 'ERR0R: item not found. Try catching the frog that is breaking the game...' },
   { slot: 'hat', id: 'acorn', name: 'Acorn cap', cost: 15 },
   { slot: 'hat', id: 'antennae', name: 'Bug antennae', cost: 20 },
   { slot: 'hat', id: 'mushroom', name: 'Mushroom cap', cost: 30 },
@@ -1561,7 +1571,7 @@ function dressUp(o, look) {
   const skinItem = shopItem('skin', look.skin) || {};
   const ghost = !!skinItem.ghost;
   o.skin.transparent = ghost; o.skin.opacity = ghost ? 0.5 : 1; o.skin.needsUpdate = true;
-  o.rainbow = !!skinItem.rainbow;
+  o.rainbow = !!skinItem.rainbow; o.glitchSkin = !!skinItem.glitch;
   if (skinItem.spots) { // spots on the back and head
     for (const [x, y, z, r] of [[0.22, 0.32, 0.12, 0.08], [-0.26, 0.28, 0.18, 0.07], [0.05, 0.4, 0.3, 0.06], [-0.08, 0.38, -0.02, 0.07], [0.35, 0.1, 0.25, 0.06], [-0.4, 0.05, 0.05, 0.07], [0.22, 0.62, -0.08, 0.05], [-0.2, 0.6, -0.04, 0.05]])
       part(acc, ballGeo, cmat(skinItem.spots), r, r * 0.5, r, x, y, z);
@@ -1611,6 +1621,7 @@ function animateAcc(o, t) {
   if (o.acc.userData.balloon) { o.acc.userData.balloon.rotation.z = Math.sin(t * 1.3) * 0.12; o.acc.userData.balloon.rotation.x = Math.cos(t * 1.1) * 0.08; }
   if (o.acc.userData.tongue) o.acc.userData.tongue.scale.z = 0.8 + Math.max(0, Math.sin(t * 2.2)) * 0.6;
   if (o.rainbow && !o.it) o.skin.color.setHSL((t * 0.12) % 1, 0.75, 0.55);
+  if (o.glitchSkin && !o.it && Math.random() < 0.15) o.skin.color.setHSL(Math.random() < 0.7 ? 0.42 : Math.random(), 1, 0.5);
 }
 
 function newBody(isPlayer) {
@@ -2762,8 +2773,13 @@ const endPointer = e => {
   if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 14 || performance.now() - p.t0 > 350) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(ais.map(a => a.group).concat(daisy.active ? [daisy.group] : []), true)[0];
-  if (hit && hit.object.userData.daisy) { daisyUnlock(); daisyVanish(true); return; }
+  const hit = ray.intersectObjects(ais.map(a => a.group).concat(mysteryActive ? [mysteryActive.group] : []), true)[0];
+  if (hit && hit.object.userData.mystery) {
+    const m = mysteries[hit.object.userData.mystery];
+    if (m.key === 'lumi' || m.key === 'shadow') mysteryVanish(m, 'stared');
+    else m.jumpT = 0, m.pos.x += (Math.random() - 0.5) * 6, m.pos.z += (Math.random() - 0.5) * 6; // too quick to tap!
+    return;
+  }
   let o = hit && hit.distance < 40 ? hit.object : null;
   while (o && !o.userData.ai) o = o.parent;
   if (o) openTalk(o.userData.ai);
@@ -2906,7 +2922,7 @@ $('menuBtn').addEventListener('click', () => {
   $('talk').hidden = true; talkTarget = null; togglePlayers(false);
   ais.forEach(a => { a.bubble.hidden = true; a.bubbleT = 0; a.follow = 0; });
   try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
-  leaveNet(); joinWait = false; ctfEnd(); resetModeState(); if (potato.mesh) { scene.remove(potato.mesh); potato.mesh = null; } if (feast.group) { scene.remove(feast.group); feast.group = null; } daisyVanish(false); daisy.bubble.hidden = true; chooseSong();
+  leaveNet(); joinWait = false; ctfEnd(); resetModeState(); if (potato.mesh) { scene.remove(potato.mesh); potato.mesh = null; } if (feast.group) { scene.remove(feast.group); feast.group = null; } if (mysteryActive) mysteryVanish(mysteryActive, 'off'); Object.values(mysteries).forEach(m => { m.bubble.hidden = true; }); chooseSong();
 });
 $('roomIn').addEventListener('input', e => {
   const v = cleanCode(e.target.value); if (v !== e.target.value) e.target.value = v;
@@ -2938,107 +2954,172 @@ $('update').addEventListener('click', () => location.reload());
 setTimeout(checkForUpdate, 5000);
 setInterval(checkForUpdate, 90000);
 
-// ---------- Daisy09 ----------
-// A shy ghost frog. Every few minutes she shows up far away, hums "Daisy Bell"
-// (1892, public domain) like a music box, drifts closer, and vanishes if you get near or tap her.
-// Only you see your sightings. Spotting her up close unlocks the secret Daisy hat.
-let daisyOn = true;
-try { daisyOn = localStorage.getItem('ribbit-daisy') !== '0'; } catch (e) {}
-const daisy = (() => {
-  const o = makeFrog(0xc9d6ff, { hat: 'daisy', face: 'none' });
-  o.skin.transparent = true; o.skin.opacity = 0.42; o.skin.depthWrite = false; o.skin.emissive.setHex(0x404a80);
-  o.group.traverse(m => { m.userData.daisy = true; if (m.material && m.material !== o.skin && m.material.transparent === false) { m.material = m.material.clone(); m.material.transparent = true; m.material.opacity = 0.55; } });
+// ---------- Mystery frogs ----------
+// Rare visitors that only you see (each device has its own sightings). One shows up every few minutes:
+//  LUMI88: a pale ghost frog humming "Twinkle, Twinkle, Little Star" (public domain); get close and she vanishes.
+//  The Shadow Croaker: a black frog with glowing eyes standing still far away in dark places; stare and it blinks out.
+//  ERR0R: a glitching frog that teleports around; catch it and it crashes, dropping flies.
+//  The Golden Frog: a lucky frog that hops away; catch it for a pile of flies.
+// Each one unlocks a secret Wardrobe item. Add ?mystery=lumi (or shadow, glitch, golden) to the URL to meet one quickly.
+let mysteryOn = true;
+try { mysteryOn = localStorage.getItem('ribbit-mystery') !== '0'; } catch (e) {}
+const DARK_MAPS = ['caves', 'spooky', 'swamp', 'volcano', 'moon', 'canopy'];
+const MYSTERY_DEFS = {
+  lumi: { name: 'LUMI88', tint: '#d7c8ff', skin: 0xc9d6ff, look: { hat: 'moonflower', face: 'none' }, unlock: 'hat:moonflower', item: 'Moonflower hat', weight: () => 3,
+    lines: ["Twinkle, twinkle...", "Do you want to play with me?", "I've been here a long, long time.", "Shhh. Don't tell the others you saw me.", "You found me!", "Can you hear the music?"],
+    react: ["Did anyone else see that?", "Was that... LUMI88?", "I heard humming!", "W-what was that?"] },
+  shadow: { name: '???', tint: '#9aa0a6', skin: 0x08080c, look: { hat: 'none', face: 'glowyeyes' }, unlock: 'face:glowyeyes', item: 'Glowing eyes', weight: () => DARK_MAPS.includes(mapKey) ? 4 : 0,
+    lines: ["...", "...you saw me.", "...shhh..."],
+    react: ["Something was watching us.", "Did you see those eyes?!", "I'm not scared. I'm NOT scared.", "Who was standing over there?"] },
+  glitch: { name: 'ERR0R', tint: '#52ffb0', skin: 0x00ff88, look: { hat: 'none', face: 'none' }, unlock: 'skin:glitch', item: 'Glitch skin', weight: () => 2,
+    lines: ["ERR0R... ERR0R...", "D0 N0T T0UCH", "h3ll0 fr0g"],
+    react: ["That frog was all fuzzy!", "Is the game broken?", "Did that frog just teleport?", "Bzzzt! Weird!"] },
+  golden: { name: 'GOLDEN FROG', tint: '#ffd23f', skin: 0xffc83d, look: { hat: 'none', face: 'none' }, unlock: 'hat:clover', item: 'Lucky clover', weight: () => 2,
+    lines: ["You caught me!", "Lucky you!"],
+    react: ["Was that a GOLDEN frog?!", "So shiny!", "Catch it next time!", "Lucky, lucky!"] },
+};
+const mysteries = {};
+for (const [key, def] of Object.entries(MYSTERY_DEFS)) {
+  const o = makeFrog(def.skin, def.look);
+  if (key === 'lumi') { o.skin.transparent = true; o.skin.opacity = 0.42; o.skin.depthWrite = false; o.skin.emissive.setHex(0x404a80); }
+  if (key === 'golden') o.skin.emissive.setHex(0x6a4400);
+  if (key === 'shadow') o.group.traverse(m => { if (m.material === M.eye || m.material === faceMat) m.material = o.skin; });
+  if (key === 'lumi') o.group.traverse(m => { if (m.material && m.material !== o.skin && !m.material.transparent) { m.material = m.material.clone(); m.material.transparent = true; m.material.opacity = 0.55; } });
+  o.group.traverse(m => { m.userData.mystery = key; });
   o.group.visible = false;
-  o.tag = document.createElement('div'); o.tag.className = 'bubble nametag daisy'; o.tag.textContent = 'DAISY09'; o.tag.hidden = true; bubbleLayer.append(o.tag);
-  o.bubble = document.createElement('div'); o.bubble.className = 'bubble daisy'; o.bubble.hidden = true; bubbleLayer.append(o.bubble);
-  return Object.assign(o, { name: 'DAISY09', active: false, timer: location.search.includes('daisy') ? 3 : 100 + Math.random() * 80, life: 0, pos: new V(), noteI: 0, noteT: 0, seen: false, bubbleT: 0, it: false, frozen: 0 });
-})();
-const DAISY_LINES = ["Daisy... Daisy...", "Do you want to play with me?", "I've been here a long, long time.", "Shhh. Don't tell the others you saw me.",
-  "You found me!", "I like your hat.", "Bye bye...", "Can you hear the music?", "Tag... you're it. Just kidding."];
-// "Daisy Bell": [midi note, beats]
-const DAISY_TUNE = [[79, 3], [76, 3], [72, 3], [67, 3], [69, 1], [71, 1], [72, 1], [69, 2], [72, 1], [67, 6],
-  [74, 3], [79, 3], [76, 3], [72, 3], [69, 1], [71, 1], [72, 1], [74, 2], [76, 1], [74, 6]];
-function daisyNote(t, midi, dur, vol) {
+  o.tag = document.createElement('div'); o.tag.className = 'bubble nametag myst'; o.tag.style.background = def.tint; o.tag.textContent = def.name; o.tag.hidden = true; bubbleLayer.append(o.tag);
+  o.bubble = document.createElement('div'); o.bubble.className = 'bubble myst'; o.bubble.hidden = true; bubbleLayer.append(o.bubble);
+  mysteries[key] = Object.assign(o, { key, def, active: false, life: 0, pos: new V(), baseY: R, noteI: 0, noteT: 0, stare: 0, jumpT: 0, bubbleT: 0, it: false, frozen: 0 });
+}
+const forced = (location.search.match(/mystery=(\w+)/) || [])[1];
+let mysteryActive = null, mysteryTimer = forced ? 3 : 90 + Math.random() * 90;
+// "Twinkle, Twinkle, Little Star": [midi note, beats]
+const TWINKLE = [[72, 1], [72, 1], [79, 1], [79, 1], [81, 1], [81, 1], [79, 2], [77, 1], [77, 1], [76, 1], [76, 1], [74, 1], [74, 1], [72, 2],
+  [79, 1], [79, 1], [77, 1], [77, 1], [76, 1], [76, 1], [74, 2], [79, 1], [79, 1], [77, 1], [77, 1], [76, 1], [76, 1], [74, 2]];
+function musicBoxNote(midi, dur, vol) {
   if (!actx || vol < 0.003) return;
-  const o = actx.createOscillator(), g = actx.createGain(), lfo = actx.createOscillator(), lg = actx.createGain();
+  const t = actx.currentTime + 0.02, o = actx.createOscillator(), g = actx.createGain(), lfo = actx.createOscillator(), lg = actx.createGain();
   o.type = 'sine'; o.frequency.value = mtof(midi);
   lfo.frequency.value = 5.5; lg.gain.value = mtof(midi) * 0.012; lfo.connect(lg); lg.connect(o.frequency);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0005, t + dur + 0.6);
   o.connect(g); g.connect(actx.destination);
   o.start(t); lfo.start(t); o.stop(t + dur + 0.7); lfo.stop(t + dur + 0.7);
 }
-function daisySay(text) {
-  daisy.bubble.innerHTML = '<b>DAISY09</b>'; daisy.bubble.append(text); daisy.bubble.hidden = false; daisy.bubbleT = 3;
+function mysterySay(m, text) {
+  m.bubble.innerHTML = ''; const b = document.createElement('b'); b.textContent = m.def.name; m.bubble.append(b, text);
+  m.bubble.style.background = m.def.tint; m.bubble.hidden = false; m.bubbleT = 3;
   if (voicesOn && window.speechSynthesis) try {
-    const u = new SpeechSynthesisUtterance(text); u.pitch = 2; u.rate = 0.7; u.volume = 0.6; speechSynthesis.speak(u);
+    const u = new SpeechSynthesisUtterance(text); u.pitch = m.key === 'shadow' ? 0.1 : m.key === 'glitch' ? 1.6 : 2; u.rate = m.key === 'glitch' ? 1.4 : 0.7; u.volume = 0.6; speechSynthesis.speak(u);
   } catch (e) {}
 }
-function daisyAppear() {
-  // somewhere 14-22 m away, off to the side or behind you
-  const ang = player.yaw + Math.PI * (0.5 + Math.random()), d = 14 + Math.random() * 8;
-  findSpot(clamp(player.pos.x - Math.sin(ang) * d, -HALF + 3, HALF - 3), clamp(player.pos.z - Math.cos(ang) * d, -HALF + 3, HALF - 3), daisy.pos);
-  if (MAPS[mapKey].spawnHigh) daisy.pos.y = player.pos.y;
-  daisy.active = true; daisy.life = 22 + Math.random() * 10; daisy.noteI = 0; daisy.noteT = 1.5;
-  daisy.group.visible = true;
-  if (music.master) music.master.gain.value = musicOn ? 0.06 : 0;
+function pickMystery() {
+  if (forced && mysteries[forced]) return mysteries[forced];
+  const pool = [];
+  for (const m of Object.values(mysteries)) for (let i = 0; i < m.def.weight(); i++) pool.push(m);
+  return pool.length ? pick(pool) : mysteries.lumi;
 }
-function daisyVanish(spoke) {
-  if (!daisy.active) return;
-  daisy.active = false; daisy.group.visible = false; daisy.tag.hidden = true;
-  if (spoke) daisySay(pick(DAISY_LINES));
-  sfxTone(900, 200, 0.6, 'sine', 0.06);
+function mysteryAppear() {
+  const m = pickMystery();
+  const ang = player.yaw + Math.PI * (0.4 + Math.random() * 1.2), d = m.key === 'golden' || m.key === 'glitch' ? 10 + Math.random() * 6 : 15 + Math.random() * 8;
+  findSpot(clamp(player.pos.x - Math.sin(ang) * d, -HALF + 3, HALF - 3), clamp(player.pos.z - Math.cos(ang) * d, -HALF + 3, HALF - 3), m.pos);
+  m.baseY = MAPS[mapKey].spawnHigh ? player.pos.y : R;
+  if (m.key === 'shadow') { // somewhere high and far, if the map has a good spot
+    const spots = ledges.filter(l => l.max.y > 2 && l.max.y < 16 && flat(player.pos, { x: (l.min.x + l.max.x) / 2, z: (l.min.z + l.max.z) / 2 }) > 15);
+    if (spots.length) { const l = pick(spots); m.pos.set((l.min.x + l.max.x) / 2, 0, (l.min.z + l.max.z) / 2); m.baseY = l.max.y + R; }
+  }
+  m.pos.y = m.baseY;
+  m.active = true; m.life = m.key === 'golden' ? 30 : 24 + Math.random() * 8; m.noteI = 0; m.noteT = 1.2; m.stare = 0; m.jumpT = 0.8;
+  m.group.visible = true; mysteryActive = m;
+  if (m.key === 'lumi' && music.master) music.master.gain.value = musicOn ? 0.06 : 0;
+  if (m.key === 'shadow') sfxTone(70, 55, 2.5, 'sine', 0.12);
+  if (m.key === 'golden') { sfxTone(1320, 1760, 0.2, 'triangle', 0.08); setTimeout(() => sfxTone(1760, 2200, 0.2, 'triangle', 0.08), 150); }
+}
+function mysteryVanish(m, how) { // how: 'caught' | 'stared' | 'near' | 'timeout' | 'off'
+  if (!m || !m.active) return;
+  m.active = false; m.group.visible = false; m.tag.hidden = true; mysteryActive = null;
   if (music.master) music.master.gain.value = musicOn ? 0.22 : 0;
-  daisy.timer = (mapKey === 'spooky' ? 50 : 120) + Math.random() * 90;
-  setTimeout(() => { // a computer frog noticed
+  mysteryTimer = (DARK_MAPS.includes(mapKey) ? 60 : 110) + Math.random() * 90;
+  if (how === 'off') return;
+  if (how !== 'timeout') mysterySay(m, pick(m.def.lines));
+  if (m.key === 'glitch') { sfxTone(800, 60, 0.4, 'square', 0.1); sfxSlap(0.3); } else sfxTone(900, 200, 0.6, 'sine', 0.06);
+  if (how === 'caught' && m.key === 'golden') { addFlies(25); flash('You caught the Golden Frog!', '+25 flies!', 3, '#ffd23f'); }
+  if (how === 'caught' && m.key === 'glitch') { addFlies(5); flash('ERR0R crashed!', 'It dropped 5 flies.', 2.6, '#52ffb0'); }
+  if (how !== 'timeout') mysteryUnlock(m);
+  setTimeout(() => {
     if (state !== 'play') return;
     const near = ais.filter(a => !a.it && a.pos.distanceTo(player.pos) < 25);
-    if (near.length) say(pick(near), pick(["Did anyone else see that?", "Was that... Daisy?", "I heard humming!", "W-what was that?"]));
+    if (near.length) say(pick(near), pick(m.def.react));
   }, 2500);
 }
-function daisyUnlock() {
-  if (daisy.seen || owned.has('hat:daisy')) return;
-  daisy.seen = true; owned.add('hat:daisy'); saveWardrobe();
-  setTimeout(() => flash('You saw Daisy09', 'The secret Daisy hat is now in your Wardrobe.', 3.5, '#d7c8ff'), 1200);
+function mysteryUnlock(m) {
+  if (owned.has(m.def.unlock)) return;
+  owned.add(m.def.unlock); saveWardrobe();
+  setTimeout(() => flash(`You found ${m.key === 'shadow' ? 'the Shadow Croaker' : m.def.name}`, `The secret ${m.def.item} is now in your Wardrobe.`, 3.5, m.def.tint), 1600);
 }
-function updateDaisy(dt, t) {
-  if (daisy.bubbleT > 0) { daisy.bubbleT -= dt; if (daisy.bubbleT <= 0) daisy.bubble.hidden = true; }
-  if (!daisyOn || state !== 'play') { if (daisy.active) daisyVanish(false); return; }
-  if (!daisy.active) { daisy.timer -= dt; if (daisy.timer <= 0) daisyAppear(); return; }
-  daisy.life -= dt;
-  const toP = tq.subVectors(player.pos, daisy.pos); toP.y = 0;
-  const d = toP.length();
-  if (d > 4) daisy.pos.addScaledVector(toP.normalize(), Math.min(1.3, d) * dt);
-  daisy.group.position.set(daisy.pos.x, daisy.pos.y + 0.25 + Math.sin(t * 1.5) * 0.15, daisy.pos.z);
-  daisy.group.rotation.y = Math.atan2(-(player.pos.x - daisy.pos.x), -(player.pos.z - daisy.pos.z));
-  daisy.arms.forEach((a, i) => { a.rotation.x = 0.4 + Math.sin(t * 1.2 + i) * 0.2; });
-  daisy.skin.color.setHSL(0.62 + Math.sin(t * 0.4) * 0.12, 0.7, 0.82);
-  // the music box
-  daisy.noteT -= dt;
-  if (daisy.noteT <= 0) {
-    const [n, beats] = DAISY_TUNE[daisy.noteI % DAISY_TUNE.length];
-    daisyNote(actx ? actx.currentTime + 0.02 : 0, n, beats * 0.3, 0.09 * clamp(1 - d / 34, 0.08, 1));
-    daisy.noteT = beats * 0.3; daisy.noteI++;
-    if (daisy.noteI % DAISY_TUNE.length === 0) daisy.noteT += 1.2;
+function updateMysteries(dt, t) {
+  for (const m of Object.values(mysteries)) if (m.bubbleT > 0) {
+    m.bubbleT -= dt; if (m.bubbleT <= 0) m.bubble.hidden = true;
+    bv.copy(m.pos); bv.y += 1.6; bv.project(camera);
+    m.bubble.style.transform = `translate(${clamp((bv.x + 1) / 2 * innerWidth, 90, innerWidth - 90)}px, ${clamp((1 - bv.y) / 2 * innerHeight, 110, innerHeight - 20)}px) translate(-50%, -100%)`;
   }
-  if (d < 10) daisyUnlock();
-  if (d < 3.5) daisyVanish(true);
-  else if (daisy.life <= 0) daisyVanish(false);
-  // name tag + speech bubble float over her
-  bv.copy(daisy.group.position); bv.y += 1.3; bv.project(camera);
-  const onScreen = bv.z < 1 && daisy.active;
-  daisy.tag.hidden = !onScreen;
-  const sx = (bv.x + 1) / 2 * innerWidth, sy = (1 - bv.y) / 2 * innerHeight;
-  if (onScreen) daisy.tag.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%)`;
-  if (!daisy.bubble.hidden) daisy.bubble.style.transform = `translate(${clamp(sx, 90, innerWidth - 90)}px, ${clamp(sy - 26, 110, innerHeight - 20)}px) translate(-50%, -100%)`;
+  if (!mysteryOn || state !== 'play') { if (mysteryActive) mysteryVanish(mysteryActive, 'off'); return; }
+  if (!mysteryActive) { mysteryTimer -= dt; if (mysteryTimer <= 0) mysteryAppear(); return; }
+  const m = mysteryActive;
+  m.life -= dt;
+  const toP = tq.subVectors(player.pos, m.pos); toP.y = 0;
+  const d = toP.length();
+  let y = m.baseY, faceYaw = Math.atan2(-(player.pos.x - m.pos.x), -(player.pos.z - m.pos.z));
+  if (m.key === 'lumi') {
+    if (d > 4) m.pos.addScaledVector(toP.clone().normalize(), Math.min(1.3, d) * dt);
+    y += 0.25 + Math.sin(t * 1.5) * 0.15;
+    m.skin.color.setHSL(0.62 + Math.sin(t * 0.4) * 0.12, 0.7, 0.82);
+    if ((m.noteT -= dt) <= 0) {
+      const [n, beats] = TWINKLE[m.noteI % TWINKLE.length];
+      musicBoxNote(n, beats * 0.35, 0.09 * clamp(1 - d / 34, 0.08, 1));
+      m.noteT = beats * 0.35; m.noteI++;
+      if (m.noteI % TWINKLE.length === 0) m.noteT += 1.2;
+    }
+    if (d < 10) mysteryUnlock(m);
+    if (d < 3.5) { mysteryVanish(m, 'near'); return; }
+  } else if (m.key === 'shadow') {
+    // stare at it for a moment (it's near the middle of your view) and it blinks away
+    let rel = faceYaw + Math.PI - player.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+    if (Math.abs(rel) < 0.3 && d < 45) m.stare += dt; else m.stare = Math.max(0, m.stare - dt * 0.5);
+    if (m.stare > 1.6 || d < 4) { mysteryVanish(m, 'stared'); return; }
+  } else if (m.key === 'glitch') {
+    if ((m.jumpT -= dt) <= 0) {
+      m.jumpT = 0.5 + Math.random() * 0.7;
+      const a = Math.random() * Math.PI * 2, r = 1.5 + Math.random() * 3;
+      m.pos.x = clamp(m.pos.x + Math.cos(a) * r, -HALF + 2, HALF - 2); m.pos.z = clamp(m.pos.z + Math.sin(a) * r, -HALF + 2, HALF - 2);
+      sfxTone(200 + Math.random() * 1200, 100, 0.05, 'square', 0.03 * clamp(1 - d / 30, 0.2, 1));
+    }
+    m.group.visible = Math.random() > 0.12;
+    m.skin.color.setHSL(Math.random(), 1, 0.5);
+    m.tag.textContent = Math.random() < 0.25 ? pick(['E#R0?', 'ERR█R', '3RR0R', 'ER?0R']) : 'ERR0R';
+    faceYaw += (Math.random() - 0.5) * 0.6;
+    if (d < 1.6) { mysteryVanish(m, 'caught'); return; }
+  } else if (m.key === 'golden') {
+    if (d < 11) { const away = toP.clone().normalize().multiplyScalar(-5.2 * dt); m.pos.add(away); m.pos.x = clamp(m.pos.x, -HALF + 2, HALF - 2); m.pos.z = clamp(m.pos.z, -HALF + 2, HALF - 2); faceYaw += Math.PI; }
+    y += Math.abs(Math.sin(t * 6)) * 0.7;
+    m.skin.emissive.setHex(Math.sin(t * 8) > 0 ? 0x8a6000 : 0x5a3a00);
+    if (d < 1.6) { mysteryVanish(m, 'caught'); return; }
+  }
+  if (m.life <= 0) { mysteryVanish(m, 'timeout'); return; }
+  m.group.position.set(m.pos.x, y, m.pos.z); m.group.rotation.y = faceYaw;
+  m.arms.forEach((a, i) => { a.rotation.x = 0.4 + Math.sin(t * (m.key === 'golden' ? 8 : 1.2) + i) * 0.25; });
+  bv.copy(m.group.position); bv.y += 1.3; bv.project(camera);
+  const onScreen = bv.z < 1 && m.group.visible;
+  m.tag.hidden = !onScreen;
+  if (onScreen) m.tag.style.transform = `translate(${(bv.x + 1) / 2 * innerWidth}px, ${(1 - bv.y) / 2 * innerHeight}px) translate(-50%, -100%)`;
 }
-function setDaisy(on) {
-  daisyOn = on;
-  document.querySelectorAll('#daisySeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.d === +on)));
-  try { localStorage.setItem('ribbit-daisy', on ? '1' : '0'); } catch (e) {}
-  if (!on) daisyVanish(false);
+function setMystery(on) {
+  mysteryOn = on;
+  document.querySelectorAll('#mysterySeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.d === +on)));
+  try { localStorage.setItem('ribbit-mystery', on ? '1' : '0'); } catch (e) {}
+  if (!on && mysteryActive) mysteryVanish(mysteryActive, 'off');
 }
-document.querySelectorAll('#daisySeg button').forEach(b => b.addEventListener('click', () => setDaisy(b.dataset.d === '1')));
-setDaisy(daisyOn);
+document.querySelectorAll('#mysterySeg button').forEach(b => b.addEventListener('click', () => setMystery(b.dataset.d === '1')));
+setMystery(mysteryOn);
 
 // ---------- Players list ----------
 const hex = h => '#' + (h >>> 0).toString(16).padStart(6, '0');
@@ -3095,9 +3176,10 @@ function renderPlayers() {
   for (const r of remotes.values()) humans.append(playerRow(r, false));
   if (!net) { const li = document.createElement('li'); li.className = 'pl-empty'; li.textContent = 'Playing solo. Type a room code on the menu to play with friends.'; humans.append(li); }
   else if (!remotes.size) { const li = document.createElement('li'); li.className = 'pl-empty'; li.textContent = net.isPublic ? 'Waiting for other players to tap Play online. The computer frogs play until they do.' : `Waiting for friends to join room ${net.code}…`; humans.append(li); }
-  if (daisy.active) {
-    const li = document.createElement('li'); li.className = 'daisy-row';
-    li.innerHTML = '<span class="pl-dot" style="background:#d7c8ff"></span><span class="pl-name">DAISY09</span><span class="pl-state">???</span><span class="pl-meta">???</span>';
+  if (mysteryActive) {
+    const li = document.createElement('li'); li.className = 'myst-row'; li.style.color = mysteryActive.def.tint;
+    li.innerHTML = `<span class="pl-dot" style="background:${mysteryActive.def.tint}"></span><span class="pl-name"></span><span class="pl-state">???</span><span class="pl-meta">???</span>`;
+    li.querySelector('.pl-name').textContent = mysteryActive.def.name;
     humans.append(li);
   }
   for (const a of ais) bots.append(playerRow(a, false));
@@ -3217,7 +3299,7 @@ function renderWardrobe() {
 }
 function wear(item) {
   const key = item.slot + ':' + item.id;
-  if (item.secret && !owned.has(key)) { $('wrMsg').textContent = 'This one is a secret. Some say a ghost frog named Daisy09 knows where to find it...'; return; }
+  if (item.secret && !owned.has(key)) { $('wrMsg').textContent = item.hint || 'This one is a secret...'; return; }
   if (!owned.has(key)) {
     if (flies < item.cost) { $('wrMsg').textContent = `You need ${item.cost - flies} more flies for the ${item.name}. Keep playing to earn them!`; sfxTone(220, 160, 0.15, 'square', 0.06); return; }
     flies -= item.cost; owned.add(key);
@@ -3624,7 +3706,7 @@ function update(dt, t) {
 
   updateTalk(dt);
   updatePickups(dt, t);
-  updateDaisy(dt, t);
+  updateMysteries(dt, t);
 
   // HUD
   if (flashTimer > 0) { flashTimer -= dt; if (flashTimer <= 0) $('flash').classList.remove('show'); }
