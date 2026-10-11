@@ -85,9 +85,9 @@ Every day brings three new quests, like "Catch 25 flies", "Unfreeze 4 frogs in F
 
 ## Maps
 
-Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, and Rainforest Canopy.
+Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, and Ice Castle.
 
-Some maps change how you move: lily pads on Lily Pond and Misty Swamp are bouncy, ice on Snowy Peaks is slippery, water, mud and the chocolate river in Candy Land slow you down, and Moon Base has low gravity. Each map has its own music.
+Some maps change how you move: lily pads on Lily Pond and Misty Swamp and the bed in the Toy Room are bouncy, Coral Reef is underwater with low gravity and drag, ice on Snowy Peaks and in the Ice Castle is slippery, water, mud and the chocolate river in Candy Land slow you down, and Moon Base has low gravity. Each map has its own music.
 
 ## The computer frogs
 
