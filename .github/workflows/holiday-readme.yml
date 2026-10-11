@@ -1,0 +1,24 @@
+name: Holiday map in README
+
+on:
+  schedule:
+    - cron: '17 9 * * *' # every morning
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Show today's holiday map in the README
+        run: python3 .github/scripts/holiday_readme.py
+      - name: Commit if it changed
+        run: |
+          if git diff --quiet README.md; then echo "No change"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update the holiday map in the README"
+          git push

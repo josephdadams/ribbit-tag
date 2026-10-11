@@ -106,6 +106,14 @@ Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Ba
 
 ### Holiday maps
 
+<!-- HOLIDAY-MAP:START -->
+### Now on the menu: Haunted Manor
+
+The Halloween map is available until Nov 2. Look for it under **Limited time** on the map picker.
+
+![Haunted Manor](docs/screenshots/holiday-manor.png)
+<!-- HOLIDAY-MAP:END -->
+
 Some maps only show up on the menu (under **Limited time**) around a holiday:
 
 | Map | Holiday | Available |
