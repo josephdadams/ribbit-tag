@@ -62,6 +62,7 @@ h1 span { color: var(--lava); display: block; }
 .seg { display: inline-flex; background: var(--ink); border-radius: 999px; padding: 3px; }
 .seg button { font: inherit; font-weight: 800; border: 0; background: transparent; color: var(--bone); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
 .seg.maps { flex-wrap: wrap; border-radius: 18px; }
+.map-info { flex-basis: 100%; margin: 2px 0 0; font-size: .9rem; line-height: 1.35; opacity: .9; min-height: 2.7em; }
 .season-label { flex-basis: 100%; padding: 4px 10px 2px; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #ff9f5a; }
 .seg button.seasonal { background: #3a2433; color: #ffd6a8; }
 .seg button.seasonal small { font-size: .72rem; opacity: .8; }
@@ -366,6 +367,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       <div class="row">
         <span class="label">Map</span>
         <div class="seg maps" id="maps"></div>
+        <p class="map-info" id="mapInfo" aria-live="polite"></p>
       </div>
       <div class="row">
         <label class="label" for="nameIn">Your name</label>
@@ -3614,6 +3616,41 @@ function keyJump() {
 }
 
 // ---------- Menu wiring ----------
+const MAP_INFO = {
+  forest: 'The classic. A big treehouse in the middle with steps up, more tree forts, and rocks to climb.',
+  caves: 'Dark caves full of shiny crystals and glowing mushrooms. Grab the ceiling and swing along it!',
+  canyon: 'Tall red mesas with steps up the sides, a wobbly rope bridge, and a giant stone arch.',
+  beach: 'Sand, waves, a pier with a boat, a lifeguard tower, bouncy umbrellas and a sandcastle.',
+  snow: 'A frozen pond to slide across, a snowy mountain, a log cabin and lots of snowmen.',
+  volcano: 'Climb the volcano to its glowing crater. Cross the bridges over the lava rivers!',
+  sky: "Floating islands high in the clouds, joined by a rainbow bridge. Don't look down!",
+  moon: 'Low gravity means giant leaps! A rocket, moon domes, a rover and big craters.',
+  candy: 'A three-layer cake, cupcakes, candy canes, cookie bridges and bouncy gumdrops.',
+  spooky: 'A haunted house, a creepy tower, a graveyard, giant pumpkins and fireflies at night.',
+  city: 'Jump from rooftop to rooftop, climb fire escapes and cross the crane bridge over the street.',
+  pond: 'Bounce across lily pads, run along floating logs and climb the willow on the rock island.',
+  swamp: 'Foggy and green. A boardwalk on stilts goes all the way around, past a shack and mossy trees.',
+  garden: "You're tiny! Climb a giant sunflower, stand on flowers and hop across stepping stones.",
+  canopy: 'Huge rainforest trees with platforms way up high, joined by rope bridges.',
+  cove: "Climb a pirate ship's crow's nest, explore a shipwreck and find the treasure chests.",
+  reef: 'Underwater! Swim slowly around a sunken ship, a giant clam, coral and a kelp forest.',
+  toys: "A giant bedroom and you're toy-sized! Bounce on the bed, climb block towers and dive in the ball pit.",
+  icecastle: 'A slippery ice castle with towers, walkways on the walls and an icy courtyard to slide on.',
+  backrooms: 'Endless yellow rooms, soggy carpet and humming lights. Climb the walls and swing from the ceiling!',
+  manor: 'A haunted mansion with two floors, flickering candles, floating ghosts and a hedge maze. Boo!',
+  farm: 'A red barn with a hayloft, a tractor, a corn maze, a scarecrow and a pumpkin patch.',
+  santa: 'Climb a giant Christmas tree to the star, skate on the ice rink and bounce on presents.',
+  valentine: 'Giant hearts to climb, a heart fountain, chocolate box platforms and floating balloons.',
+  rainbow: 'Rolling green hills and a rainbow you can walk across, with a pot of gold at the end.',
+  eggs: 'Climb and bounce on giant eggs, find the bunny burrow and chase the butterflies.',
+  fireworks: 'A lake at night with boats, a dock and an island, and fireworks bursting overhead.',
+};
+function showMapInfo(key) {
+  const el = $('mapInfo'); if (!el) return;
+  const mp = MAPS[key]; if (!mp) return;
+  el.textContent = '';
+  const b = document.createElement('b'); b.textContent = mp.label + ': '; el.append(b, MAP_INFO[key] || '');
+}
 const seasonal = Object.entries(MAPS).filter(([k, mp]) => mp.season && mapAvailable(k));
 if (seasonal.length) { const h = document.createElement('span'); h.className = 'season-label'; h.textContent = 'Limited time'; $('maps').append(h); }
 for (const [key, mp] of seasonal.concat(Object.entries(MAPS).filter(([k, mp]) => !mp.season))) {
@@ -3625,6 +3662,7 @@ for (const [key, mp] of seasonal.concat(Object.entries(MAPS).filter(([k, mp]) =>
     buildMap(key); placeIdle();
     try { localStorage.setItem('ribbit-map', key); } catch (e) {}
     document.querySelectorAll('#maps button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.map === key)));
+    showMapInfo(key);
   });
   $('maps').append(b);
 }
@@ -5965,6 +6003,7 @@ function placeIdle() { ais.forEach((a, i) => { const ang = i * 1.3; spawnAt(Math
   let k = 'forest'; try { k = localStorage.getItem('ribbit-map') || 'forest'; } catch (e) {}
   if (MAPS[k] && mapAvailable(k) && k !== mapKey) buildMap(k);
   document.querySelectorAll('#maps button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.map === mapKey)));
+  showMapInfo(mapKey);
 })();
 placeIdle();
 requestAnimationFrame(frame);
