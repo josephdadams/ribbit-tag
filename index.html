@@ -376,7 +376,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-7';
+const APP_VERSION = 'ribbit-8';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -2156,13 +2156,29 @@ function doTag(a, b) {
 // ---------- AI ----------
 const dir = new V(), away = new V();
 function nearestTarget(ai) {
+  // height counts the same as distance, so frogs hiding up high still get chased;
+  // a chaser sticks with its target for a few seconds instead of flip-flopping
+  const ok = b => b && b !== ai && !b.it && b.immune <= 0 && !b.iced && !b.out && bodies.includes(b);
   let best = null, bd = 1e9;
   for (const b of bodies) {
-    if (b === ai || b.it || b.immune > 0 || b.iced || b.out) continue;
-    const d = Math.hypot(b.pos.x - ai.pos.x, (b.pos.y - ai.pos.y) * 1.5, b.pos.z - ai.pos.z);
+    if (!ok(b)) continue;
+    const d = b.pos.distanceTo(ai.pos);
     if (d < bd) { bd = d; best = b; }
   }
+  const now = performance.now();
+  if (ok(ai.chase) && now < ai.chaseUntil && ai.chase.pos.distanceTo(ai.pos) < bd * 1.8 + 3) return ai.chase;
+  ai.chase = best; ai.chaseUntil = now + 6000;
   return best;
+}
+// how to get up to something above: scramble up a wall, leap straight up, or hop to a ledge
+function climbPlan(ai, g) {
+  const up = g.y - ai.pos.y, hd = Math.hypot(g.x - ai.pos.x, g.z - ai.pos.z);
+  if (up <= 1.6) return null;
+  if (ai.nearWall) return { jumpV: 9.5, quick: true };
+  if (hd < 3.5) return { jumpV: Math.min(11.5, 6.5 + up * 1.2), quick: true };
+  const L = pickLedge(ai, { pos: g });
+  if (L && hd > 2) return { jumpV: 8.6, ledge: L };
+  return { jumpV: 6.5 };
 }
 function pickLedge(ai, tgt) {
   const feet = ai.pos.y - R; let best = null, bs = 1e9;
@@ -2177,9 +2193,12 @@ function pickLedge(ai, tgt) {
 }
 function aiThink(ai, dt) {
   ai.hopT -= dt; ai.swing = Math.max(0, ai.swing - dt * 3);
-  if (ai.frozen > 0 || ai.hopT > 0 || !(ai.grounded || ai.wall)) return;
+  if (ai.frozen > 0 || ai.hopT > 0) return;
+  // "touching" a wall includes the map's outer walls, which bodies rest right against without colliding
+  surfaceGap(ai.pos); ai.nearWall = ai.wall || wallGap < 0.45;
+  if (!(ai.grounded || ai.nearWall)) return;
   const sp = DIFF[diff];
-  let speed = 3, jumpV = 3.2 + Math.random() * 1.5;
+  let speed = 3, jumpV = 3.2 + Math.random() * 1.5, quick = false;
   dir.set(0, 0, 0);
   const goal = state === 'play' && !ai.out ? modeGoal(ai) : null;
   if (goal) {
@@ -2187,21 +2206,15 @@ function aiThink(ai, dt) {
     const carrying = ctf.flags.some(F => F.carrier === ai);
     speed = (carrying ? 5.9 : 6.4) * sp; jumpV = 4 + Math.random() * 2;
     if (dir.length() < 1.2) { dir.set(Math.random() - 0.5, 0, Math.random() - 0.5); speed = 1.5; }
-    if (goal.y - ai.pos.y > 1.6) {
-      const L = pickLedge(ai, { pos: goal });
-      if (L && Math.hypot(goal.x - ai.pos.x, goal.z - ai.pos.z) > 2) { dir.set(L.cx - ai.pos.x, 0, L.cz - ai.pos.z); jumpV = 8.6; }
-      else if (ai.wall) jumpV = 8;
-    }
+    const cp = climbPlan(ai, goal);
+    if (cp) { jumpV = cp.jumpV; quick = !!cp.quick; if (cp.ledge) dir.set(cp.ledge.cx - ai.pos.x, 0, cp.ledge.cz - ai.pos.z); }
   } else if (state === 'play' && ai.it) {
     const tgt = nearestTarget(ai);
     if (tgt) {
       dir.set(tgt.pos.x + tgt.vel.x * 0.25 - ai.pos.x, 0, tgt.pos.z + tgt.vel.z * 0.25 - ai.pos.z);
       jumpV = 4 + Math.random() * 2;
-      if (tgt.pos.y - ai.pos.y > 1.6) {
-        const L = pickLedge(ai, tgt);
-        if (L && Math.hypot(tgt.pos.x - ai.pos.x, tgt.pos.z - ai.pos.z) > 2) { dir.set(L.cx - ai.pos.x, 0, L.cz - ai.pos.z); jumpV = 8.6; }
-        else if (ai.wall) jumpV = 8;
-      }
+      const cp = climbPlan(ai, tgt.pos);
+      if (cp) { jumpV = cp.jumpV; quick = !!cp.quick; if (cp.ledge) dir.set(cp.ledge.cx - ai.pos.x, 0, cp.ledge.cz - ai.pos.z); }
     }
     speed = 6.7 * sp;
   } else if (state === 'play' && !ai.out) {
@@ -2217,14 +2230,14 @@ function aiThink(ai, dt) {
       dir.x += -dir.z * (Math.random() - 0.5) * 0.9; dir.z += dir.x * (Math.random() - 0.5) * 0.9;
       if (Math.abs(ai.pos.x) > HALF - 6) dir.x -= Math.sign(ai.pos.x) * 0.8;
       if (Math.abs(ai.pos.z) > HALF - 6) dir.z -= Math.sign(ai.pos.z) * 0.8;
-      speed = 6.1 * sp; jumpV = ai.wall ? 8 : 4 + Math.random() * 2.5;
+      speed = 6.1 * sp; jumpV = ai.nearWall ? 8 : 4 + Math.random() * 2.5;
     }
   }
   if (dir.lengthSq() < 1e-4 && ai.follow > 0 && !ai.it) { // following a player
     const fb = ai.followBody || player;
     dir.set(fb.pos.x - ai.pos.x, 0, fb.pos.z - ai.pos.z);
     const d = dir.length();
-    if (d > 3) { speed = clamp(d * 1.2, 4, 9) * sp; jumpV = fb.pos.y - ai.pos.y > 1.5 ? (ai.wall ? 8 : 6.5) : 4; }
+    if (d > 3) { speed = clamp(d * 1.2, 4, 9) * sp; jumpV = fb.pos.y - ai.pos.y > 1.5 ? (ai.nearWall ? 8 : 6.5) : 4; }
     else { dir.set(Math.random() - 0.5, 0, Math.random() - 0.5); speed = 0.5; jumpV = 2; }
   }
   if (dir.lengthSq() < 1e-4) { // wander
@@ -2234,7 +2247,7 @@ function aiThink(ai, dt) {
   }
   dir.normalize();
   ai.vel.x = dir.x * speed; ai.vel.z = dir.z * speed; ai.vel.y = Math.max(ai.vel.y, jumpV);
-  ai.hopT = (ai.it ? 0.28 : 0.34) + Math.random() * 0.3 + (state === 'play' ? 0 : 0.5);
+  ai.hopT = quick ? 0.15 : (ai.it ? 0.28 : 0.34) + Math.random() * 0.3 + (state === 'play' ? 0 : 0.5);
   ai.swing = 1;
 }
 function drawAI(ai, t) {
