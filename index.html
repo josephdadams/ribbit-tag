@@ -412,6 +412,14 @@ Object.assign(M, {
   cityWin: new THREE.MeshLambertMaterial({ color: 0x9fd4ff, emissive: 0x1a3550 }), ac: lam(0xb8bcc4), tower: lam(0x8a5a35), escape: lam(0x4a4a52),
   crane: lam(0xffc61a), carA: lam(0xe63946), carB: lam(0x3a86ff), carC: lam(0xffd23f), lamp: fx(0xfff1b8),
 });
+Object.assign(M, {
+  lilyPad: lam(0x3fa34d), lotusPink: lam(0xffa3c8), reed: lam(0x5a8a3a), cattail: lam(0x6b4226), mud: lam(0x6b5a3a),
+  swampGround: lam(0x3e4a30), swampWall: lam(0x3a4034), mudPool: lam(0x4a4028), shack: lam(0x6a5a44), boatWood: lam(0x7a5a3a),
+  cypress: lam(0x5a4a3a), swampLeaf: lam(0x4a6a3a), moss: lam(0x7a9a5a),
+  lawn: lam(0x6fbf4a), soil: lam(0x5a3d26), fence: lam(0xf4efe4), stemGreen: lam(0x4f9a3a), sunPetal: lam(0xffc61a), sunCentre: lam(0x6b4226),
+  toadstool: lam(0xe0303a), pot: lam(0xc8643a), can: lam(0x6aa8d8),
+  forestFloor: lam(0x4a6a32), bigTrunk: lam(0x6a4a30), fern: lam(0x3f8a3a),
+});
 const waterMat = new THREE.MeshLambertMaterial({ color: 0x2f9fcf, transparent: true, opacity: 0.8 });
 
 function addBox(x, y, z, w, h, d, m, climb, hidden) {
@@ -448,6 +456,11 @@ function addCap(x, y, z, r, m) { // mushroom caps and umbrellas: round look, box
   mesh.position.set(x, y, z);
   const w = r * 1.5, b = { min: new V(x - w / 2, y - 0.35, z - w / 2), max: new V(x + w / 2, y + 0.35, z + w / 2) };
   boxes.push(b); ledges.push(b);
+}
+function addPad(x, z, r, y, big) { // a floating lily pad; most of them are bouncy
+  const pad = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(r, r, 0.1, 12, 1, false, 0.3, Math.PI * 2 - 0.6))), M.lilyPad)); pad.position.set(x, y, z);
+  const b = addBox(x, y, z, r * 1.5, 0.12, r * 1.5, M.lilyPad, true, true); b.bounce = big ? 13 : 9;
+  if (big) { const f = put(new THREE.Mesh(ballGeo, M.lotusPink)); f.scale.set(0.25, 0.15, 0.25); f.position.set(x + r * 0.4, y + 0.15, z); }
 }
 function addGround(m) {
   const g = put(new THREE.Mesh(geo(new THREE.PlaneGeometry(HALF * 2 + 40, HALF * 2 + 40)), m));
@@ -904,6 +917,142 @@ const MAPS = {
       addClouds();
     },
   },
+  pond: {
+    label: 'Lily Pond', sky: 0xbfe8ff, fog: [20, 75], hemi: [0xf4fbff, 0x5a8a4a, 0.95], sun: 0.75,
+    spawn: [0, 23], ring: [0, 22, 5], slow: [[-18, 18, -16, 16]], ctf: [[0, 0, 24], [0, 0, -24]],
+    idle: ["Home sweet pond!", "Boing! These lily pads are bouncy!", "I love the smell of the pond.", "Ribbit ribbit!"],
+    build() {
+      addGround(M.grass); addPatches(M.mud, 6, 2, 4); addWalls(M.cliff); addEdgeRocks(M.rock, 24, 6);
+      const w = put(new THREE.Mesh(boxGeo, waterMat)); w.scale.set(36, 0.05, 32); w.position.set(0, 0.06, 0);
+      // a rock island with a willow in the middle
+      addBox(0, 1, 0, 6, 2, 6, M.rock, true); addTree(0, 0, 0.6, 6, 3.4, { y0: 2 });
+      // bouncy lily pads all over the water
+      for (let i = 0; i < 26; i++) {
+        const a = srnd() * Math.PI * 2, d = 5 + srnd() * 11, r = 0.9 + srnd() * 0.9;
+        addPad(Math.cos(a) * d * 1.05, Math.sin(a) * d * 0.9, r, 0.12, srnd() < 0.3);
+      }
+      // floating logs to run along
+      for (const [x, z, len, along] of [[-10, 6, 9, 'x'], [9, -8, 8, 'z'], [6, 10, 7, 'x'], [-8, -10, 6, 'z']]) {
+        addBox(x, 0.35, z, along === 'x' ? len : 1, 0.7, along === 'x' ? 1 : len, M.trunk, true);
+      }
+      // dock on the south shore
+      addBox(0, 0.6, 15, 3, 0.3, 6, M.plank, true);
+      for (const dx of [-1.3, 1.3]) for (const dz of [12.5, 15, 17.5]) { const p = put(new THREE.Mesh(boxGeo, M.trunk)); p.scale.set(0.25, 0.6, 0.25); p.position.set(dx, 0.3, dz); }
+      // cattails around the shore
+      for (let i = 0; i < 40; i++) {
+        const a = srnd() * Math.PI * 2, x = Math.cos(a) * (19 + srnd() * 2), z = Math.sin(a) * (17 + srnd() * 2);
+        const h = 1.6 + srnd(); const st = put(new THREE.Mesh(boxGeo, M.reed)); st.scale.set(0.06, h, 0.06); st.position.set(x, h / 2, z);
+        const top = put(new THREE.Mesh(boxGeo, M.cattail)); top.scale.set(0.16, 0.45, 0.16); top.position.set(x, h + 0.1, z);
+      }
+      const taken = [[0, 0], [0, 15]];
+      scatter(14, 5, taken, (x, z) => Math.abs(x) > 19 || Math.abs(z) > 17, (x, z) => addTree(x, z, 0.5 + srnd() * 0.3, 5 + srnd() * 3, 2.5 + srnd()));
+      addClouds();
+    },
+  },
+  swamp: {
+    label: 'Misty Swamp', sky: 0x5f7360, fog: [8, 42], hemi: [0xc8d8b0, 0x2a3220, 0.8], sun: 0.4, fx: 'fireflies',
+    spawn: [0, 20], ring: [0, 18, 6], slow: [[-14, -2, -10, 4], [4, 16, -4, 10], [-8, 6, -22, -14]],
+    idle: ["It's so misty out here.", "Ew, the mud is squishy!", "I think something is watching us.", "Perfect weather for a frog!"],
+    build() {
+      addGround(M.swampGround); addWalls(M.swampWall); addEdgeRocks(M.swampWall, 24, 6);
+      for (const [x0, x1, z0, z1] of this.slow) { const m = put(new THREE.Mesh(boxGeo, M.mudPool)); m.scale.set(x1 - x0, 0.05, z1 - z0); m.position.set((x0 + x1) / 2, 0.04, (z0 + z1) / 2); }
+      // boardwalk on stilts all the way around
+      const walk = [[0, 1.6, 12, 22, 2.2], [-11, 1.6, 0, 2.2, 22], [11, 1.6, 0, 2.2, 22], [0, 1.6, -12, 22, 2.2]];
+      for (const [x, y, z, w, d] of walk) {
+        addBox(x, y, z, w, 0.3, d, M.plank, true);
+        for (let k = -0.45; k <= 0.45; k += 0.15) { const p = put(new THREE.Mesh(boxGeo, M.trunk)); p.scale.set(0.2, y, 0.2); p.position.set(x + (w > d ? k * w : 0), y / 2, z + (w > d ? 0 : k * d)); }
+      }
+      steps([[0, 0.7, 16], [-11, 0.7, 14.5]], M.plank, 1.8);
+      // shack on stilts
+      addBox(16, 3.5, -16, 6, 3, 5, M.shack, true); addBox(16, 5.3, -16, 6.8, 0.6, 5.8, M.houseRoof, true);
+      addBox(16, 1.6, -16, 6, 0.3, 5, M.plank, true);
+      steps([[12.5, 0.9, -13.5], [13, 2.4, -11.8]], M.plank, 1.8);
+      const win = put(new THREE.Mesh(boxGeo, M.window)); win.scale.set(1.2, 0.9, 0.1); win.position.set(16, 3.7, -13.45);
+      addBox(-17, 0.5, 15, 4.5, 0.8, 1.8, M.boatWood, true); // old rowboat
+      // cypress trees with hanging moss
+      const taken = [[16, -16], [-17, 15], [0, 12], [0, -12], [-11, 0], [11, 0]];
+      scatter(22, 5, taken, () => true, (x, z) => {
+        const h = 6 + srnd() * 5;
+        addPillar(x, z, 0.9, h, M.cypress, 0.35);
+        const top = put(new THREE.Mesh(ballGeo, M.swampLeaf)); top.scale.set(3, 1, 3); top.position.set(x, h + 0.4, z);
+        blobs.push({ c: new V(x, h + 0.4, z), r: 1.6 });
+        for (let k = 0; k < 4; k++) { const ms = put(new THREE.Mesh(boxGeo, M.moss)); const mh = 1 + srnd() * 1.5; ms.scale.set(0.08, mh, 0.3); ms.position.set(x + (srnd() - 0.5) * 4, h - mh / 2, z + (srnd() - 0.5) * 4); }
+      });
+      scatter(8, 4, taken, () => true, (x, z) => { addPillar(x, z, 0.12, 0.6, M.stem, 0.12); addCap(x, 0.75, z, 0.6, M.mushA); });
+      scatter(10, 4, taken, () => true, (x, z) => addPad(x, z, 0.8 + srnd() * 0.5, 0.08, false));
+    },
+  },
+  garden: {
+    label: 'Giant Garden', sky: 0xa8dcff, fog: [20, 80], hemi: [0xffffff, 0x6a9a4a, 1.0], sun: 0.8,
+    spawn: [0, 20], ring: [0, 16, 8],
+    idle: ["Everything is so big here!", "Look at that flower, it's huge!", "Watch out for the watering can!", "I could live in this garden forever."],
+    build() {
+      addGround(M.lawn); addPatches(M.soil, 8, 2, 4); addWalls(M.fence);
+      for (let x = -HALF; x <= HALF; x += 1.6) for (const z of [-HALF + 0.1, HALF - 0.1]) { const pk = put(new THREE.Mesh(boxGeo, M.fence)); pk.scale.set(1.1, 9, 0.2); pk.position.set(x, 4.5, z); }
+      // a giant sunflower tower in the middle, with leaves to climb
+      addPillar(0, 0, 0.7, 16, M.stemGreen, 0.6);
+      [[1.6, 2.5, 0], [-1.6, 5, 0.5], [0.4, 7.5, 1.6], [-0.6, 10, -1.6], [1.4, 12.5, -0.6]].forEach(([x, y, z]) => addBox(x * 1.4, y, z * 1.4, 2.4, 0.25, 1.6, M.leafB, true));
+      addCap(0, 16.3, 0, 4.5, M.sunPetal);
+      const centre = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(1.8, 1.8, 0.3, 14))), M.sunCentre)); centre.position.set(0, 16.7, 0);
+      // flowers you can stand on
+      const petals = [M.gumA, M.gumC, M.gumD, M.umbA, M.umbC, M.white];
+      const taken = [[0, 0]];
+      scatter(14, 6, taken, (x, z) => Math.hypot(x, z) > 7, (x, z) => {
+        const h = 3 + srnd() * 6; addPillar(x, z, 0.22, h, M.stemGreen, 0.2);
+        addCap(x, h + 0.2, z, 1.5 + srnd(), petals[Math.floor(srnd() * petals.length)]);
+        const c = put(new THREE.Mesh(ballGeo, M.sunCentre)); c.scale.set(0.5, 0.25, 0.5); c.position.set(x, h + 0.6, z);
+        addBox(x + 0.9, h * 0.45, z, 1.6, 0.2, 0.9, M.leafB, true);
+      });
+      // toadstools
+      scatter(8, 5, taken, (x, z) => Math.hypot(x, z) > 7, (x, z) => {
+        const h = 1.2 + srnd() * 2.5; addPillar(x, z, 0.4, h, M.stem, 0.35); addCap(x, h + 0.2, z, 1.6 + srnd() * 0.8, M.toadstool);
+        for (let k = 0; k < 5; k++) { const d = put(new THREE.Mesh(ballGeo, M.white)); d.scale.set(0.22, 0.08, 0.22); const a = k * 1.3; d.position.set(x + Math.cos(a) * 0.9, h + 0.55, z + Math.sin(a) * 0.9); }
+      });
+      // flower pots, watering can, stepping stones
+      for (const [x, z, r, h] of [[-18, -14, 2.4, 4], [17, 12, 2, 3], [-15, 16, 1.6, 2.5]]) {
+        const pot = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(r, r * 0.75, h, 12))), M.pot)); pot.position.set(x, h / 2, z);
+        addBox(x, h / 2, z, r * 1.5, h, r * 1.5, M.pot, true, true);
+        const soil = put(new THREE.Mesh(geo(new THREE.CircleGeometry(r * 0.9, 12)), M.soil)); soil.rotation.x = -Math.PI / 2; soil.position.set(x, h + 0.01, z);
+      }
+      steps([[-14.5, 1.3, -11.5], [15, 1.3, 9.5]], M.rock, 1.8);
+      addBox(16, 2, -16, 5, 4, 3.4, M.can, true);
+      const spout = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(0.35, 0.5, 5, 8))), M.can)); spout.rotation.z = 1; spout.position.set(12, 3.2, -16);
+      const handle = put(new THREE.Mesh(geo(new THREE.TorusGeometry(1.4, 0.25, 6, 14, Math.PI)), M.can)); handle.position.set(17, 4, -16);
+      for (let i = 0; i < 8; i++) addBox(-6 + i * 1.8, 0.15, 10 - i * 0.6, 1.4, 0.3, 1.4, M.rock, true);
+      addClouds();
+    },
+  },
+  canopy: {
+    label: 'Rainforest Canopy', sky: 0x9fd8c0, fog: [14, 60], hemi: [0xe8fff0, 0x2f5a2a, 0.9], sun: 0.6, fx: 'fireflies',
+    spawn: [0, 20], ring: [0, 18, 6],
+    idle: ["Don't look down!", "These bridges wobble!", "I can hear a waterfall somewhere.", "The best view is at the top!"],
+    build() {
+      addGround(M.forestFloor); addWalls(M.cliff); addEdgeRocks(M.rock, 24, 7);
+      // giant trees with platforms at two heights
+      const T = [[-14, -12], [12, -14], [-12, 12], [14, 10], [0, -2]];
+      for (const [x, z] of T) {
+        addPillar(x, z, 1.5, 24, M.bigTrunk, 1.1);
+        const top = put(new THREE.Mesh(ballGeo, M.leafC)); top.scale.set(6, 3, 6); top.position.set(x, 25, z);
+        addBox(x, 8, z, 6, 0.4, 6, M.plank, true);
+        addBox(x, 14, z, 5, 0.4, 5, M.plank, true);
+        // spiral of branch steps up each trunk
+        const list = [];
+        for (let k = 0; k < 9; k++) { const a = k * 0.9 + x; list.push([x + Math.cos(a) * 2.6, 1.3 + k * 1.45, z + Math.sin(a) * 2.6]); }
+        steps(list, M.trunk, 1.6);
+      }
+      // rope bridges between platforms
+      const bridge = (a, b, y) => {
+        const [x0, z0] = T[a], [x1, z1] = T[b], len = Math.hypot(x1 - x0, z1 - z0);
+        const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, along = Math.abs(x1 - x0) > Math.abs(z1 - z0);
+        addBox(mx, y, mz, along ? len - 4 : 1.4, 0.2, along ? 1.4 : len - 4, M.rope, true);
+      };
+      bridge(0, 2, 8); bridge(1, 3, 8); bridge(0, 1, 14); bridge(2, 3, 14);
+      // ferns and fallen logs on the forest floor
+      const taken = T.slice();
+      scatter(24, 3.5, taken, () => true, (x, z) => { for (let k = 0; k < 4; k++) { const f = put(new THREE.Mesh(ballGeo, M.fern)); f.scale.set(0.9, 0.12, 0.35); f.position.set(x, 0.3, z); f.rotation.set(0.3, k * 0.8, 0); } });
+      scatter(6, 6, taken, () => true, (x, z) => addBox(x, 0.5, z, srnd() > 0.5 ? 6 : 1, 1, srnd() > 0.5 ? 1 : 6, M.trunk, true));
+    },
+  },
 };
 const hemiLight = new THREE.HemisphereLight(0xe8f6ff, 0x3d5a24, 0.85);
 scene.add(hemiLight);
@@ -1006,7 +1155,9 @@ function collide(b) {
     if (d >= R) continue;
     if (d < 1e-5) { tn.set(0, 1, 0); p.y = bx.max.y + R; }
     else { tn.multiplyScalar(1 / d); p.addScaledVector(tn, R - d); }
-    const vn = v.dot(tn); if (vn < 0) v.addScaledVector(tn, -vn);
+    const vn = v.dot(tn);
+    if (bx.bounce && tn.y > 0.6 && vn < -2) { v.y = Math.max(bx.bounce, -vn * 0.85); if (b.isPlayer) sfxTone(260, 620, 0.16, 'sine', 0.1); continue; }
+    if (vn < 0) v.addScaledVector(tn, -vn);
     if (tn.y > 0.6) { b.grounded = true; if (bx.ice) b.onIce = true; } else if (Math.abs(tn.y) < 0.5) b.wall = true;
   }
   for (const t of trees) {
@@ -1182,6 +1333,28 @@ const HAT_BUILD = {
     for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; part(f, ballGeo, cmat(0xffffff), 0.05, 0.022, 0.012, Math.cos(an) * 0.065, Math.sin(an) * 0.065, 0, 0, 0, an); }
     part(f, ballGeo, cmat(0xffd23f), 0.035, 0.035, 0.02, 0, 0, -0.005);
   },
+  mushroom(a) {
+    part(a, GEO.dome, cmat(0xe0303a), 0.36, 0.24, 0.36, 0, 0.7, -0.12);
+    for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2; part(a, ballGeo, cmat(0xffffff), 0.05, 0.03, 0.05, Math.sin(an) * 0.22, 0.84, -0.12 + Math.cos(an) * 0.22); }
+    part(a, ballGeo, cmat(0xffffff), 0.06, 0.04, 0.06, 0, 0.94, -0.12);
+  },
+  acorn(a) { part(a, GEO.dome, cmat(0x8a5a2b), 0.3, 0.16, 0.3, 0, 0.7, -0.12); part(a, GEO.cyl, cmat(0x5a3d1e), 0.03, 0.1, 0.03, 0, 0.9, -0.12); },
+  snail(a) {
+    part(a, GEO.ring, cmat(0xc98b4a), 0.14, 0.14, 0.5, 0, 0.88, -0.1, 0, Math.PI / 2);
+    part(a, ballGeo, cmat(0xd9a066), 0.16, 0.16, 0.1, 0, 0.88, -0.1, 0, Math.PI / 2);
+    part(a, ballGeo, cmat(0x9acd32), 0.07, 0.04, 0.2, 0, 0.74, -0.25);
+    for (const sx of [-1, 1]) part(a, GEO.cyl, cmat(0x9acd32), 0.012, 0.12, 0.012, sx * 0.03, 0.8, -0.4, 0.4, 0, sx * 0.3);
+  },
+  antennae(a) { for (const sx of [-1, 1]) { part(a, GEO.cyl, cmat(0x222222), 0.012, 0.32, 0.012, sx * 0.09, 0.88, -0.12, 0, 0, -sx * 0.3); part(a, ballGeo, cmat(0xffd23f), 0.05, 0.05, 0.05, sx * 0.14, 1.03, -0.12); } },
+  leafhat(a) { part(a, GEO.cyl, cmat(0x0e7a4a), 0.012, 0.4, 0.012, 0, 0.92, -0.12); part(a, ballGeo, cmat(0x3fa34d), 0.42, 0.04, 0.3, 0, 1.12, -0.12, 0, 0.3, 0.12); },
+  flyhat(a) {
+    const orbit = new THREE.Group(); orbit.position.set(0, 0.92, -0.12); a.add(orbit);
+    const fly = new THREE.Group(); fly.position.set(0.32, 0, 0); orbit.add(fly);
+    part(fly, ballGeo, cmat(0x1b1b22), 0.05, 0.04, 0.07, 0, 0, 0);
+    const wingM = new THREE.MeshLambertMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0.6, depthWrite: false });
+    for (const sx of [-1, 1]) part(fly, ballGeo, wingM, 0.06, 0.01, 0.035, sx * 0.05, 0.04, 0);
+    a.userData.orbit = orbit;
+  },
   frog(a) {
     part(a, GEO.dome, cmat(0x52b788), 0.31, 0.26, 0.31, 0, 0.6, -0.12);
     for (const sx of [-1, 1]) { part(a, ballGeo, cmat(0xffffff), 0.08, 0.08, 0.08, sx * 0.12, 0.86, -0.2); part(a, ballGeo, cmat(0x111111), 0.035, 0.035, 0.03, sx * 0.12, 0.87, -0.27); }
@@ -1201,6 +1374,14 @@ const FACE_BUILD = {
   whiskers(a) { for (const sx of [-1, 1]) for (const k of [-1, 0, 1]) part(a, boxGeo, cmat(0x111111), 0.16, 0.008, 0.008, sx * 0.17, 0.42 + k * 0.025, -0.47, 0, 0, sx * k * 0.15); },
   monocle(a) { part(a, GEO.ring, goldMat, 0.075, 0.075, 0.075, 0.1, 0.55, -0.42); part(a, boxGeo, goldMat, 0.006, 0.2, 0.006, 0.17, 0.45, -0.41); },
   ninja(a) { part(a, boxGeo, cmat(0x1b1b1f), 0.38, 0.14, 0.05, 0, 0.42, -0.44); part(a, GEO.ring, cmat(0x1b1b1f), 0.3, 0.3, 0.3, 0, 0.62, -0.12, Math.PI / 2); },
+  tongue(a) { const tg = new THREE.Group(); tg.position.set(0.02, 0.36, -0.43); a.add(tg); part(tg, ballGeo, cmat(0xff6f91), 0.06, 0.02, 0.16, 0, 0, -0.12); a.userData.tongue = tg; },
+  blush(a) { for (const sx of [-1, 1]) part(a, ballGeo, cmat(0xff8fab), 0.06, 0.035, 0.015, sx * 0.17, 0.45, -0.42); },
+  freckles(a) { for (const sx of [-1, 1]) for (const [dx, dy] of [[0, 0], [0.035, 0.02], [0.03, -0.025]]) part(a, ballGeo, cmat(0x7a5a3a), 0.012, 0.012, 0.008, sx * (0.14 + dx), 0.47 + dy, -0.43); },
+  snorkel(a) {
+    part(a, boxGeo, cmat(0x4cc9f0), 0.34, 0.12, 0.03, 0, 0.55, -0.42);
+    for (const sx of [-1, 1]) part(a, boxGeo, new THREE.MeshLambertMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.5 }), 0.12, 0.08, 0.02, sx * 0.08, 0.55, -0.44);
+    part(a, GEO.cyl, cmat(0xff8c1a), 0.025, 0.4, 0.025, 0.2, 0.68, -0.32);
+  },
   glasses3d(a) { part(a, boxGeo, cmat(0xffffff), 0.32, 0.09, 0.015, 0, 0.55, -0.415); part(a, boxGeo, cmat(0xff2a2a), 0.11, 0.06, 0.02, -0.08, 0.55, -0.425); part(a, boxGeo, cmat(0x2a7bff), 0.11, 0.06, 0.02, 0.08, 0.55, -0.425); },
 };
 // Back items sit on the frog's back (+z)
@@ -1232,6 +1413,19 @@ const BACK_BUILD = {
     for (const sx of [-1, 1]) part(flame, GEO.cone, fm, 0.07, 0.22, 0.07, sx * 0.14, 0, 0, Math.PI);
     a.userData.flame = flame;
   },
+  balloon(a) {
+    const bl = new THREE.Group(); bl.position.set(0.25, 0.3, 0.4); a.add(bl);
+    part(bl, boxGeo, cmat(0xffffff), 0.006, 1.2, 0.006, 0, 0.6, 0);
+    part(bl, ballGeo, cmat(0xff4d6d), 0.24, 0.3, 0.24, 0, 1.4, 0);
+    a.userData.balloon = bl;
+  },
+  dragonfly(a) {
+    const m = new THREE.MeshLambertMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.5, depthWrite: false, emissive: 0x204060 });
+    const L = new THREE.Group(), Rg = new THREE.Group();
+    for (const [g, sx] of [[L, -1], [Rg, 1]]) { g.position.set(sx * 0.1, 0.25, 0.45); a.add(g); part(g, ballGeo, m, 0.4, 0.02, 0.09, sx * 0.4, 0.06, -0.06); part(g, ballGeo, m, 0.36, 0.02, 0.08, sx * 0.36, 0.02, 0.1); }
+    a.userData.flap = [L, Rg]; a.userData.fastFlap = true;
+  },
+  leafcape(a) { part(a, ballGeo, cmat(0x3fa34d), 0.42, 0.55, 0.05, 0, -0.08, 0.5, 0.2); part(a, boxGeo, cmat(0x2f6b3a), 0.02, 0.9, 0.02, 0, -0.08, 0.56, 0.2); },
   shell(a) { part(a, GEO.dome, cmat(0x3d8b3d), 0.48, 0.5, 0.3, 0, -0.02, 0.32, Math.PI / 2); part(a, GEO.ring, cmat(0x7a5a2b), 0.4, 0.4, 0.4, 0, -0.02, 0.5); },
 };
 const goldHex = 0xffc83d;
@@ -1309,6 +1503,25 @@ const SHOP = [
   { slot: 'back', id: 'wings', name: 'Angel wings', cost: 80 },
   { slot: 'back', id: 'jetpack', name: 'Jetpack', cost: 100 },
   { slot: 'hat', id: 'daisy', name: 'Daisy', cost: 0, secret: true },
+  { slot: 'hat', id: 'acorn', name: 'Acorn cap', cost: 15 },
+  { slot: 'hat', id: 'antennae', name: 'Bug antennae', cost: 20 },
+  { slot: 'hat', id: 'mushroom', name: 'Mushroom cap', cost: 30 },
+  { slot: 'hat', id: 'leafhat', name: 'Leaf umbrella', cost: 35 },
+  { slot: 'hat', id: 'snail', name: 'Snail buddy', cost: 45 },
+  { slot: 'hat', id: 'flyhat', name: 'Pet fly', cost: 60 },
+  { slot: 'face', id: 'blush', name: 'Rosy cheeks', cost: 10 },
+  { slot: 'face', id: 'freckles', name: 'Freckles', cost: 10 },
+  { slot: 'face', id: 'tongue', name: 'Silly tongue', cost: 20 },
+  { slot: 'face', id: 'snorkel', name: 'Snorkel mask', cost: 35 },
+  { slot: 'back', id: 'leafcape', name: 'Leaf cape', cost: 25 },
+  { slot: 'back', id: 'balloon', name: 'Balloon', cost: 40 },
+  { slot: 'back', id: 'dragonfly', name: 'Dragonfly wings', cost: 70 },
+  { slot: 'skin', id: 'poisondart', name: 'Poison dart', cost: 50, color: 0x2a6fe0, spots: 0x111111 },
+  { slot: 'skin', id: 'strawberry', name: 'Strawberry', cost: 50, color: 0xe0303a, spots: 0x2a1010 },
+  { slot: 'skin', id: 'bumblebee', name: 'Bumblebee', cost: 60, color: 0xf2c94c, stripes: 0x1b1b1f },
+  { slot: 'skin', id: 'tiger', name: 'Tiger', cost: 60, color: 0xe8833a, stripes: 0x1b1b1f },
+  { slot: 'skin', id: 'glass', name: 'Glass frog', cost: 90, color: 0x9be86a, ghost: true },
+  { slot: 'skin', id: 'rainbow', name: 'Rainbow', cost: 200, color: 0xff4d4d, rainbow: true },
 ];
 const shopItem = (slot, id) => SHOP.find(i => i.slot === slot && i.id === id);
 function skinHexOf(look) { const f = shopItem('skin', look.skin); return f ? f.color : 0x5cb85c; }
@@ -1324,15 +1537,24 @@ function dressUp(o, look) {
   const hat = shopItem('hat', look.hat);
   (HAT_BUILD[look.hat] || HAT_BUILD.none)(hatG, look.hatColor || (hat && hat.color) || 0xe63946);
   (FACE_BUILD[look.face] || FACE_BUILD.none)(faceG);
-  acc.userData = Object.assign(acc.userData, hatG.userData);
+  acc.userData = Object.assign(acc.userData, hatG.userData, faceG.userData);
   const back = shopItem('back', look.back);
   (BACK_BUILD[look.back] || BACK_BUILD.none)(acc, (back && back.color) || 0xd62828);
   o.group.add(acc);
   if (look.skin) o.skinHex = skinHexOf(look);
   if (!o.it) o.skin.color.setHex(o.skinHex);
   o.skin.emissive.setHex(o.it ? LAVA_GLOW : skinGlowOf(look));
-  const ghost = !!(shopItem('skin', look.skin) || {}).ghost;
+  const skinItem = shopItem('skin', look.skin) || {};
+  const ghost = !!skinItem.ghost;
   o.skin.transparent = ghost; o.skin.opacity = ghost ? 0.5 : 1; o.skin.needsUpdate = true;
+  o.rainbow = !!skinItem.rainbow;
+  if (skinItem.spots) { // spots on the back and head
+    for (const [x, y, z, r] of [[0.22, 0.32, 0.12, 0.08], [-0.26, 0.28, 0.18, 0.07], [0.05, 0.4, 0.3, 0.06], [-0.08, 0.38, -0.02, 0.07], [0.35, 0.1, 0.25, 0.06], [-0.4, 0.05, 0.05, 0.07], [0.22, 0.62, -0.08, 0.05], [-0.2, 0.6, -0.04, 0.05]])
+      part(acc, ballGeo, cmat(skinItem.spots), r, r * 0.5, r, x, y, z);
+  }
+  if (skinItem.stripes) { // stripes across the back
+    for (const z of [-0.18, 0.08, 0.32]) { const k = Math.sqrt(Math.max(0.2, 1 - (z / 0.5) ** 2)); part(acc, GEO.ring, cmat(skinItem.stripes), 0.56 * k, 0.43 * k, 0.4, 0, 0, z); }
+  }
   if (o.ownerAi) acc.traverse(m => { m.userData.ai = o.ownerAi; });
 }
 function makeFrog(skinHex, look) { // a frog: squat body, wide head, bulging eyes, sticky hands
@@ -1370,6 +1592,11 @@ function animateAcc(o, t) {
   if (o.acc.userData.bob) o.acc.userData.bob.position.y = 1.0 + Math.sin(t * 3) * 0.03;
   if (o.acc.userData.flap) { const f = Math.sin(t * 6) * 0.35; o.acc.userData.flap[0].rotation.y = f; o.acc.userData.flap[1].rotation.y = -f; }
   if (o.acc.userData.flame) o.acc.userData.flame.scale.y = 0.7 + Math.random() * 0.6;
+  if (o.acc.userData.fastFlap) { const f = Math.sin(t * 40) * 0.25; o.acc.userData.flap[0].rotation.z = f; o.acc.userData.flap[1].rotation.z = -f; }
+  if (o.acc.userData.orbit) o.acc.userData.orbit.rotation.y = t * 3;
+  if (o.acc.userData.balloon) { o.acc.userData.balloon.rotation.z = Math.sin(t * 1.3) * 0.12; o.acc.userData.balloon.rotation.x = Math.cos(t * 1.1) * 0.08; }
+  if (o.acc.userData.tongue) o.acc.userData.tongue.scale.z = 0.8 + Math.max(0, Math.sin(t * 2.2)) * 0.6;
+  if (o.rainbow && !o.it) o.skin.color.setHSL((t * 0.12) % 1, 0.75, 0.55);
 }
 
 function newBody(isPlayer) {
@@ -1473,6 +1700,10 @@ const SONGS = {
   candy:   { bpm: 122, root: 67, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 3, 4, 0], seed: 71 },
   spooky:  { bpm: 90,  root: 57, scale: 'minor', lead: 'bell',    drums: 'soft',  prog: [0, 5, 1, 4], seed: 83, pad: true, echo: true },
   city:    { bpm: 100, root: 60, scale: 'minor', lead: 'pluck',   drums: 'light', prog: [0, 5, 6, 4], seed: 97, echo: true },
+  pond:    { bpm: 100, root: 65, scale: 'major', lead: 'marimba', drums: 'soft',  prog: [0, 4, 5, 3], seed: 101, echo: true },
+  swamp:   { bpm: 84,  root: 55, scale: 'minor', lead: 'pluck',   drums: 'soft',  prog: [0, 3, 6, 5], seed: 113, pad: true, echo: true },
+  garden:  { bpm: 116, root: 67, scale: 'major', lead: 'steel',   drums: 'light', prog: [0, 3, 1, 4], seed: 127 },
+  canopy:  { bpm: 98,  root: 62, scale: 'lydian', lead: 'flute',  drums: 'light', prog: [0, 1, 5, 4], seed: 131, pad: true },
 };
 const SCALES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], phrygian: [0, 1, 3, 5, 7, 8, 10], lydian: [0, 2, 4, 6, 7, 9, 11] };
 let musicOn = true;
@@ -2910,12 +3141,15 @@ function renderWardrobe() {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'wr-item' + (have ? '' : ' locked'); b.id = 'item-' + item.slot + '-' + item.id;
     b.setAttribute('aria-pressed', String(wearing));
     const sw = document.createElement('span'); sw.className = 'sw';
-    if (item.color !== undefined) sw.style.background = '#' + item.color.toString(16).padStart(6, '0');
+    if (item.rainbow) sw.style.background = 'conic-gradient(#ff4d4d, #ffd23f, #52d273, #4dabff, #a66bff, #ff4d4d)';
+    else if (item.color !== undefined) sw.style.background = item.spots || item.stripes ? `radial-gradient(circle at 35% 35%, #${(item.spots || item.stripes).toString(16).padStart(6, '0')} 22%, #${item.color.toString(16).padStart(6, '0')} 24%)` : '#' + item.color.toString(16).padStart(6, '0');
     else {
       const swatch = { crown: '#ffd23f', halo: '#fff3a0', lilypad: '#52b788', pumpkin: '#ff7a1a', horns: '#d62828', bunny: '#ffffff', flowers: '#ff70a6', santa: '#d62828',
         frog: '#52b788', gradcap: '#1b1b1f', unicorn: '#ffc83d', astronaut: '#bfe6ff', cone: '#ff6b1a', chef: '#ffffff', viking: '#9aa0a6', wings: '#ffffff',
         batwings: '#2a1f3d', butterfly: '#ff70a6', jetpack: '#b8c0c8', shell: '#3d8b3d', fangs: '#ffffff', beard: '#5a3d1e', monocle: '#ffc83d', ninja: '#1b1b1f',
-        starglasses: '#ff5d8f', glasses3d: '#ff2a2a', sunglasses: '#111111', glasses: '#222222', mustache: '#2a1a10', nose: '#ff2a2a', eyepatch: '#111111', mask: '#e63946', whiskers: '#111111' }[item.id];
+        starglasses: '#ff5d8f', glasses3d: '#ff2a2a', sunglasses: '#111111', glasses: '#222222', mustache: '#2a1a10', nose: '#ff2a2a', eyepatch: '#111111', mask: '#e63946', whiskers: '#111111',
+        acorn: '#8a5a2b', antennae: '#ffd23f', mushroom: '#e0303a', leafhat: '#3fa34d', snail: '#c98b4a', flyhat: '#1b1b22', blush: '#ff8fab', freckles: '#7a5a3a',
+        tongue: '#ff6f91', snorkel: '#4cc9f0', leafcape: '#3fa34d', balloon: '#ff4d6d', dragonfly: '#bfe6ff' }[item.id];
       if (swatch) sw.style.background = swatch;
     }
     const nm = document.createElement('b'); nm.textContent = item.secret && !have ? '???' : item.name;

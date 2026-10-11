@@ -45,9 +45,9 @@ On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `O` Play 
 
 ## Maps
 
-Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, and City Rooftops.
+Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, and Rainforest Canopy.
 
-Some maps change how you move: ice on Snowy Peaks is slippery, water on the Beach and the chocolate river in Candy Land slow you down, and Moon Base has low gravity. Each map has its own music.
+Some maps change how you move: lily pads on Lily Pond and Misty Swamp are bouncy, ice on Snowy Peaks is slippery, water, mud and the chocolate river in Candy Land slow you down, and Moon Base has low gravity. Each map has its own music.
 
 ## The computer frogs
 
@@ -59,7 +59,7 @@ Every so often a ghost frog named **Daisy09** shows up in the distance, humming.
 
 ## Wardrobe
 
-Catch flies around each map, stay safe, tag other frogs, and win games to earn flies. Spend them in the Wardrobe on hats, face items, back items (capes, wings, a jetpack), and skin colors. Progress is saved in the browser on each device.
+Catch flies around each map, stay safe, tag other frogs, and win games to earn flies. Spend them in the Wardrobe on hats (including a pet fly that circles your head), face items, back items (capes, wings, a balloon, a jetpack), and skins, from plain colors to patterned poison dart, bumblebee and tiger frogs and a color-shifting rainbow frog. Progress is saved in the browser on each device.
 
 ## Multiplayer
 
