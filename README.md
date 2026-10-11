@@ -29,6 +29,7 @@ It runs on tablets (including Amazon Fire tablets), phones, and computers. There
 - Next to a tree or wall, keep swiping down to **climb** it.
 - Your hands go see-through when there is nothing close enough to grab.
 - **Tap a frog** (or press **Talk**) to chat with it.
+- The chip at the top always starts with the game mode's name. **Tap it** for a reminder of the rules and the map.
 
 ### Controller
 
@@ -62,6 +63,7 @@ On menus, the D-pad or left stick moves between buttons, `A` picks, and `B` goes
 | `1`–`9` | Quick replies while talking |
 | `Tab` | Talk to the next frog |
 | `P` | Player list |
+| `I` | What mode is this? (rules and map) |
 | `H` | Become the host |
 | `M` | Music on/off |
 | `Esc` | Close a panel, or go back to the menu |

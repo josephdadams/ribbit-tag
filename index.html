@@ -77,6 +77,9 @@ h1 span { color: var(--lava); display: block; }
 .chip { font-family: var(--display); font-size: 1.15rem; padding: 6px 14px; border-radius: 999px; background: rgba(10,26,16,.72); color: var(--bone); white-space: nowrap; }
 #status.safe { background: var(--leaf); color: var(--ink); }
 #status.lava { background: var(--lava); color: var(--ink); }
+#info { pointer-events: auto; border: 0; cursor: pointer; text-align: left; }
+#info:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
+#info .mname { color: var(--leaf); }
 #info { font-family: var(--body); font-weight: 800; font-size: .95rem; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .spacer { flex: 1; }
 #menuBtn { pointer-events: auto; border: 0; cursor: pointer; }
@@ -236,7 +239,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   <div id="vignette"></div>
   <div class="hud-top">
     <div id="status" class="chip safe">SAFE</div>
-    <div id="info" class="chip"></div>
+    <button id="info" class="chip" type="button" title="What mode is this?"></button>
     <div class="spacer"></div>
     <div id="flyChip" class="chip fly"><svg class="ban" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="7.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(-25 7.5 9)"/><ellipse cx="16.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(25 16.5 9)"/><ellipse cx="12" cy="14" rx="3.6" ry="5.4" fill="#1b1b22"/><circle cx="10.6" cy="9.6" r="1.3" fill="#d62828"/><circle cx="13.4" cy="9.6" r="1.3" fill="#d62828"/></svg><span id="flyCount">0</span></div>
     <button id="playersBtn" class="chip" type="button" aria-expanded="false" aria-controls="players">Players</button>
@@ -391,7 +394,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic hot">!</span><span>Your hands go see-through when there is nothing close enough to grab. The arrow at the top points to the lava frog.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
         <li><span class="ic">Pad</span><span><strong>Controller:</strong> left stick to push (up forward, down back, sideways), right stick to turn, <kbd>A</kbd> jump, hold <kbd>RT</kbd> for big pushes, <kbd>X</kbd> talk (D-pad for quick replies), <kbd>Y</kbd> player list, <kbd>Start</kbd> menu. On menus, the D-pad moves, <kbd>A</kbd> picks, <kbd>B</kbd> goes back.</span></li>
-        <li><span class="ic">Key</span><span><strong>Keyboard:</strong> <kbd>W</kbd> push forward, <kbd>S</kbd> back, <kbd>A</kbd> <kbd>D</kbd> turn, <kbd>Q</kbd> <kbd>E</kbd> sideways, <kbd>Space</kbd> jump, hold <kbd>Shift</kbd> for big pushes. <kbd>T</kbd> talk, <kbd>1</kbd>–<kbd>9</kbd> quick replies, <kbd>Tab</kbd> next frog, <kbd>H</kbd> be host, <kbd>M</kbd> music on/off, <kbd>P</kbd> player list, <kbd>Esc</kbd> menu. On the menu: <kbd>1</kbd> Infection, <kbd>2</kbd> Classic, <kbd>3</kbd> Capture the Lily Pad, <kbd>4</kbd> Freeze Tag, <kbd>5</kbd> Hot Potato, <kbd>6</kbd> Fly Feast, <kbd>7</kbd> Free Play, <kbd>8</kbd> King of the Lily Pad, <kbd>Q</kbd> Daily quests, <kbd>O</kbd> Play online, <kbd>R</kbd> Wardrobe.</span></li>
+        <li><span class="ic">Key</span><span><strong>Keyboard:</strong> <kbd>W</kbd> push forward, <kbd>S</kbd> back, <kbd>A</kbd> <kbd>D</kbd> turn, <kbd>Q</kbd> <kbd>E</kbd> sideways, <kbd>Space</kbd> jump, hold <kbd>Shift</kbd> for big pushes. <kbd>T</kbd> talk, <kbd>1</kbd>–<kbd>9</kbd> quick replies, <kbd>Tab</kbd> next frog, <kbd>H</kbd> be host, <kbd>M</kbd> music on/off, <kbd>P</kbd> player list, <kbd>I</kbd> mode info, <kbd>Esc</kbd> menu. On the menu: <kbd>1</kbd> Infection, <kbd>2</kbd> Classic, <kbd>3</kbd> Capture the Lily Pad, <kbd>4</kbd> Freeze Tag, <kbd>5</kbd> Hot Potato, <kbd>6</kbd> Fly Feast, <kbd>7</kbd> Free Play, <kbd>8</kbd> King of the Lily Pad, <kbd>Q</kbd> Daily quests, <kbd>O</kbd> Play online, <kbd>R</kbd> Wardrobe.</span></li>
       </ul>
     </div>
   </div>
@@ -429,7 +432,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-10';
+const APP_VERSION = 'ribbit-11';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -3133,6 +3136,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyH') { claimHost(); return; }
   if (e.code === 'KeyP') { togglePlayers(); return; }
   if (e.code === 'KeyF') { tryThrow(); return; }
+  if (e.code === 'KeyI') { modeRules(); return; }
   if (e.code === 'KeyM') { setMusic(!musicOn); return; }
   if (e.code === 'KeyT' || e.code === 'Enter') { e.preventDefault(); openTalk(talkOpen ? talkTarget : null); $('sayInput').focus(); return; }
   if (talkOpen && e.code === 'Tab') { $('talkNext').click(); return; }
@@ -3506,7 +3510,7 @@ function renderPlayers() {
     humans.append(li);
   }
   for (const a of ais) bots.append(playerRow(a, false));
-  $('plTitle').textContent = net ? roomLabel() : 'Players';
+  $('plTitle').textContent = `${MODE_NAMES[mode] || 'Players'} · ${MAPS[mapKey].label}${net ? ' · ' + roomLabel() : ''}`;
 }
 function togglePlayers(open) {
   const p = $('players'); p.hidden = open === undefined ? !p.hidden : !open;
@@ -5240,8 +5244,17 @@ function update(dt, t) {
         $('radarTxt').textContent = `${mh.radar.label} ${Math.round(flat(g, player.pos))} m`;
       }
     }
+    // the mode's name always leads the info chip
+    const rest = $('info').textContent, nm = MODE_NAMES[mode] || '';
+    $('info').innerHTML = ''; const b = document.createElement('span'); b.className = 'mname'; b.textContent = nm; $('info').append(b, rest ? ` · ${rest}` : '');
   }
 }
+function modeRules() { // the same one-line rules the menu buttons show
+  const btn = document.querySelector(`[data-mode="${mode}"]`) || $({ infection: 'modeInfection', classic: 'modeClassic', ctf: 'modeCtf', freeze: 'modeFreeze', potato: 'modePotato', feast: 'modeFeast', free: 'modeFree', king: 'modeKing' }[mode] || 'modeClassic');
+  const rules = btn && btn.querySelector('small') ? btn.querySelector('small').textContent : '';
+  flash(MODE_NAMES[mode] || 'Ribbit Tag', `${rules} Map: ${MAPS[mapKey].label}.`, 4, 'var(--leaf)');
+}
+$('info').addEventListener('click', e => { e.currentTarget.blur(); modeRules(); });
 const maxQuality = Math.min(window.devicePixelRatio || 1, 1.25);
 let quality = maxQuality, fpsTime = 0, fpsFrames = 0;
 function adaptQuality(raw) {
