@@ -2712,12 +2712,12 @@ const FACTS = [
 ];
 const PERSONA = {
   Red: { pitch: 0.7, rate: 1.1, l: {
-    greet: ["Hey {p}! I'm Red, fastest frog in the jungle!", "Oh hey {p}. Hope you're ready to lose!"],
+    greet: ["Hey {p}! I'm Red, fastest frog in the {place}!", "Oh hey {p}. Hope you're ready to lose!"],
     name: ["I'm Red! Remember it, 'cause I'm gonna win.", "The name's Red. Red like FAST."],
     how: ["Feeling super speedy today!", "Awesome! I just did a triple flip off the treehouse."],
     food: ["Flies give me my super speed!", "Grasshoppers. Spicy ones. Don't ask."],
     age: ["Old enough to beat you!", "I'm eight in frog years. That's like a hundred in speed years."],
-    home: ["I live on the very top of the tallest tree. Obviously.", "Right here! This is my jungle."],
+    home: ["I live on the very top of the tallest tree. Obviously.", "Right here! This is my {place}."],
     friend: ["Okay fine, you're cool. But I'm still faster.", "Best friends! Just don't tell Blue."],
     cantcatch: ["Oh yeah? Watch me!", "Ha! Nobody outruns Red!"],
     tease: ["Hey! I'm the fastest, not the slowest!", "Rude! Race me and see who's slow!"],
@@ -2736,7 +2736,7 @@ const PERSONA = {
     taggedPlayer: ["Ha! Got you, {p}!", "Tag! You're lava, {p}!"],
     chase: ["I'm right behind you, {p}!", "You can't escape Red!", "Here I come!"],
     flee: ["Can't catch me!", "Way too slow!", "Zoom zoom!"],
-    idle: ["Watch this jump!", "I bet I can climb that tree in two seconds.", "Anybody wanna race?"],
+    idle: ["Watch this jump!", "I bet I can climb to the top in two seconds.", "Anybody wanna race?"],
   }},
   Blue: { pitch: 0.5, rate: 0.85, l: {
     greet: ["Oh, hey {p}. What's up, dude?", "Yo {p}. Nice day for some tag, huh?"],
@@ -2763,7 +2763,7 @@ const PERSONA = {
     taggedPlayer: ["Gotcha, {p}. No hard feelings, dude.", "Tag, little dude!"],
     chase: ["Comin' for ya, {p}...", "Slow and steady, dude."],
     flee: ["Whoa whoa whoa, nope!", "Gotta bounce, dude!"],
-    idle: ["Nice breeze today.", "These trees are so chill.", "Anyone else hungry?"],
+    idle: ["Nice vibes today.", "This {place} is so chill.", "Anyone else hungry?"],
   }},
   Yellow: { pitch: 1.9, rate: 1.3, l: {
     greet: ["HI {p}! HI HI HI! Wanna play? Wanna play?", "Ooh ooh! It's {p}! Yay!"],
@@ -2793,12 +2793,12 @@ const PERSONA = {
     idle: ["Has anyone seen a fly?", "Wheee!", "I can do a flip! Watch! Okay, I can't."],
   }},
   Purple: { pitch: 1.15, rate: 1.0, l: {
-    greet: ["Greetings, {p}. Want to hear a frog fact?", "Oh, hello {p}. I was just studying these trees."],
+    greet: ["Greetings, {p}. Want to hear a frog fact?", "Oh, hello {p}. I was just studying this {place}."],
     name: ["I'm Purple. I'm the smart one.", "Purple. Professor Purple, if you like."],
     how: ["Excellent, thank you for asking.", "Curious, as always."],
     food: ["Crickets, technically. Very nutritious.", "Mealworms. Full of protein."],
     age: ["I'm nine. That's 108 months, if you're counting.", "Nine years, three months, and two days."],
-    home: ["Frogs live on every continent except Antarctica. I live in this forest.", "In the treehouse library. I'm building one."],
+    home: ["Frogs live on every continent except Antarctica. I live by a quiet pond.", "In the treehouse library. I'm building one."],
     friend: ["That's very kind. Statistically, you're my favorite.", "Friends! I'll share all my facts with you."],
     cantcatch: ["Based on your speed, I calculate I can.", "Interesting hypothesis. Let's test it."],
     tease: ["Hmm. My data says otherwise.", "That's not very scientific of you."],
@@ -2817,7 +2817,7 @@ const PERSONA = {
     taggedPlayer: ["Tagged, {p}! Just as I calculated.", "Got you, {p}. Physics wins."],
     chase: ["Predicting your path, {p}...", "I know where you're going, {p}!"],
     flee: ["Escape route activated!", "Not according to plan!", "Retreat!"],
-    idle: ["Did you know frogs drink through their skin?", "These leaves are fascinating.", "I wonder how tall that tree is."],
+    idle: ["Did you know frogs drink through their skin?", "This {place} is fascinating.", "I wonder how high the top is."],
   }},
   Teal: { pitch: 1.5, rate: 0.9, l: {
     greet: ["Oh! Um, hi {p}. I'm Teal.", "H-hi {p}. Nice to see you."],
@@ -2847,7 +2847,7 @@ const PERSONA = {
     idle: ["Pretty flowers over here.", "Is it safe?", "I hope nobody tags me."],
   }},
   Orange: { pitch: 0.6, rate: 1.0, l: {
-    greet: ["Ahoy, {p}! Captain Orange at yer service!", "Arr, {p}! Welcome aboard me jungle!"],
+    greet: ["Ahoy, {p}! Captain Orange at yer service!", "Arr, {p}! Welcome aboard me {place}!"],
     name: ["Captain Orange, terror of the seven trees!", "They call me Captain Orange. Arr!"],
     how: ["Shipshape and ready to sail!", "Arr, I be feelin' fine as treasure!"],
     food: ["Coconuts! A pirate's favorite treasure!", "Flies and sea biscuits, matey!"],
@@ -2875,7 +2875,7 @@ const PERSONA = {
   }},
   Pink: { pitch: 1.7, rate: 1.05, l: {
     greet: ["Oh, hello {p}! Please bow to Princess Pink.", "Darling {p}! How wonderful to see you!"],
-    name: ["I am Princess Pink, ruler of the jungle!", "Princess Pink. You may call me Your Majesty."],
+    name: ["I am Princess Pink, ruler of the {place}!", "Princess Pink. You may call me Your Majesty."],
     how: ["Simply fabulous, as always.", "Royally wonderful, thank you!"],
     food: ["Dragonflies with a tiny bit of sparkle.", "Only the finest royal flies."],
     age: ["A princess never tells!", "Eight. And a half. Royally."],
@@ -2898,7 +2898,7 @@ const PERSONA = {
     taggedPlayer: ["By royal order, you're lava, {p}!", "Tagged! Bow before me, {p}!"],
     chase: ["The princess is coming, {p}!", "Halt, {p}! Royal orders!"],
     flee: ["Eek! Not the crown!", "Guards! Help!", "So undignified!"],
-    idle: ["Does my crown look sparkly?", "I need a royal snack.", "This jungle needs more glitter."],
+    idle: ["Does my crown look sparkly?", "I need a royal snack.", "This {place} needs more glitter."],
   }},
   Green: { pitch: 0.9, rate: 1.2, l: {
     greet: ["Hey {p}! Coach Green here! Ready to train?", "Let's go, {p}! Warm up those arms!"],
@@ -2909,7 +2909,7 @@ const PERSONA = {
     home: ["At the lily pad gym! Get it?", "On the climbing wall, every day!"],
     friend: ["You're on my team, champ!", "Team buddies! High five!"],
     cantcatch: ["Ha! I've been training for this!", "Challenge accepted, champ!"],
-    tease: ["Hey! Good sports don't say that!", "That's a penalty! Two laps around the tree!"],
+    tease: ["Hey! Good sports don't say that!", "That's a penalty! Two laps around the map!"],
     nice: ["That's the spirit, champ!", "Great attitude! Keep it up!"],
     follow: ["Let's go! Keep that pace up!", "Right behind you! Pump those arms!"],
     stay: ["Okay! I'll stretch over here.", "Taking a water break!"],
@@ -2932,8 +2932,8 @@ const PERSONA = {
     name: ["They call me Grandpa Silver, oldest frog in the pond.", "Silver. My skin went silver years ago."],
     how: ["My knees are a bit creaky, but I'm well.", "Oh, can't complain. Well, I could. But I won't."],
     food: ["Crickets. Back in my day, we hopped miles for them.", "A nice cup of leaf tea."],
-    age: ["Older than all these trees, young one.", "Twenty. That's very old for a frog."],
-    home: ["I've lived in this jungle my whole life.", "Under a comfy log by the pond."],
+    age: ["Older than this whole {place}, young one.", "Twenty. That's very old for a frog."],
+    home: ["I've lived by the old pond my whole life.", "Under a comfy log by the pond."],
     friend: ["Of course, young one. Friends are the best treasure.", "Aww. You remind me of me, back in the day."],
     cantcatch: ["Heh. Slow and steady, young one.", "Oh, I've got a few tricks left."],
     tease: ["Heh heh. I've been called worse.", "Respect your elders, young one."],
@@ -2952,7 +2952,7 @@ const PERSONA = {
     taggedPlayer: ["Gotcha, young {p}. Still got it!", "Tag, {p}. Grandpa wins this one."],
     chase: ["I'm coming, {p}... give me a minute.", "Slow and steady, {p}!"],
     flee: ["Oh my knees!", "Not so fast!", "Too old for this!"],
-    idle: ["Back in my day, this pond was all lily pads.", "Ahh, what a lovely day.", "You kids have so much energy."],
+    idle: ["Back in my day, this {place} was all lily pads.", "Ahh, what a lovely day.", "You kids have so much energy."],
   }},
 };
 const INTENTS = [
@@ -2991,11 +2991,16 @@ for (const a of ALL_AIS) {
   bubbleLayer.append(a.bubble);
   a.ownerAi = a; a.group.traverse(o => { o.userData.ai = a; });
 }
+// what frogs call each map when they talk about where they are
+const PLACE = { forest: 'forest', caves: 'cave', canyon: 'canyon', beach: 'beach', snow: 'mountain', volcano: 'volcano', sky: 'sky', moon: 'moon',
+  candy: 'candy land', spooky: 'spooky woods', city: 'city', pond: 'pond', swamp: 'swamp', garden: 'garden', canopy: 'rainforest', cove: 'cove',
+  reef: 'reef', toys: 'toy room', icecastle: 'castle', backrooms: 'maze', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
+  rainbow: 'meadow', eggs: 'meadow', fireworks: 'lake' };
 function fill(text, ai, extra) {
   extra = extra || {};
   const lava = bodies.filter(b => b.it).map(b => b.isPlayer ? 'you' : b.name);
   return text.replace(/\{p\}/g, playerName || 'buddy').replace(/\{me\}/g, ai.name).replace(/\{them\}/g, extra.them || 'buddy')
-    .replace(/\{lava\}/g, lava.length ? lava.join(' and ') : 'nobody');
+    .replace(/\{lava\}/g, lava.length ? lava.join(' and ') : 'nobody').replace(/\{place\}/g, PLACE[mapKey] || 'place');
 }
 let speaking = 0;
 function say(ai, text, directed = false) {
@@ -3042,7 +3047,7 @@ function reply(ai, text) {
       line = !lava.length ? 'Nobody yet!' : ai.it ? "Me! And I'm coming for you!" : player.it && lava.length === 1 ? "You are, silly!" : fill('{lava}! Run!', ai);
       break;
     }
-    case 'help': line = 'Swipe down to push off the ground. Swipe down next to a tree to climb it!'; break;
+    case 'help': line = 'Swipe down to push off the ground. Swipe down next to a wall or tree to climb it!'; break;
     case 'follow':
       if (ai.it && !player.it) line = "Follow you? I'm lava! I'll follow you all right!";
       else if (player.it && !ai.it) line = "No way, you're lava!";
