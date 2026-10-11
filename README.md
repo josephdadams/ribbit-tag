@@ -27,6 +27,7 @@ It runs on tablets (including Amazon Fire tablets), phones, and computers. There
 - **Swipe down** to shove the ground away and launch forward. Faster swipes make bigger leaps.
 - **Swipe sideways** to turn.
 - Next to a tree or wall, keep swiping down to **climb** it.
+- **Hold your finger down** while touching a wall, tree or ceiling to **hang on**. Swipe down to climb higher, and let go to drop.
 - Your hands go see-through when there is nothing close enough to grab.
 - **Tap a frog** (or press **Talk**) to chat with it.
 - The chip at the top always starts with the game mode's name. **Tap it** for a reminder of the rules and the map.
@@ -41,6 +42,7 @@ Plug in or pair a gamepad (Xbox, PlayStation, Switch Pro, or most Bluetooth cont
 | Right stick | Turn |
 | Right stick click | With Look around on, look straight ahead again |
 | `A` | Jump |
+| `RB` / `R1` (hold) | Grab a wall, tree or ceiling and hang on |
 | `RT` / `R2` (hold) | Big pushes |
 | `X` | Talk (then the D-pad sends quick replies, `RB` picks the next frog) |
 | `Y` | Player list |
@@ -63,18 +65,20 @@ Turn on **Look around** in the menu settings and the tablet becomes your frog's 
 | `A` `D` / `←` `→` | Turn |
 | `Q` `E` | Push sideways |
 | `Space` | Jump (climbs higher next to a wall) |
+| `C` (hold) | Grab a wall, tree or ceiling and hang on |
 | `Shift` (hold) | Big pushes |
 | `T` or `Enter` | Talk |
 | `1`–`9` | Quick replies while talking |
 | `Tab` | Talk to the next frog |
 | `P` | Player list |
+| `L` | Scores |
 | `I` | What mode is this? (rules and map) |
 | `H` | Become the host |
 | `M` | Music on/off |
 | `G` | Get in or out of a Toadhog |
 | `Esc` | Close a panel, or go back to the menu |
 
-On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freeze Tag, `5` Hot Potato, `6` Fly Feast, `7` Free Play, `8` King of the Lily Pad, `Q` Daily quests, `O` Play online, `R` Wardrobe.
+On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freeze Tag, `5` Hot Potato, `6` Fly Feast, `7` Free Play, `8` King of the Lily Pad, `Q` Daily quests, `O` Play online, `R` Wardrobe, `F` Meet the frogs.
 
 ## Game modes
 
@@ -106,11 +110,16 @@ In Mud Splat and Pond Ball, throw with `F`, a quick tap on the screen, or `B` on
 
 Every day brings three new quests, like "Catch 25 flies", "Unfreeze 4 frogs in Freeze Tag", or "Be king of the lily pad for 40 seconds". Finish one and claim its fly reward from **Daily quests** on the menu. New quests arrive at midnight.
 
+## Scores and records
+
+Tap **Scores** during a game (or press `L`) to see everyone in the game ranked by the mode's score, or by tags in modes that don't keep one. The menu shows your personal records: your longest Infection survival, the most tags you've made in one game, and your total tags.
+
 ## Maps
 
 Forest, Mega Map, Frog Gulch, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), and The Backrooms (a yellow maze under humming lights).
 
 - **Mega Map**: one giant world. Forest in the middle, a city to the east, snowy peaks to the north, and caves underneath. Tunnels, a subway, a log bridge and a skybridge join it all up, and a ramp lets you drive down into the caves.
+- **The Stump** and several other maps have **jump walls**: two tall plank walls close together. Push off one, then the other, to climb fast.
 - **Frog Gulch**: a long grassy canyon with a base at each end (great for Capture the Lily Pad), rolling hills, a rock arch and teleporters up to the cliff perches.
 
 ### Toadhogs
@@ -121,7 +130,7 @@ The Mega Map and Frog Gulch have **Toadhogs**: jeeps with frog eyes. Walk up to 
 - Touch: put a finger down and drag up to drive, down to reverse, sideways to steer.
 - Controller: left stick, or `RT`/`LT` for gas and reverse. `A` honks.
 
-A speeding Toadhog bumps frogs out of the way, and a lava frog driving one tags anyone it hits. Empty hogs drive themselves home after a while.
+Each Toadhog has its own engine that revs as it speeds up. A speeding Toadhog bumps frogs out of the way, and a lava frog driving one tags anyone it hits. Empty hogs drive themselves home after a while.
 
 ### Holiday maps
 
@@ -183,7 +192,11 @@ Players connect directly to each other with WebRTC through [Trystero](https://gi
 
 Kid safety: players cannot send each other messages, and in public lobbies everyone's typed name is replaced with a random one like "Frog 4821".
 
-Some networks (school Wi-Fi, some phone data plans) block direct connections. Being on the same Wi-Fi works best. The **Players** list shows connection status and troubleshooting tips.
+Some networks (school Wi-Fi, some phone data plans) block direct connections. Being on the same Wi-Fi works best. The **Players** list shows connection status and troubleshooting tips, and the **Online check** at the bottom of the Friends panel shows how many servers and frogs this device can reach and whether friend codes work in this browser.
+
+## Settings
+
+The menu settings cover frog speed (Easy, Normal or Hard), how many computer frogs play (3, 6 or 9), your name, music, mystery frogs, frog voices, Look around, and graphics (**Auto**, **Nice** for sun shadows and smooth edges, or **Fast** for older tablets). Settings are saved on each device.
 
 ## Running it locally
 
@@ -212,6 +225,10 @@ Because every deploy gets a new version stamp, players who already have the game
 - [Lilita One](https://fonts.google.com/specimen/Lilita+One) and [Nunito](https://fonts.google.com/specimen/Nunito) from Google Fonts
 
 All music is generated by the game. LUMI88 hums "Twinkle, Twinkle, Little Star", a traditional melody in the public domain.
+
+## Support Ribbit Tag
+
+Ribbit Tag is free, with no ads and nothing to buy. If your family enjoys it, a grown-up can chip in on [Ko-fi](https://ko-fi.com/josephdadams) to help us keep making new maps and modes. There's a link at the bottom of the menu settings too.
 
 ## License
 

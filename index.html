@@ -292,6 +292,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .pill-btn { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer; background: var(--canopy); color: var(--bone); }
 .pill-btn:focus-visible, .name-in:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
 .note { margin: 6px 0 0; font-size: .85rem; opacity: .75; max-width: 46ch; }
+.note a { color: var(--leaf); font-weight: 800; }
 .bubble.nametag { padding: 3px 10px 4px; font-size: .85rem; opacity: .9; }
 .name-in { font: inherit; font-size: 16px; font-weight: 800; border: 0; border-radius: 999px; padding: 7px 14px; background: var(--ink); color: var(--bone); width: 11em; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { #flash, .mode { transition: none; } }
@@ -495,6 +496,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       </div>
       <p class="note" id="gfxNote" hidden>Reload the page to switch smooth edges on or off.</p>
       <div class="best" id="best"></div>
+      <p class="note" id="donate" hidden>Like Ribbit Tag? It's free, with no ads. Grown-ups can <a id="donateLink" target="_blank" rel="noopener">chip in on Ko-fi</a> to help us keep making it.</p>
     </div>
     <div class="how">
       <h2>How to move</h2>
@@ -557,8 +559,10 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script>
 (() => {
 const APP_VERSION = 'ribbit-27';
+const DONATE_URL = 'https://ko-fi.com/josephdadams'; // a Ko-fi page like https://ko-fi.com/name; the menu's donate note stays hidden while this is empty
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
+if (DONATE_URL) { $('donateLink').href = DONATE_URL; $('donate').hidden = false; }
 const V = THREE.Vector3;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
