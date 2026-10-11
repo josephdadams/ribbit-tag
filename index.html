@@ -378,6 +378,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
             <input class="name-in" id="frIn" type="text" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="characters" placeholder="KP7-QX2">
             <button class="pill-btn" id="frSave" type="button">Add</button>
           </div>
+          <p class="note" id="frDiag"></p>
           <p class="note" id="frNote">Type a friend's code and you'll both show up on each other's lists. Only frogs who have your code can see when you're online.</p>
         </div>
       </div>
@@ -546,7 +547,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-21';
+const APP_VERSION = 'ribbit-22';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -6932,6 +6933,7 @@ async function gotHi(x, peerId) { // someone who has my code added me: add them 
 async function sendHere(target) {
   if (!presence.here) return;
   let x = null; try { x = await lockNote(); } catch (e) {}
+  presence.sealOk = !!x;
   try { presence.here.send(x ? { w: myWhere(), x } : { w: myWhere() }, target ? { target } : undefined); } catch (e) {}
 }
 function renderOnline() {
@@ -6945,6 +6947,10 @@ function renderOnline() {
   const text = presence.room ? `${total} frog${total === 1 ? '' : 's'} online now` : 'Checking who is online…';
   $('onlineNow').textContent = text; $('onlineWhere').textContent = presence.room ? parts.join(' · ') : '';
   $('plOnline').textContent = presence.room ? `${text}: ${parts.join(', ')}` : '';
+  // what this device is doing, to compare when a friend shows as offline
+  const others = presence.peers.size, noted = [...presence.peers.values()].filter(p => typeof p.x === 'string').length;
+  $('frDiag').textContent = `Online check: ${APP_VERSION.split('-').slice(0, 2).join('-')} · ` + (!presence.room ? 'not connected yet'
+    : `sees ${others} other frog${others === 1 ? '' : 's'} (${noted} with friend codes) · ` + (presence.sealOk === false ? 'friend codes NOT working in this browser' : presence.sealOk ? 'friend codes working' : 'starting…'));
   renderFriends();
 }
 function friendStatus(n) {
