@@ -371,7 +371,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
           <p class="fr-mine">Your friend code:<b id="frMine"></b></p>
           <div class="row">
             <label class="label" for="frIn">Friend's code</label>
-            <input class="name-in" id="frIn" type="text" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="characters" placeholder="ABC-123">
+            <input class="name-in" id="frIn" type="text" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="characters" placeholder="KP7-QX2">
             <button class="pill-btn" id="frSave" type="button">Add</button>
           </div>
           <p class="note" id="frNote">Swap codes with a friend and add each other. Only frogs who have your code can see when you're online.</p>
@@ -542,7 +542,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-17';
+const APP_VERSION = 'ribbit-18';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -945,16 +945,20 @@ function enterHog(h) {
   if (s === 0) { if (!hogTipped) flash('Toadhog!', usedKeys ? 'W and S to drive, A and D to steer, Space to honk. G to hop out.' : 'Drag up to drive, drag sideways to steer.', 3.4, 'var(--leaf)'); hogTipped = true; }
   else flash(s === 1 ? 'Riding shotgun!' : 'Standing in the back!', 'Drag to look around.', 2, 'var(--leaf)');
 }
-function exitHog() {
-  const h = player.hog; if (!h) return;
-  if (h.seats[player.seat] === player) h.seats[player.seat] = null;
-  const side = player.seat === 1 ? 1 : -1, c = Math.cos(h.yaw), sn = Math.sin(h.yaw);
+function hopOut(b) { // any frog climbs out beside the hog (or out the top if both sides are blocked)
+  const h = b.hog; if (!h) return;
+  if (h.seats[b.seat] === b) h.seats[b.seat] = null;
+  const side = b.seat === 1 ? 1 : -1, c = Math.cos(h.yaw), sn = Math.sin(h.yaw);
   let best = null;
   for (const sd of [side, -side]) { const x = h.pos.x + sd * 2.4 * c, z = h.pos.z - sd * 2.4 * sn; if (!blockedAt(x, z)) { best = [x, z]; break; } }
-  if (best) player.pos.set(best[0], h.pos.y + 1.2, best[1]); else player.pos.set(h.pos.x, h.pos.y + 2.2, h.pos.z); // nowhere to step: hop out the top
-  player.vel.set(-sn * h.speed * 0.5, 4, -c * h.speed * 0.5);
-  player.yaw = player.seat === 0 ? h.yaw : player.yaw; player.hog = null; player.seat = -1;
-  hideMyFrog(); sfxSlap(0.25);
+  if (best) b.pos.set(best[0], h.pos.y + 1.2, best[1]); else b.pos.set(h.pos.x, h.pos.y + 2.2, h.pos.z);
+  b.vel.set(-sn * h.speed * 0.5, 4, -c * h.speed * 0.5);
+  if (b.seat === 0) b.yaw = h.yaw;
+  b.hog = null; b.seat = -1;
+}
+function exitHog() {
+  if (!player.hog) return;
+  hopOut(player); hideMyFrog(); sfxSlap(0.25);
 }
 function toggleHog() {
   if (player.hog) { exitHog(); return; }
@@ -997,7 +1001,8 @@ function updateHogs(dt) {
     const d = h.seats[0];
     h.thr = 0;
     if (d === player) { const [t, s] = driveInput(); h.thr = t; hogDrive(h, dt, t, s); h.mineT = now; }
-    else if (d && d.isRemote && h.net) {
+    else if (d && host && !d.isRemote) { const ts = aiDriveInput(h, d, dt); if (ts) h.thr = ts[0]; hogDrive(h, dt, ts ? ts[0] : 0, ts ? ts[1] : 0); }
+    else if (d && h.net) {
       const n = h.net, age = Math.min(0.3, (now - n.t) / 1000), k = 1 - Math.exp(-dt * 12);
       hogTmp.set(n.x - Math.sin(n.yaw) * n.speed * age, n.y, n.z - Math.cos(n.yaw) * n.speed * age);
       if (h.pos.distanceTo(hogTmp) > 12) h.pos.copy(hogTmp); else h.pos.lerp(hogTmp, k);
@@ -1007,6 +1012,7 @@ function updateHogs(dt) {
       if (h.pos.distanceTo(h.park) > 12) h.pos.copy(h.park); else h.pos.lerp(h.park, k);
       h.yaw = lerpAngle(h.yaw, h.parkYaw, k); h.speed *= Math.exp(-3 * dt); hogPose(h, dt);
     } else hogDrive(h, dt, 0, 0); // coasting to a stop
+    if (host) for (let s = 1; s < 3; s++) { const b = h.seats[s]; if (b && !b.isRemote && b !== player && (!h.seats[0] || b.iced || b.out) && Math.abs(h.speed) < 2) aiLeaveHog(b); }
     for (let s = 0; s < 3; s++) { const b = h.seats[s]; if (b && b !== player) { seatPos(h, s, b.pos); b.vel.set(-Math.sin(h.yaw) * h.speed, 0, -Math.cos(h.yaw) * h.speed); } }
     if (host) { // empty hogs that were left somewhere drive themselves home after a while
       const empty = !h.seats.some(Boolean), away = Math.hypot(h.pos.x - h.home[0], h.pos.z - h.home[1]) > 6;
@@ -1081,6 +1087,93 @@ function hogAudio() {
     v.sk.gain.setTargetAtTime(skid * 0.16 * near, t, 0.05);
   }
 }
+// ---------- computer frogs in toadhogs (the host runs them) ----------
+// They grab a hog to chase someone far away, to get away from a lava frog, to reach a far-off goal, or
+// just for a joyride in Free Play. A frog following you hops in the back of your hog.
+const HOG_HI = ['Beep beep!', 'Vroom vroom!', "I'm driving!", 'Toadhog time!', 'Hold on to your hats!', 'Wheee!'];
+const HOG_RIDE = ['Can I come too?', 'Wait for me!', 'Shotgun!', 'Road trip!'];
+function aiSeat(ai, h, s) {
+  h.seats[s] = ai; ai.hog = h; ai.seat = s; ai.vel.set(0, 0, 0);
+  ai.hogT = 0; ai.stuckT = 0; ai.stuckN = 0; ai.backT = 0; ai.wp = null; ai.hogWant = null; ai.hogSafeT = 0;
+  if (Math.random() < 0.5 && ai.talkCd <= 0 && flat(ai.pos, player.pos) < 25) say(ai, pick(s === 0 ? HOG_HI : HOG_RIDE));
+}
+function aiLeaveHog(ai) { hopOut(ai); ai.hogCd = 8 + Math.random() * 10; ai.hopT = 0.4; }
+function ejectAiHogs() { for (const a of ALL_AIS) if (a.hog) { if (a.hog.seats[a.seat] === a) a.hog.seats[a.seat] = null; a.hog = null; a.seat = -1; } }
+function aiHogThink(ai, dt) { // on foot: should I get in a hog? Returns true if walking to one took over this hop
+  if (!hogs.length || ai.out || ai.iced || ai.frozen > 0) return false;
+  ai.hogCd = (ai.hogCd === undefined ? 5 + Math.random() * 10 : ai.hogCd) - dt;
+  const fb = ai.follow > 0 ? ai.followBody || player : null;
+  if (fb && fb.hog && fb.seat === 0) { // ride along with the frog you're following
+    const h = fb.hog, s = h.seats.indexOf(null, 1);
+    if (s > 0 && flat(ai.pos, h.pos) < 4) { aiSeat(ai, h, s); return true; }
+    return false;
+  }
+  if (ai.hogCd > 0) return false;
+  if (!ai.hogWant) {
+    let why = false;
+    if (state === 'play') {
+      const goal = modeGoal(ai);
+      if (goal) why = flat(goal, ai.pos) > 24 && Math.random() < 0.35;
+      else if (ai.it) { const t = nearestTarget(ai); why = !!t && flat(t.pos, ai.pos) > 16 && Math.random() < 0.4; }
+      else why = bodies.some(b => b.it && b !== ai && flat(b.pos, ai.pos) < 12) && Math.random() < 0.25;
+      if (mode === 'free') why = Math.random() < 0.06;
+    }
+    if (!why) { ai.hogCd = 2 + Math.random() * 3; return false; }
+    let best = null, bd = 14;
+    for (const h of hogs) {
+      if (h.seats[0] || (h.claim && h.claim !== ai && h.claimT > performance.now())) continue;
+      const d = flat(h.pos, ai.pos); if (d < bd && Math.abs(h.pos.y - ai.pos.y) < 3) { bd = d; best = h; }
+    }
+    if (!best) { ai.hogCd = 3 + Math.random() * 4; return false; }
+    ai.hogWant = best; ai.hogWantT = 5; best.claim = ai; best.claimT = performance.now() + 5000;
+  }
+  const h = ai.hogWant;
+  ai.hogWantT -= dt;
+  if (h.seats[0] || ai.hogWantT <= 0 || !hogs.includes(h)) { ai.hogWant = null; ai.hogCd = 4 + Math.random() * 4; return false; }
+  if (flat(h.pos, ai.pos) < 3) { aiSeat(ai, h, 0); return true; }
+  return false; // keep walking; aiThink points the frog at ai.hogWant
+}
+const aiGoal = new V();
+function aiDriveInput(h, ai, dt) { // [throttle, steer] for a computer frog at the wheel; may hop out instead
+  ai.hogT += dt;
+  if (ai.iced || ai.out || state === 'menu') { aiLeaveHog(ai); return null; }
+  let goal = null, reason = 'ride', flee = false;
+  if (state === 'play') {
+    const mg = modeGoal(ai);
+    if (mg) { goal = mg; reason = 'goal'; }
+    else if (ai.it) { const t = nearestTarget(ai); if (t) { goal = t.pos; reason = 'chase'; } }
+    else {
+      let th = null, td = 30;
+      for (const b of bodies) if (b.it && b !== ai) { const d = flat(b.pos, h.pos); if (d < td) { td = d; th = b; } }
+      if (th) {
+        flee = true; reason = 'flee'; ai.hogSafeT = 0;
+        const ax = h.pos.x - th.pos.x, az = h.pos.z - th.pos.z, al = Math.hypot(ax, az) || 1;
+        goal = aiGoal.set(clamp(h.pos.x + ax / al * 25, -HALF + 8, HALF - 8), h.pos.y, clamp(h.pos.z + az / al * 25, -HALF + 8, HALF - 8));
+      } else ai.hogSafeT += dt;
+    }
+  }
+  if (!goal) { // joyride between random spots
+    if (!ai.wp || flat(ai.wp, h.pos) < 7 || ai.hogT > ai.wpT) { ai.wp = new V((Math.random() - 0.5) * (HALF - 10) * 2, h.pos.y, (Math.random() - 0.5) * (HALF - 10) * 2); ai.wpT = ai.hogT + 14; }
+    goal = ai.wp;
+  }
+  const dx = goal.x - h.pos.x, dz = goal.z - h.pos.z, dist = Math.hypot(dx, dz);
+  const diff = Math.atan2(Math.sin(Math.atan2(-dx, -dz) - h.yaw), Math.cos(Math.atan2(-dx, -dz) - h.yaw));
+  let thr = 1, str = clamp(diff * 2.2, -1, 1);
+  if (Math.abs(diff) > 2.3 && dist < 9 && !flee) { thr = -0.7; str = -str; } // it's right behind: back up toward it
+  else if (dist < 6 && reason !== 'chase') thr = 0.35;
+  if (ai.backT > 0) { ai.backT -= dt; thr = -1; str = ai.backSteer; }
+  else if (Math.abs(h.speed) < 1.2 && !h.air) { // stuck against something: reverse and turn away
+    ai.stuckT += dt;
+    if (ai.stuckT > 0.7) { ai.stuckT = 0; ai.stuckN++; ai.backT = 1 + Math.random() * 0.5; ai.backSteer = -(Math.sign(str) || 1); }
+  } else ai.stuckT = Math.max(0, ai.stuckT - dt * 0.5);
+  if (ai.frozen > 0) thr = 0;
+  // time to get out?
+  const high = goal.y - h.pos.y > 2.5;
+  if (ai.stuckN > 4 || (reason === 'goal' && dist < 6) || (reason === 'chase' && dist < 7 && high) ||
+      (reason === 'ride' && ai.hogT > (mode === 'free' ? 40 : 20)) || ai.hogSafeT > 8) { aiLeaveHog(ai); return null; }
+  if (flat(player.pos, h.pos) < 9 && Math.random() < dt * 0.4) honk();
+  return [thr, str];
+}
 function touching(a, b, reach = 1.3) { // tag reach; a frog driving a speeding toadhog tags with the whole hog
   const h = a.hog;
   if (h && a.seat === 0 && Math.abs(h.speed) > 3 && Math.hypot(b.pos.x - h.pos.x, b.pos.z - h.pos.z) < 2.4 && Math.abs(b.pos.y - h.pos.y - 1) < 2) return true;
@@ -1100,7 +1193,7 @@ function hogFromNet(r, q) {
     if (myId < r.id) return;
     h.seats[s] = null; const free = h.seats.indexOf(null, s === 0 ? 1 : 0);
     if (free >= 0 && free !== s) { h.seats[free] = player; player.seat = free; } else { h.seats[s] = player; exitHog(); }
-  } else if (other && other !== r) { other.hog = null; other.seat = -1; }
+  } else if (other && other !== r) { if (isHost() && ais.includes(other)) aiLeaveHog(other); else { other.hog = null; other.seat = -1; } }
   h.seats[s] = r; r.hog = h; r.seat = s;
   if (s === 0 && q.length >= 9) {
     const n = h.net || (h.net = {}), num = v => Number.isFinite(+v) ? +v : 0;
@@ -3317,6 +3410,7 @@ function flash(big, small = '', secs = 2.2, color = 'var(--bone)') {
 function startRound(firstId, seed) {
   setTimeout(() => { sendHere(); renderOnline(); }, 500);
   if (player.hog) exitHog();
+  ejectAiHogs();
   state = 'play'; chooseSong(); startMusic(); roundTime = 0; playerTaggedThisRound = false;
   resetModeState(); if (mode !== 'king') kingEnd();
   questEvent('mode', 1, mode); questEvent('map', 1, mapKey);
@@ -3436,6 +3530,7 @@ function pickLedge(ai, tgt) {
   return best;
 }
 function aiThink(ai, dt) {
+  if (ai.hog) return; // driving or riding: updateHogs handles it
   ai.hopT -= dt; ai.swing = Math.max(0, ai.swing - dt * 3);
   if (ai.frozen > 0 || ai.hopT > 0) return;
   // "touching" a wall includes the map's outer walls, which bodies rest right against without colliding
@@ -3477,6 +3572,9 @@ function aiThink(ai, dt) {
       speed = 6.1 * sp; jumpV = ai.nearWall ? 8 : 4 + Math.random() * 2.5;
     }
   }
+  aiHogThink(ai, 0.3);
+  if (ai.hog) return;
+  if (ai.hogWant) { dir.set(ai.hogWant.pos.x - ai.pos.x, 0, ai.hogWant.pos.z - ai.pos.z); speed = Math.max(speed, 6.2 * sp); jumpV = ai.nearWall ? 8 : 4; } // heading for a toadhog to drive
   if (dir.lengthSq() < 1e-4 && ai.follow > 0 && !ai.it) { // following a player
     const fb = ai.followBody || player;
     dir.set(fb.pos.x - ai.pos.x, 0, fb.pos.z - ai.pos.z);
@@ -4147,7 +4245,7 @@ function snapshot() {
   for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0), r2(b.score || 0), r2(b.size || 1), b.hits || 0, b.tags || 0, b.tagged || 0];
   return { n: ais.length, m: mapKey, mo: mode, st: state, rt: r2(roundTime), ot: r2(overT), d: diff,
     ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null,
-    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, hg: hogs.length ? hogs.map(h => [h.pos.x, h.pos.y, h.pos.z, h.yaw].map(r2)) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
+    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, hg: hogs.length ? hogs.map(h => [h.pos.x, h.pos.y, h.pos.z, h.yaw, h.speed, h.steer].map(r2).concat([h.air ? 1 : 0])) : undefined, ah: hogs.length ? ais.map(a => a.hog ? [a.hog.idx, a.seat] : 0) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
 }
 let joinWait = false;
 function applySnapshot(s, from) {
@@ -4179,7 +4277,21 @@ function applySnapshot(s, from) {
     b.feastScore = fs || 0;
   }
   if (s.pf !== undefined) potato.fuse = s.pf;
-  if (Array.isArray(s.hg)) s.hg.forEach((q, i) => { const h = hogs[i]; if (h && Array.isArray(q)) { (h.park || (h.park = new V())).set(+q[0] || 0, +q[1] || 0, +q[2] || 0); h.parkYaw = +q[3] || 0; } });
+  if (Array.isArray(s.ah)) s.ah.forEach((q, i) => { // which computer frogs are in which hog
+    const a = ais[i]; if (!a) return;
+    const h = Array.isArray(q) ? hogs[q[0] | 0] : null, st = h ? clamp(q[1] | 0, 0, 2) : -1;
+    if (a.hog && (a.hog !== h || a.seat !== st)) { if (a.hog.seats[a.seat] === a) a.hog.seats[a.seat] = null; a.hog = null; a.seat = -1; }
+    if (h && (!h.seats[st] || h.seats[st] === a)) { h.seats[st] = a; a.hog = h; a.seat = st; }
+  });
+  if (Array.isArray(s.hg)) s.hg.forEach((q, i) => {
+    const h = hogs[i]; if (!h || !Array.isArray(q)) return;
+    (h.park || (h.park = new V())).set(+q[0] || 0, +q[1] || 0, +q[2] || 0); h.parkYaw = +q[3] || 0;
+    const d = h.seats[0];
+    if (d && !d.isRemote && d !== player) { // a computer frog is driving it on the host
+      const n = h.net || (h.net = {});
+      Object.assign(n, { x: h.park.x, y: h.park.y, z: h.park.z, yaw: h.parkYaw, speed: clamp(+q[4] || 0, -HOG.rev, HOG.max), steer: clamp(+q[5] || 0, -1, 1), air: !!q[6], t: performance.now() });
+    }
+  });
   for (const [id, row] of Object.entries(s.it)) { const b = byId(id); if (b) { b.kingScore = row[6] || 0; b.score = row[7] || 0; b.size = row[8] || 1; b.hits = row[9] || 0; b.tags = row[10] || 0; b.tagged = row[11] || 0; } }
   if (MODE2[mode]) { MODE2[mode].active = true; if (s.ms && MODE2[mode].apply && state !== 'menu') MODE2[mode].apply(s.ms); }
   for (const [k, m] of Object.entries(MODE2)) if (k !== mode && m.active) { m.active = false; if (m.end) m.end(); }
@@ -4618,6 +4730,7 @@ document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListe
 $('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (16)'; });
 $('menuBtn').addEventListener('click', () => {
   if (player.hog) exitHog();
+  ejectAiHogs();
   state = 'menu'; pointers.clear(); showBest();
   $('menu').hidden = false; $('hud').hidden = true;
   bodies.forEach(b => setLava(b, false));
@@ -4996,6 +5109,7 @@ function updatePickups(dt, t) {
 }
 function setAiCount(n) {
   n = [3, 6, 9].includes(n) ? n : 6; aiCount = n;
+  ejectAiHogs();
   ais.length = 0;
   ALL_AIS.forEach((a, i) => {
     const on = i < n; a.group.visible = on;
@@ -6693,10 +6807,64 @@ const MODE2 = {
 
 // ---------- Frogs online ----------
 // Every open copy of the game joins one shared "presence" room and says, every 20 seconds, roughly where it is:
-// on the menu, solo, in a public lobby, or in a friends room. Room codes are never shared.
+// on the menu, solo, in a public lobby, or in a friends room. Room codes and names only travel inside friend notes.
 const presence = { room: null, here: null, peers: new Map() };
 const myWhere = () => state === 'menu' ? 'menu' : !net ? 'solo' : net.isPublic ? 'public' : 'friends';
-function sendHere(target) { try { if (presence.here) presence.here.send({ w: myWhere() }, target ? { target } : undefined); } catch (e) {} }
+// Friends: every device gets its own friend code. Each "here" message also carries a note locked with my code
+// (AES-GCM) saying my name and which game I'm in, so only frogs who typed my code can read it and hop in.
+const FR_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I, O, 0 or 1 to mix up
+let myFriendCode = '', friends = [], frOnlineWas = new Set(), frDrawn = '';
+try { myFriendCode = localStorage.getItem('ribbit-fcode') || ''; friends = JSON.parse(localStorage.getItem('ribbit-friends') || '[]'); } catch (e) {}
+if (!Array.isArray(friends)) friends = [];
+const isFriendCode = c => c.length === 6 && [...c].every(ch => FR_ABC.includes(ch));
+if (!isFriendCode(myFriendCode)) {
+  myFriendCode = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => FR_ABC[b % 32]).join('');
+  try { localStorage.setItem('ribbit-fcode', myFriendCode); } catch (e) {}
+}
+const showCode = c => c.slice(0, 3) + '-' + c.slice(3);
+const friendName = f => f.name || showCode(f.code);
+function saveFriends() { try { localStorage.setItem('ribbit-friends', JSON.stringify(friends.map(({ code, name }) => ({ code, name })))); } catch (e) {} }
+const frKeys = new Map();
+function frKey(code) {
+  if (!frKeys.has(code)) frKeys.set(code, (async () => {
+    try {
+      const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ribbit-friend:' + code));
+      return await crypto.subtle.importKey('raw', h, 'AES-GCM', false, ['encrypt', 'decrypt']);
+    } catch (e) { return null; } // no crypto (not https): friends just never show up
+  })());
+  return frKeys.get(code);
+}
+const b64 = u => btoa(String.fromCharCode(...u)), unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function lockNote() {
+  const key = await frKey(myFriendCode); if (!key) return null;
+  const note = { n: playerName || '', w: myWhere(), m: mapKey };
+  if (net && state !== 'menu') { if (net.isPublic) note.l = net.lobby; else note.r = net.code; }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(note)));
+  return b64(iv) + '.' + b64(new Uint8Array(box));
+}
+async function readPeer(p) { // try each friend's key on a peer's note; the right one opens it, the rest fail
+  p.fr = null; p.note = null;
+  if (typeof p.x !== 'string' || p.x.length > 600 || !friends.length) return;
+  const [iv, box] = p.x.split('.');
+  for (const f of friends) {
+    const key = await frKey(f.code); if (!key) continue;
+    let n; try { n = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, key, unb64(box)))); } catch (e) { continue; }
+    if (!n || typeof n !== 'object') continue;
+    const lobby = Math.floor(+n.l) || 0, room = typeof n.r === 'string' ? cleanCode(n.r) : '';
+    p.fr = f.code;
+    p.note = { w: ['menu', 'solo', 'public', 'friends'].includes(n.w) ? n.w : 'menu', m: MAPS[n.m] ? n.m : '',
+      l: lobby >= 1 && lobby <= PUBLIC_LOBBIES ? lobby : 0, r: room };
+    const name = typeof n.n === 'string' ? n.n.trim().slice(0, 16) : '';
+    if (name && name !== f.name) { f.name = name; saveFriends(); }
+    return;
+  }
+}
+async function sendHere(target) {
+  if (!presence.here) return;
+  let x = null; try { x = await lockNote(); } catch (e) {}
+  try { presence.here.send(x ? { w: myWhere(), x } : { w: myWhere() }, target ? { target } : undefined); } catch (e) {}
+}
 function renderOnline() {
   const now = Date.now();
   for (const [id, p] of presence.peers) if (now - p.t > 70000) presence.peers.delete(id);
@@ -6708,7 +6876,85 @@ function renderOnline() {
   const text = presence.room ? `${total} frog${total === 1 ? '' : 's'} online now` : 'Checking who is online…';
   $('onlineNow').textContent = text; $('onlineWhere').textContent = presence.room ? parts.join(' · ') : '';
   $('plOnline').textContent = presence.room ? `${text}: ${parts.join(', ')}` : '';
+  renderFriends();
 }
+function friendStatus(n) {
+  if (!n) return 'Offline';
+  const where = n.m ? ` · ${MAPS[n.m].label}` : '';
+  return n.r ? `In room ${n.r}${where}` : n.l ? `In public game ${n.l}${where}` : n.w === 'solo' ? `Playing solo${where}` : 'On the menu';
+}
+function renderFriends() {
+  const rank = n => !n ? 0 : n.r || n.l ? 3 : n.w === 'solo' ? 2 : 1; // a game you can join beats solo beats the menu
+  const rows = friends.map(f => {
+    let best = null;
+    for (const p of presence.peers.values()) if (p.fr === f.code && rank(p.note) > rank(best)) best = p.note;
+    return { f, n: best };
+  }).sort((a, b) => rank(b.n) - rank(a.n));
+  const online = new Set(rows.filter(r => r.n).map(r => r.f.code));
+  $('frCount').textContent = friends.length ? `${online.size} online` : '';
+  if (state === 'play') for (const r of rows) if (r.n && !frOnlineWas.has(r.f.code)) { flash(`${friendName(r.f)} is online!`, 'Go to the Menu to see your friends.', 3, 'var(--leaf)'); break; }
+  frOnlineWas = online;
+  const sig = JSON.stringify(rows.map(r => [r.f.code, r.f.name, r.n]));
+  if (sig === frDrawn) return; // nothing changed: leave the buttons alone so a tap in progress still lands
+  frDrawn = sig;
+  const list = $('frList'); list.innerHTML = '';
+  if (!friends.length) {
+    const li = document.createElement('li'); li.className = 'fr-empty';
+    li.textContent = "Add friends to see when they're online and hop into their games.";
+    list.append(li); return;
+  }
+  for (const { f, n } of rows) {
+    const li = document.createElement('li'); if (n) li.className = 'on';
+    const dot = document.createElement('span'); dot.className = 'fr-dot';
+    const who = document.createElement('span'); who.className = 'fr-who';
+    const b = document.createElement('b'); b.textContent = friendName(f);
+    const sm = document.createElement('small'); sm.textContent = friendStatus(n);
+    who.append(b, sm); li.append(dot, who);
+    if (n && (n.r || n.l)) {
+      const join = document.createElement('button'); join.type = 'button'; join.className = 'pill-btn fr-join'; join.textContent = 'Join';
+      join.setAttribute('aria-label', `Join ${friendName(f)}`);
+      join.addEventListener('click', () => joinFriend(n));
+      li.append(join);
+    }
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'pill-btn fr-x'; x.textContent = '✕';
+    x.setAttribute('aria-label', `Remove ${friendName(f)}`);
+    x.addEventListener('click', () => {
+      if (!confirm(`Remove ${friendName(f)} from your friends?`)) return;
+      friends = friends.filter(o => o !== f); saveFriends();
+      for (const p of presence.peers.values()) if (p.fr === f.code) { p.fr = null; p.note = null; }
+      renderOnline();
+    });
+    li.append(x); list.append(li);
+  }
+}
+function joinFriend(n) {
+  if (state !== 'menu') return;
+  if (n.l) { begin(mode, n.l); return; }
+  $('roomIn').value = n.r;
+  try { localStorage.setItem('ribbit-room', n.r); } catch (e) {}
+  updateJoinUI();
+  begin(mode, 0, 'guest'); // the host's map and mode come along when we connect
+}
+async function addFriend() {
+  const c = cleanCode($('frIn').value), note = $('frNote');
+  if (!isFriendCode(c)) { note.textContent = "That doesn't look like a friend code. They have 6 letters and numbers, like KP7-QX2."; return; }
+  if (c === myFriendCode) { note.textContent = "That's your own code! Type your friend's code instead."; return; }
+  if (friends.some(f => f.code === c)) { note.textContent = `${friendName(friends.find(f => f.code === c))} is already your friend.`; return; }
+  friends.push({ code: c, name: '' }); saveFriends();
+  $('frIn').value = '';
+  note.textContent = `Added ${showCode(c)}! They'll show up here when they're online. Ask them to add your code too.`;
+  await Promise.all([...presence.peers.values()].filter(p => !p.fr).map(readPeer)); // maybe they're already here
+  renderOnline();
+}
+$('frMine').textContent = showCode(myFriendCode);
+$('frAddBtn').addEventListener('click', () => {
+  const open = $('frAdd').hidden; $('frAdd').hidden = !open;
+  $('frAddBtn').setAttribute('aria-expanded', String(open)); $('frAddBtn').textContent = open ? 'Done' : 'Add a friend';
+  if (open) $('frIn').focus();
+});
+$('frSave').addEventListener('click', addFriend);
+$('frIn').addEventListener('keydown', e => { if (e.key === 'Enter') addFriend(); });
+renderFriends();
 async function startPresence() {
   let lib;
   try { lib = await import(TRYSTERO); } catch (e) { $('onlineNow').textContent = 'Offline'; return; }
@@ -6716,7 +6962,13 @@ async function startPresence() {
   presence.room = room; presence.here = room.makeAction('here');
   room.onPeerJoin = id => { presence.peers.set(id, { w: 'menu', t: Date.now() }); sendHere(id); renderOnline(); };
   room.onPeerLeave = id => { presence.peers.delete(id); renderOnline(); };
-  presence.here.onMessage = (d, { peerId }) => { presence.peers.set(peerId, { w: d && ['menu', 'solo', 'public', 'friends'].includes(d.w) ? d.w : 'menu', t: Date.now() }); renderOnline(); };
+  presence.here.onMessage = async (d, { peerId }) => {
+    const p = presence.peers.get(peerId) || {};
+    p.w = d && ['menu', 'solo', 'public', 'friends'].includes(d.w) ? d.w : 'menu'; p.t = Date.now(); p.x = d && d.x;
+    presence.peers.set(peerId, p);
+    await readPeer(p);
+    renderOnline();
+  };
   setInterval(() => { sendHere(); renderOnline(); }, 20000);
   renderOnline();
 }
@@ -6735,7 +6987,7 @@ function update(dt, t) {
 
   const steps = 2, h = dt / steps;
   const host = isHost();
-  for (let i = 0; i < steps; i++) { if (!player.hog) physics(player, h); if (host) for (const a of ais) physics(a, h); }
+  for (let i = 0; i < steps; i++) { if (!player.hog) physics(player, h); if (host) for (const a of ais) if (!a.hog) physics(a, h); }
   if (host) for (const a of ais) aiThink(a, dt);
   netFrame(dt);
   updateHogs(dt); updateTeleports();
