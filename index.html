@@ -429,7 +429,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-9';
+const APP_VERSION = 'ribbit-10';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -2790,7 +2790,7 @@ function updateTalk(dt) {
       a.bubbleT -= dt;
       bv.copy(a.pos); bv.y += 1.35; bv.project(camera);
       const far = a.pos.distanceTo(player.pos) > 32;
-      if (a.bubbleT <= 0 || bv.z > 1 || far) a.bubble.hidden = true;
+      if (a.bubbleT <= 0 || bv.z > 1 || far || concealed(a)) a.bubble.hidden = true;
       else {
         a.bubble.hidden = false;
         const x = clamp((bv.x + 1) / 2 * innerWidth, 90, innerWidth - 90), y = clamp((1 - bv.y) / 2 * innerHeight, 110, innerHeight - 20);
@@ -3030,7 +3030,7 @@ function netFrame(dt) {
   for (const r of remotes.values()) {
     bv.copy(r.pos); bv.y += 1.3; bv.project(camera);
     const d = r.pos.distanceTo(player.pos);
-    if (bv.z > 1 || d > 40 || (r.bubbleT || 0) > 0 || (mode === 'hide' && player.it && !r.it) || (mode === 'sardines' && r === MODE2.sardines.hider)) { r.tag.hidden = true; continue; }
+    if (bv.z > 1 || d > 40 || (r.bubbleT || 0) > 0 || concealed(r)) { r.tag.hidden = true; continue; }
     r.tag.hidden = false; r.tag.classList.toggle('lava', r.it);
     r.tag.style.transform = `translate(${(bv.x + 1) / 2 * innerWidth}px, ${(1 - bv.y) / 2 * innerHeight}px) translate(-50%, -100%)`;
   }
@@ -3473,8 +3473,8 @@ function playerRow(b, me) {
     const age = performance.now() - b.netT;
     meta.textContent = age < 250 ? 'Good' : age < 800 ? 'Slow' : 'Lagging';
     meta.className += age < 250 ? '' : age < 800 ? ' slow' : ' bad';
-    meta.title = `${Math.round(b.pos.distanceTo(player.pos))} m away`;
-  } else meta.textContent = Math.round(b.pos.distanceTo(player.pos)) + ' m';
+    meta.title = concealed(b) ? '' : `${Math.round(b.pos.distanceTo(player.pos))} m away`;
+  } else meta.textContent = concealed(b) ? '?' : Math.round(b.pos.distanceTo(player.pos)) + ' m';
   li.append(dot, nm, st, meta);
   return li;
 }
@@ -4230,6 +4230,15 @@ function pollGamepad(dt) {
 // Each mode is an object: start(seed, firsts), update(dt, t, host), and optional goal(ai) for computer frogs,
 // hud() for the top bar, row(b) for the player list, snap()/apply(ms) for multiplayer, onTag(a, b), onEvent(d, from), end().
 // "tagBase" modes reuse the normal tag rules (pick a lava frog, touch to tag); "ownTags" modes handle touching themselves.
+// Frogs you shouldn't be able to spot: their name tags, speech bubbles and distances stay hidden
+function concealed(b) {
+  if (state !== 'play' || !b || b === player) return false;
+  const d = b.pos.distanceTo(player.pos);
+  if (mode === 'bat') return !b.it && d > 7;
+  if (mode === 'hide') return player.it && !b.it && d > 6;
+  if (mode === 'sardines') return b === MODE2.sardines.hider && !player.sardFound && d > 6;
+  return false;
+}
 const CLASSICISH = ['classic', 'potato', 'bat', 'shrink', 'tongue', 'gravity'];
 const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge'];
 Object.assign(MODE_NAMES, { hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
@@ -4378,6 +4387,7 @@ const MODE2 = {
     end() { overlay('blind', false); },
   },
   bat: { tagBase: true,
+    hud() { return { radar: player.it ? 'hide' : undefined }; }, // no free arrow to the runners in the dark
     start() { flash('Bat Tag!', 'Lights out. The lava frog glows. Follow your lantern!', 3, '#ffb36a'); },
     update(dt, t) {
       if (!lantern) { lantern = new THREE.PointLight(0xfff0c8, 1.3, 11, 1.4); camera.add(lantern); }
