@@ -102,7 +102,7 @@ Every day brings three new quests, like "Catch 25 flies", "Unfreeze 4 frogs in F
 
 ## Maps
 
-Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, and The Backrooms (a yellow maze under humming lights).
+Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in), and The Backrooms (a yellow maze under humming lights).
 
 ### Holiday maps
 
@@ -144,6 +144,8 @@ Every few minutes a rare visitor shows up that only you can see. Each one unlock
 - **The Shadow Croaker**: a pitch-black frog with glowing eyes that stands perfectly still far away in dark places. Stare back at it and it blinks out. Unlocks Glowing eyes.
 - **ERR0R**: a glitching frog that teleports around with a scrambled name. Catch it and it crashes, dropping flies. Unlocks the Glitch skin.
 - **The Golden Frog**: a lucky frog that hops away fast. Catch it for 25 flies and the Lucky clover hat.
+
+Some room codes are haunted: each mystery frog has three secret codes where it shows up much more often. Listen for clues when they vanish.
 
 Mystery frogs show up in the Players list as "???" while they're around. They can be turned off on the menu.
 

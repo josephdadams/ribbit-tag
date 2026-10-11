@@ -664,6 +664,9 @@ function steps(list, m, size = 2.6, post) {
   }
 }
 
+Object.assign(M, { // the Stump
+  stBark: lam(0x5a3d26), stTube: new THREE.MeshLambertMaterial({ color: 0x5a3d26, side: THREE.DoubleSide }), stWood: lam(0xc79a62), stRing: lam(0xa87a48), stMoss: lam(0x4f7d34), stRedCap: lam(0xd8442f), stDot: lam(0xfff4e0),
+});
 Object.assign(M, { // the Backrooms
   brWall: lam(0xd8c46c), brStripe: lam(0xc2ad57), brCarpet: lam(0x9a884a), brDamp: lam(0x86763c), brCeil: lam(0xe6ddb4),
   brLight: fx(0xfffbe2), brTrim: lam(0xa8944e), brExit: fx(0x3ddc6a), brBox: lam(0xb08a55),
@@ -1382,6 +1385,54 @@ const MAPS = {
         for (const f of flick) { const on = Math.sin(t * 13 + f.ph) + Math.sin(t * 3.1 + f.ph * 2) > -0.6; f.m.emissiveIntensity = on ? 0.6 : 0.05; f.m.color.setHex(on ? 0xfffbe2 : 0x8a8466); }
         if ((humT -= dt) <= 0) { humT = 5 + Math.random() * 6; if (actx && state === 'play') sfxTone(118, 120, 1.6, 'sawtooth', 0.012); }
       });
+    },
+  },
+  stump: {
+    label: 'The Stump', sky: 0xf0b98a, fog: [18, 70], hemi: [0xffe8cc, 0x3d5a24, 0.9], sun: 0.65, fx: 'fireflies',
+    spawn: [0, 16], ring: [0, 0, 15],
+    idle: ["Meet you at the stump!", "This stump is HUGE!", "Race you to the top of the stump!", "I wonder how old this tree was.", "Who wants to hang out inside?"],
+    build() {
+      addGround(M.grass); addPatches(M.stMoss, 10, 1.5, 3.5); addWalls(M.cliff); addEdgeRocks(M.rock, 24, 6);
+      // the giant hollow stump: a ring of bark walls you can climb, with a doorway facing the spawn
+      const SR = 9, SH = 8, T = 1.4, SEG = 18;
+      for (let i = 0; i < SEG; i++) {
+        const a = (i + 0.5) / SEG * Math.PI * 2;
+        if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a)) - Math.PI / 2) < 0.3) continue; // doorway on the +z side
+        addBox(Math.cos(a) * SR, SH / 2, Math.sin(a) * SR, 2.8, SH, 2.8, M.stBark, true, true); // invisible blocks; the bark tube below is the look
+      }
+      // the look: a bark tube with a pale wooden top rim and growth rings
+      // inner bark wall (darker) so the inside looks hollow, plus doorway edges
+      const inner = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(SR - T / 2, SR - T / 2, SH, SEG, 1, true, 0.2, Math.PI * 2 - 0.4))), M.stTube)); inner.position.set(0, SH / 2, 0);
+      for (const sx of [-1, 1]) { const e = put(new THREE.Mesh(boxGeo, M.stWood)); e.scale.set(T + 0.6, SH, 0.3); e.position.set(Math.sin(0.2) * SR * sx, SH / 2, Math.cos(0.2) * SR); e.rotation.y = 0.2 * sx; }
+      const bark = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(SR + T / 2, SR + T / 2 + 0.6, SH, SEG, 1, true, 0.2, Math.PI * 2 - 0.4))), M.stTube)); bark.position.set(0, SH / 2, 0);
+      const rim = put(new THREE.Mesh(geo(new THREE.RingGeometry(SR - T / 2, SR + T / 2 + 0.05, SEG * 2, 1, Math.PI * 1.5 + 0.2, Math.PI * 2 - 0.4)), M.stWood)); rim.rotation.x = -Math.PI / 2; rim.position.set(0, SH + 0.52, 0);
+      const ring2 = put(new THREE.Mesh(geo(new THREE.RingGeometry(SR - 0.2, SR + 0.05, SEG * 2, 1, Math.PI * 1.5 + 0.2, Math.PI * 2 - 0.4)), M.stRing)); ring2.rotation.x = -Math.PI / 2; ring2.position.set(0, SH + 0.54, 0);
+      // soft moss floor inside, and mushroom shelves spiralling up the inner wall
+      const floor = put(new THREE.Mesh(geo(new THREE.CircleGeometry(SR - 0.6, SEG)), M.stMoss)); floor.rotation.x = -Math.PI / 2; floor.position.y = 0.03;
+      for (let k = 0; k < 7; k++) {
+        const a = -Math.PI / 2 + k * 0.8, r = SR - 2;
+        addCap(Math.cos(a) * r, 1.2 + k * 1.05, Math.sin(a) * r, 1.5, k % 2 ? M.stRedCap : M.mushB);
+      }
+      // a log bench and a little lantern in the middle
+      addBox(0, 0.5, -2, 4, 1, 1.1, M.trunk, true);
+      addPillar(3.5, -3.5, 0.12, 1.6, M.trunk, 0.12);
+      const lamp = put(new THREE.Mesh(ballGeo, M.flame)); lamp.scale.setScalar(0.35); lamp.position.set(3.5, 1.9, -3.5);
+      // big roots spreading out like stairs
+      for (const [ang, len] of [[0.3, 9], [1.9, 8], [2.9, 10], [4.0, 8], [5.2, 9]]) {
+        for (let k = 0; k < 4; k++) {
+          const d = SR + 1.4 + k * (len / 4), h = 3.2 - k * 0.75;
+          addBox(Math.cos(ang) * d, h / 2, Math.sin(ang) * d, 2.4, h, 2.4, M.stBark, true);
+        }
+      }
+      // red mushrooms with white dots around the clearing, and a ring of trees
+      const taken = [[0, 0]];
+      scatter(8, 5, taken, (x, z) => Math.hypot(x, z) > 15, (x, z) => {
+        const h = 1.4 + srnd() * 2.2;
+        addPillar(x, z, 0.35, h, M.stem, 0.3);
+        addCap(x, h + 0.3, z, 1.4 + srnd() * 0.6, M.stRedCap);
+        for (let k = 0; k < 4; k++) { const d = put(new THREE.Mesh(ballGeo, M.stDot)); d.scale.set(0.18, 0.08, 0.18); const a = srnd() * 6.28; d.position.set(x + Math.cos(a) * 0.6, h + 0.66, z + Math.sin(a) * 0.6); }
+      });
+      scatter(12, 6, taken, (x, z) => Math.hypot(x, z) > 20, (x, z) => addTree(x, z, 0.8, 7 + srnd() * 4, 3.2));
     },
   },
   // ===== Holiday maps (only on the menu during their season) =====
@@ -2376,6 +2427,7 @@ const SONGS = {
   reef:    { bpm: 80,  root: 60, scale: 'lydian', lead: 'bell',   drums: 'soft',  prog: [0, 1, 5, 4], seed: 149, pad: true, echo: true },
   toys:    { bpm: 126, root: 67, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 3, 4, 0], seed: 151 },
   icecastle: { bpm: 92, root: 64, scale: 'minor', lead: 'bell',   drums: 'soft',  prog: [0, 5, 3, 6], seed: 163, pad: true, echo: true },
+  stump:   { bpm: 100, root: 62, scale: 'major', lead: 'flute',   drums: 'light', prog: [0, 3, 4, 0], seed: 199, pad: true },
   backrooms: { bpm: 72, root: 58, scale: 'lydian', lead: 'bell',  drums: 'soft',  prog: [0, 1, 0, 5], seed: 167, pad: true, echo: true },
   manor:   { bpm: 86,  root: 57, scale: 'phrygian', lead: 'bell', drums: 'soft',  prog: [0, 1, 0, 5], seed: 171, pad: true, echo: true },
   farm:    { bpm: 104, root: 62, scale: 'major', lead: 'pluck',   drums: 'light', prog: [0, 3, 4, 0], seed: 173 },
@@ -3014,7 +3066,7 @@ for (const a of ALL_AIS) {
 // what frogs call each map when they talk about where they are
 const PLACE = { forest: 'forest', caves: 'cave', canyon: 'canyon', beach: 'beach', snow: 'mountain', volcano: 'volcano', sky: 'sky', moon: 'moon',
   candy: 'candy land', spooky: 'spooky woods', city: 'city', pond: 'pond', swamp: 'swamp', garden: 'garden', canopy: 'rainforest', cove: 'cove',
-  reef: 'reef', toys: 'toy room', icecastle: 'castle', backrooms: 'maze', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
+  reef: 'reef', toys: 'toy room', icecastle: 'castle', stump: 'stump', backrooms: 'maze', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
   rainbow: 'meadow', eggs: 'meadow', fireworks: 'lake' };
 function fill(text, ai, extra) {
   extra = extra || {};
@@ -3393,6 +3445,10 @@ async function joinNet(code, lobby, role = 'auto') {
   if (!libs.length) { flash('No connection', "Couldn't reach the internet, so this is a solo game.", 3); return; }
   const room = joinMulti(libs, lobby ? 'public-' + lobby : 'room-' + code);
   myId = libs[0].lib.selfId; player.id = myId;
+  if (!lobby && mysteryOn && ghostRoomFor(code)) { // a haunted code: someone will visit soon
+    mysteryTimer = Math.min(mysteryTimer, 12 + Math.random() * 8);
+    setTimeout(() => { if (state === 'play') flash('This room feels... strange.', 'Keep your eyes open.', 2.8, '#d7c8ff'); }, 4500);
+  }
   net = { room, code, role, lobby: lobby || 0, isPublic: !!lobby, hostId: role === 'guest' ? null : myId, relays: room.sockets, joinedAt: performance.now(),
     pos: room.makeAction('pos'), snap: room.makeAction('snap'), ev: room.makeAction('ev'), prof: room.makeAction('prof') };
   const profile = myProfile;
@@ -3661,6 +3717,7 @@ const MAP_INFO = {
   reef: 'Underwater! Swim slowly around a sunken ship, a giant clam, coral and a kelp forest.',
   toys: "A giant bedroom and you're toy-sized! Bounce on the bed, climb block towers and dive in the ball pit.",
   icecastle: 'A slippery ice castle with towers, walkways on the walls and an icy courtyard to slide on.',
+  stump: 'A giant hollow tree stump to hang out in. Climb the mushroom shelves inside, run along the rim and hop down the roots.',
   backrooms: 'Endless yellow rooms, soggy carpet and humming lights. Climb the walls and swing from the ceiling!',
   manor: 'A haunted mansion with two floors, flickering candles, floating ghosts and a hedge maze. Boo!',
   farm: 'A red barn with a hayloft, a tractor, a corn maze, a scarecrow and a pumpkin patch.',
@@ -3853,6 +3910,17 @@ const MYSTERY_DEFS = {
     lines: ["You caught me!", "Lucky you!"],
     react: ["Was that a GOLDEN frog?!", "So shiny!", "Catch it next time!", "Lucky, lucky!"] },
 };
+// Ghost codes: each mystery frog haunts three room codes. Play in one and that frog shows up soon and often.
+// They sometimes whisper one of their codes as they vanish, so players can find them by playing.
+const GHOST_CODES = {
+  lumi: ['STARLIGHT', 'LULLABY', 'MOONBEAM'],
+  shadow: ['MIDNIGHT', 'BLACKOUT', 'WATCHER'],
+  glitch: ['ERR0R404', 'GLITCH', 'STATIC'],
+  golden: ['JACKPOT', 'LUCKY7', 'GOLDRUSH'],
+};
+const ghostRoomFor = code => code ? Object.keys(GHOST_CODES).find(k => GHOST_CODES[k].includes(code)) || null : null;
+const ghostRoom = () => ghostRoomFor(net ? net.code : cleanCode($('roomIn').value));
+const ghostDelay = () => ghostRoom() ? 25 + Math.random() * 20 : (DARK_MAPS.includes(mapKey) ? 60 : 110) + Math.random() * 90;
 const mysteries = {};
 for (const [key, def] of Object.entries(MYSTERY_DEFS)) {
   const o = makeFrog(def.skin, def.look);
@@ -3889,6 +3957,8 @@ function mysterySay(m, text) {
 }
 function pickMystery() {
   if (forced && mysteries[forced]) return mysteries[forced];
+  const haunt = ghostRoom();
+  if (haunt && mysteries[haunt] && Math.random() < 0.85) return mysteries[haunt];
   const pool = [];
   for (const m of Object.values(mysteries)) for (let i = 0; i < m.def.weight(); i++) pool.push(m);
   return pool.length ? pick(pool) : mysteries.lumi;
@@ -3913,9 +3983,14 @@ function mysteryVanish(m, how) { // how: 'caught' | 'stared' | 'near' | 'timeout
   if (!m || !m.active) return;
   m.active = false; m.group.visible = false; m.tag.hidden = true; mysteryActive = null;
   if (music.master) music.master.gain.value = musicOn ? 0.22 : 0;
-  mysteryTimer = (DARK_MAPS.includes(mapKey) ? 60 : 110) + Math.random() * 90;
+  mysteryTimer = ghostDelay();
   if (how === 'off') return;
   if (how !== 'timeout') mysterySay(m, pick(m.def.lines));
+  if (how !== 'timeout' && Math.random() < 0.4) { // a clue: one of the codes it haunts
+    const code = pick(GHOST_CODES[m.key]);
+    const clue = { lumi: `Come find me in ${code}...`, shadow: `...${code}...`, glitch: `R00M_C0DE: ${code}`, golden: `Psst! Try room ${code}!` }[m.key];
+    setTimeout(() => { if (state === 'play') { mysterySay(m, clue); m.bubble.hidden = false; } }, 2200);
+  }
   if (m.key === 'glitch') { sfxTone(800, 60, 0.4, 'square', 0.1); sfxSlap(0.3); } else sfxTone(900, 200, 0.6, 'sine', 0.06);
   if (how === 'caught' && m.key === 'golden') { addFlies(25); flash('You caught the Golden Frog!', '+25 flies!', 3, '#ffd23f'); }
   if (how === 'caught' && m.key === 'glitch') { addFlies(5); flash('ERR0R crashed!', 'It dropped 5 flies.', 2.6, '#52ffb0'); }
