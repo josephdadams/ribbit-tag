@@ -6,6 +6,19 @@ A 3D tag game for the browser where you play as a frog with sticky hands and no 
 
 It runs on tablets (including Amazon Fire tablets), phones, and computers. There is nothing to install.
 
+![Frogs in their outfits chatting in the Forest map](docs/screenshots/forest.png)
+
+## Screenshots
+
+| | |
+| --- | --- |
+| ![The main menu with room codes, game modes and the how-to-move guide](docs/screenshots/menu.png) | ![Capture the Lily Pad: the Green team's base and lotus on the Lily Pond map](docs/screenshots/capture-the-lily-pad.png) |
+| **Menu** | **Capture the Lily Pad** |
+| ![Candy Land with candy canes, cupcakes and the three-tier cake](docs/screenshots/candy-land.png) | ![Moon Base with a rocket, crystals and Earth in the sky](docs/screenshots/moon-base.png) |
+| **Candy Land** | **Moon Base** |
+| ![Spooky Woods at night with a haunted house and a giant pumpkin](docs/screenshots/spooky-woods.png) | ![The Wardrobe with a blue poison dart frog wearing a crown, sunglasses and a cape](docs/screenshots/wardrobe.png) |
+| **Spooky Woods** | **Wardrobe** |
+
 ## How to play
 
 ### Touch
