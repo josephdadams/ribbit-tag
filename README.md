@@ -66,6 +66,7 @@ On menus, the D-pad or left stick moves between buttons, `A` picks, and `B` goes
 | `I` | What mode is this? (rules and map) |
 | `H` | Become the host |
 | `M` | Music on/off |
+| `G` | Get in or out of a Toadhog |
 | `Esc` | Close a panel, or go back to the menu |
 
 On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freeze Tag, `5` Hot Potato, `6` Fly Feast, `7` Free Play, `8` King of the Lily Pad, `Q` Daily quests, `O` Play online, `R` Wardrobe.
@@ -102,7 +103,20 @@ Every day brings three new quests, like "Catch 25 flies", "Unfreeze 4 frogs in F
 
 ## Maps
 
-Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), and The Backrooms (a yellow maze under humming lights).
+Forest, Mega Map, Frog Gulch, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), and The Backrooms (a yellow maze under humming lights).
+
+- **Mega Map**: one giant world. Forest in the middle, a city to the east, snowy peaks to the north, and caves underneath. Tunnels, a subway, a log bridge and a skybridge join it all up, and a ramp lets you drive down into the caves.
+- **Frog Gulch**: a long grassy canyon with a base at each end (great for Capture the Lily Pad), rolling hills, a rock arch and teleporters up to the cliff perches.
+
+### Toadhogs
+
+The Mega Map and Frog Gulch have **Toadhogs**: jeeps with frog eyes. Walk up to one and tap **Drive** (or press `G`, or `LB` on a controller). Three frogs fit: a driver, a passenger and one standing in the back.
+
+- Keyboard: `W`/`S` to drive, `A`/`D` to steer, `Space` to honk.
+- Touch: put a finger down and drag up to drive, down to reverse, sideways to steer.
+- Controller: left stick, or `RT`/`LT` for gas and reverse. `A` honks.
+
+A speeding Toadhog bumps frogs out of the way, and a lava frog driving one tags anyone it hits. Empty hogs drive themselves home after a while.
 
 ### Holiday maps
 

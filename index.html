@@ -104,6 +104,7 @@ h1 span { color: var(--lava); display: block; }
 #info { font-family: var(--body); font-weight: 800; font-size: .95rem; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .spacer { flex: 1; }
 #menuBtn { pointer-events: auto; border: 0; cursor: pointer; }
+#hogBtn { position: absolute; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: var(--leaf); color: var(--ink); font-size: 1.3rem; padding: 12px 22px; touch-action: manipulation; }
 #radar { position: absolute; top: calc(58px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
 #radar .arrow { width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 18px solid currentColor; display: inline-block; }
 #radar.chase { color: var(--lava); }
@@ -222,6 +223,20 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .quest .claim { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; background: #ffd23f; color: var(--ink); }
 .quest .claim:focus-visible { outline: 3px solid var(--bone); outline-offset: 2px; }
 .quest.done { box-shadow: inset 0 0 0 2px #ffd23f; }
+#frogsPanel { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 4; display: grid; place-items: center; padding: 16px; background: rgba(10,26,16,.6); }
+#frogsPanel .qp-card { width: min(560px, 100%); }
+#frogList { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.mf { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; background: var(--canopy); border-radius: 14px; padding: 10px 12px; border-left: 6px solid var(--sig); }
+.mf .face { grid-row: 1 / span 3; width: 44px; height: 44px; border-radius: 50%; background: var(--skin); box-shadow: inset 0 0 0 3px var(--sig); position: relative; }
+.mf .face::before, .mf .face::after { content: ''; position: absolute; top: 9px; width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 3px #1b1b22; }
+.mf .face::before { left: 8px; } .mf .face::after { right: 8px; }
+.mf b { font-weight: 800; font-size: 1.05rem; } .mf b span { color: var(--sig); }
+.mf p { grid-column: 2; margin: 0; font-size: .88rem; line-height: 1.3; }
+.mf small { grid-column: 2; font-weight: 700; font-size: .78rem; opacity: .8; }
+.mf q { grid-column: 2; font-style: italic; font-size: .85rem; color: var(--sig); }
+.mf q:empty { display: none; }
+.mf .hi { grid-column: 3; grid-row: 1 / span 3; font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; background: var(--sig); color: var(--ink); }
+.mf .hi:focus-visible { outline: 3px solid var(--bone); outline-offset: 2px; }
 .quest.claimed { opacity: .65; }
 .quest.claimed .qbar i { background: #ffd23f; }
 .quests-btn { margin-top: 10px; }
@@ -278,6 +293,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
     <button id="talkBtn" class="chip" type="button">Talk</button>
     <button id="menuBtn" class="chip" type="button">Menu</button>
   </div>
+  <button id="hogBtn" class="chip" type="button" hidden>Drive</button>
   <div id="bubbles"></div>
   <div id="scores" hidden>
     <div class="pl-head"><h2 id="scTitle">Scores</h2><span class="spacer"></span><button id="scClose" class="pill-btn" type="button">Close</button></div>
@@ -383,6 +399,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       </div>
       <button class="wardrobe-btn quests-btn" id="questsBtn" type="button"><span>Daily quests</span><span class="wb-count" id="questCount">0/3</span></button>
       <button class="wardrobe-btn" id="wardrobeBtn" type="button"><span>Wardrobe</span><span class="wb-count"><svg class="ban" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="7.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(-25 7.5 9)"/><ellipse cx="16.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(25 16.5 9)"/><ellipse cx="12" cy="14" rx="3.6" ry="5.4" fill="#1b1b22"/><circle cx="10.6" cy="9.6" r="1.3" fill="#d62828"/><circle cx="13.4" cy="9.6" r="1.3" fill="#d62828"/></svg><span id="menuFlies">0</span></span></button>
+      <button class="wardrobe-btn" id="frogsBtn" type="button"><span>Meet the frogs</span><span class="wb-count">9</span></button>
       <div class="row">
         <span class="label">Frog speed</span>
         <div class="seg" id="diff">
@@ -449,7 +466,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
           <p class="keys-sub">On menus</p><dl class="keys"><dt><kbd>D-pad</kbd></dt><dd>Move around</dd><dt><kbd>A</kbd></dt><dd>Pick</dd><dt><kbd>B</kbd></dt><dd>Go back</dd></dl></div></li>
         <li class="keys-li"><span class="ic">Key</span><div><strong>Keyboard</strong>
           <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>L</kbd></dt><dd>Scores</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
-          <p class="keys-sub">On the menu</p><dl class="keys"><dt><kbd>1</kbd></dt><dd>Infection</dd><dt><kbd>2</kbd></dt><dd>Classic</dd><dt><kbd>3</kbd></dt><dd>Capture the Lily Pad</dd><dt><kbd>4</kbd></dt><dd>Freeze Tag</dd><dt><kbd>5</kbd></dt><dd>Hot Potato</dd><dt><kbd>6</kbd></dt><dd>Fly Feast</dd><dt><kbd>7</kbd></dt><dd>Free Play</dd><dt><kbd>8</kbd></dt><dd>King of the Lily Pad</dd><dt><kbd>Q</kbd></dt><dd>Daily quests</dd><dt><kbd>O</kbd></dt><dd>Play online</dd><dt><kbd>R</kbd></dt><dd>Wardrobe</dd></dl></div></li>
+          <p class="keys-sub">On the menu</p><dl class="keys"><dt><kbd>1</kbd></dt><dd>Infection</dd><dt><kbd>2</kbd></dt><dd>Classic</dd><dt><kbd>3</kbd></dt><dd>Capture the Lily Pad</dd><dt><kbd>4</kbd></dt><dd>Freeze Tag</dd><dt><kbd>5</kbd></dt><dd>Hot Potato</dd><dt><kbd>6</kbd></dt><dd>Fly Feast</dd><dt><kbd>7</kbd></dt><dd>Free Play</dd><dt><kbd>8</kbd></dt><dd>King of the Lily Pad</dd><dt><kbd>Q</kbd></dt><dd>Daily quests</dd><dt><kbd>O</kbd></dt><dd>Play online</dd><dt><kbd>R</kbd></dt><dd>Wardrobe</dd><dt><kbd>F</kbd></dt><dd>Meet the frogs</dd></dl></div></li>
       </ul>
     </div>
   </div>
@@ -462,6 +479,13 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
     <div class="pl-head"><h2>Daily quests</h2><span class="spacer"></span><button id="questsClose" class="pill-btn" type="button">Close</button></div>
     <ul id="questList"></ul>
     <p class="note" id="questReset"></p>
+  </div>
+</div>
+<div id="frogsPanel" hidden>
+  <div class="qp-card">
+    <div class="pl-head"><h2>Meet the frogs</h2><span class="spacer"></span><button id="frogsClose" class="pill-btn" type="button">Close</button></div>
+    <ul id="frogList"></ul>
+    <p class="note">Tap a frog in the game to talk to it. Ask its name, what it eats, or for a joke!</p>
   </div>
 </div>
 <button id="update" type="button" hidden>A new version is ready. Tap to update.</button>
@@ -487,7 +511,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-16';
+const APP_VERSION = 'ribbit-17';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -513,7 +537,7 @@ sun.position.set(20, 40, 10);
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -38, right: 38, top: 38, bottom: -38, near: 1, far: 120 });
 sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
-scene.add(sun);
+scene.add(sun); scene.add(sun.target);
 const shadowsWanted = () => !(MAPS[mapKey] && MAPS[mapKey].indoor) && (gfx === 'nice' || (gfx === 'auto' && !shadowAutoOff));
 // everything solid casts and catches shadows; see-through things (ghosts, glass, water) don't cast
 function shadowFlags(root) { root.traverse(m => { if (m.isMesh) { const clear = m.material && m.material.transparent; m.castShadow = !clear; m.receiveShadow = true; } }); }
@@ -551,7 +575,11 @@ const M = {
 const LAVA = 0xff5a1f, LAVA_GLOW = 0x7a2000;
 
 // ---------- World ----------
-const R = 0.5, REACH = 1.0, HALF = 30;
+const R = 0.5, REACH = 1.0;
+let HALF = 30; // half the arena's width; big maps set their own
+const flatGround = () => 0;
+let groundAt = flatGround; // height of the ground itself (hills, cave floors); boxes sit on top of it
+let hogs = [], teleports = [];
 let G = 18;
 const boxes = [], trees = [], blobs = [], ledges = [];
 const mapGroup = new THREE.Group();
@@ -701,7 +729,8 @@ function addClouds() {
 function addTufts(m, n, zMax = HALF) {
   const t = put(new THREE.InstancedMesh(geo(facet(new THREE.ConeGeometry(0.16, 0.45, 4))), m, n)), d = new THREE.Object3D();
   for (let i = 0; i < n; i++) {
-    d.position.set((srnd() - .5) * HALF * 2, 0.2, Math.min(zMax, (srnd() - .5) * HALF * 2));
+    const tx = (srnd() - .5) * HALF * 2, tz = Math.min(zMax, (srnd() - .5) * HALF * 2);
+    d.position.set(tx, groundAt(tx, tz) + 0.2, tz);
     d.rotation.set(0, srnd() * 6, 0); d.scale.setScalar(0.7 + srnd() * 0.8); d.updateMatrix(); t.setMatrixAt(i, d.matrix);
   }
 }
@@ -731,6 +760,546 @@ Object.assign(M, { // the Backrooms
   brLight: fx(0xfffbe2), brTrim: lam(0xa8944e), brExit: fx(0x3ddc6a), brBox: lam(0xb08a55),
 });
 
+Object.assign(M, { // the Mega Map, Frog Gulch and the Toadhog
+  tunnelLamp: fx(0xffe9a8), train: lam(0x3a86ff), trainStripe: lam(0xffd23f), tile: lam(0xcfc8b8),
+  gulchGrass: lam(0x6fa845), gulchCliff: lam(0x8f897c), gulchCliffDark: lam(0x736d62), baseMetal: lam(0x9aa1a8), baseDark: lam(0x5c636b),
+  teleRing: fx(0x3fd0ff), teleGlow: new THREE.MeshLambertMaterial({ color: 0x7fe8ff, emissive: 0x3fb8ff, emissiveIntensity: 0.8, transparent: true, opacity: 0.7, depthWrite: false }),
+  hogTire: lam(0x26262b), hogHub: lam(0xb8bcc4), hogMetal: lam(0x6b7378), hogSeat: lam(0x2f2f36), hogSand: lam(0xc9a86a),
+  hogGreen: lam(0x5a9a3a), hogBlue: lam(0x3f72c0), hogLight: fx(0xfff1b8),
+});
+function plane(x0, x1, z0, z1, y, m) { // a flat floor piece with no collider
+  const g = put(new THREE.Mesh(geo(new THREE.PlaneGeometry(x1 - x0, z1 - z0)), m));
+  g.rotation.x = -Math.PI / 2; g.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); return g;
+}
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
+
+// ---------- Toadhogs: jeeps you can drive ----------
+// Up to three frogs ride in one: a driver, a passenger and one standing in the back. Whoever drives
+// moves the hog on their own device and sends where it is; parked hogs follow the host.
+const HOG = { accel: 12, max: 17, rev: 7, turn: 1.9, r: 1.4, step: 0.75 };
+const HOG_SEATS = [[-0.45, 1.4, 0.1], [0.45, 1.4, 0.1], [0, 1.65, 1.25]];
+let hogWheelGeo = null, hogEyeGeo = null;
+function addHog(x, z, yaw, paint = M.hogSand) {
+  hogWheelGeo = hogWheelGeo || facet(new THREE.CylinderGeometry(0.5, 0.5, 0.4, 12));
+  const g = new THREE.Group(); g.rotation.order = 'YXZ'; put(g);
+  const box = (m, sx, sy, sz, px, py, pz) => part(g, boxGeo, m, sx, sy, sz, px, py, pz);
+  box(paint, 2.0, 0.45, 3.6, 0, 0.75, 0);                 // chassis
+  box(paint, 1.9, 0.35, 1.3, 0, 1.1, -1.1);               // hood
+  box(M.hogMetal, 1.6, 0.4, 0.1, 0, 0.95, -1.82);         // grille
+  for (const s of [-1, 1]) {
+    box(paint, 0.4, 0.14, 1.15, s * 1.05, 1.2, -1.2); box(paint, 0.4, 0.14, 1.15, s * 1.05, 1.2, 1.2); // fenders
+    part(g, ballGeo, M.eye, 0.2, 0.2, 0.2, s * 0.55, 1.36, -1.45);    // big frog-eye headlights
+    part(g, ballGeo, M.pupil, 0.1, 0.1, 0.06, s * 0.55, 1.4, -1.63);
+    box(M.hogLight, 0.32, 0.16, 0.06, s * 0.6, 0.95, -1.88);
+    box(M.hogSeat, 0.62, 0.16, 0.6, s * 0.45, 1.05, 0.15); box(M.hogSeat, 0.62, 0.32, 0.12, s * 0.45, 1.25, 0.5); // seats
+    box(M.hogMetal, 0.08, 0.5, 0.08, s * 0.92, 1.5, -0.5);  // windshield posts
+    box(M.hogMetal, 0.1, 0.9, 0.1, s * 0.9, 1.45, 0.75);    // roll bar
+    box(paint, 0.1, 0.35, 1.2, s * 0.95, 1.15, 1.25);       // bed sides
+  }
+  box(M.hogMetal, 1.9, 0.08, 0.08, 0, 1.75, -0.5); box(M.hogMetal, 1.9, 0.1, 0.1, 0, 1.9, 0.75); box(paint, 2.0, 0.35, 0.1, 0, 1.15, 1.85);
+  box(M.hogTire, 0.4, 0.05, 0.05, -0.45, 1.45, -0.3); box(M.hogTire, 0.05, 0.05, 0.4, -0.45, 1.45, -0.3); // steering wheel
+  const wheels = [], fronts = [];
+  for (const [wx, wz] of [[-1.05, -1.2], [1.05, -1.2], [-1.05, 1.2], [1.05, 1.2]]) {
+    const pivot = new THREE.Group(); pivot.position.set(wx, 0.5, wz); g.add(pivot);
+    const spin = new THREE.Group(); pivot.add(spin);
+    part(spin, hogWheelGeo, M.hogTire, 1, 1, 1, 0, 0, 0, 0, 0, Math.PI / 2);
+    part(spin, boxGeo, M.hogHub, 0.42, 0.5, 0.14, 0, 0, 0);
+    wheels.push(spin); if (wz < 0) fronts.push(pivot);
+  }
+  const h = { g, wheels, fronts, home: [x, z, yaw], pos: new V(x, standY(x, z) - R, z), yaw, speed: 0, vy: 0, steer: 0, air: false, spin: 0, pitch: 0, roll: 0,
+    seats: [null, null, null], box: { min: new V(), max: new V(), hog: true }, idx: hogs.length, net: null, park: null, parkYaw: yaw, mineT: 0, idleT: 0 };
+  boxes.push(h.box); hogs.push(h); hogPose(h, 1);
+  return h;
+}
+function hogGround(h, x, z) { // the highest thing under the hog that's low enough to drive onto
+  let y = groundAt(x, z);
+  const lim = h.pos.y + HOG.step;
+  for (const b of boxes) {
+    if (b === h.box || b.max.y > lim || b.max.y <= y) continue;
+    if (x > b.min.x - 0.6 && x < b.max.x + 0.6 && z > b.min.z - 0.6 && z < b.max.z + 0.6) y = b.max.y;
+  }
+  return y;
+}
+function hogSlide(h, nx, nz) { // lose the speed going into a wall, keep the part that slides along it
+  const fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw), vx = fx * h.speed, vz = fz * h.speed, vn = vx * nx + vz * nz;
+  if (vn >= 0) return 0;
+  h.speed = (vx - nx * vn * 1.25) * fx + (vz - nz * vn * 1.25) * fz;
+  return -vn;
+}
+function hogWalls(h) {
+  const p = h.pos, r = HOG.r, lo = p.y + HOG.step, hi = p.y + 1.6;
+  let hit = 0;
+  for (const b of boxes) {
+    if (b === h.box || b.max.y <= lo || b.min.y >= hi) continue;
+    if (p.x < b.min.x - r || p.x > b.max.x + r || p.z < b.min.z - r || p.z > b.max.z + r) continue;
+    let nx = p.x - clamp(p.x, b.min.x, b.max.x), nz = p.z - clamp(p.z, b.min.z, b.max.z), d = Math.hypot(nx, nz), pen;
+    if (d >= r) continue;
+    if (d < 1e-4) { // middle of the hog is inside the box: back out the nearest side
+      const sides = [[p.x - b.min.x, -1, 0], [b.max.x - p.x, 1, 0], [p.z - b.min.z, 0, -1], [b.max.z - p.z, 0, 1]].sort((u, v) => u[0] - v[0]);
+      [pen, nx, nz] = sides[0]; pen += r;
+    } else { nx /= d; nz /= d; pen = r - d; }
+    p.x += nx * pen; p.z += nz * pen;
+    hit = Math.max(hit, hogSlide(h, nx, nz));
+  }
+  for (const t of trees) {
+    if (t.h <= lo || t.y0 >= hi) continue;
+    let dx = p.x - t.x, dz = p.z - t.z, d = Math.hypot(dx, dz);
+    if (d >= t.r + r) continue;
+    if (d < 1e-4) { dx = 1; dz = 0; d = 1; }
+    p.x = t.x + dx / d * (t.r + r); p.z = t.z + dz / d * (t.r + r);
+    hit = Math.max(hit, hogSlide(h, dx / d, dz / d));
+  }
+  return hit;
+}
+function hogDrive(h, dt, thr, str) {
+  h.steer += (str - h.steer) * Math.min(1, dt * 8);
+  if (!h.air) {
+    if (thr) h.speed += thr * HOG.accel * dt * (h.speed * thr < 0 ? 2 : 1);
+    else h.speed *= Math.exp(-(h.seats[0] ? 1.2 : 2.5) * dt);
+    h.speed = clamp(h.speed, -HOG.rev, HOG.max);
+    h.yaw += h.steer * HOG.turn * dt * clamp(h.speed / 6, -1, 1);
+  }
+  h.pos.x += -Math.sin(h.yaw) * h.speed * dt; h.pos.z += -Math.cos(h.yaw) * h.speed * dt;
+  const hit = hogWalls(h);
+  if (hit > 5 && h.seats.includes(player)) { sfxSlap(0.3); rumble(120, Math.min(1, hit / 12)); }
+  h.pos.x = clamp(h.pos.x, -HALF + HOG.r, HALF - HOG.r); h.pos.z = clamp(h.pos.z, -HALF + HOG.r, HALF - HOG.r);
+  const gy = hogGround(h, h.pos.x, h.pos.z), ball = h.pos.y + h.vy * dt - 0.5 * G * dt * dt;
+  if (gy >= ball || (!h.air && h.pos.y - gy < 0.25)) { // on the ground (it catches us before gravity would)
+    const climb = gy - h.pos.y, fall = h.vy, wasAir = h.air;
+    h.vy = wasAir || Math.abs(climb) > 0.3 ? 0 : clamp(climb / dt, -14, 14); // following hills keeps the bounce for crests
+    h.pos.y = gy; h.air = false;
+    if (wasAir && fall < -7 && h.seats.includes(player)) { sfxSlap(0.4); rumble(160, 0.6); }
+  } else { h.air = true; h.vy -= G * dt; h.pos.y = ball; }
+  hogPose(h, dt);
+}
+function hogPose(h, dt) {
+  const p = h.pos, fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw);
+  if (!h.air) {
+    const f = hogGround(h, p.x + fx * 1.3, p.z + fz * 1.3), b = hogGround(h, p.x - fx * 1.3, p.z - fz * 1.3);
+    const rt = hogGround(h, p.x - fz * 0.9, p.z + fx * 0.9), lt = hogGround(h, p.x + fz * 0.9, p.z - fx * 0.9);
+    const k = Math.min(1, dt * 10);
+    h.pitch += (clamp(Math.atan2(f - b, 2.6), -0.5, 0.5) - h.pitch) * k;
+    h.roll += (clamp(Math.atan2(rt - lt, 1.8), -0.4, 0.4) - h.roll) * k;
+  } else h.pitch += (-0.05 - h.pitch) * Math.min(1, dt * 2);
+  h.g.position.copy(p); h.g.rotation.set(h.pitch, h.yaw, h.roll);
+  h.spin += h.speed * dt / 0.5;
+  for (const w of h.wheels) w.rotation.x = -h.spin;
+  for (const f of h.fronts) f.rotation.y = h.steer * 0.45;
+  h.box.min.set(p.x - 1.2, p.y + 0.35, p.z - 1.2); h.box.max.set(p.x + 1.2, p.y + 1.3, p.z + 1.2);
+}
+function seatPos(h, s, out) {
+  const [sx, sy, sz] = HOG_SEATS[s], c = Math.cos(h.yaw), sn = Math.sin(h.yaw);
+  return out.set(h.pos.x + sx * c + sz * sn, h.pos.y + sy, h.pos.z - sx * sn + sz * c);
+}
+var myFrog = null; // your own frog, shown sitting in the hog while the camera follows from behind
+function showMyFrog() { if (!myFrog) myFrog = makeFrog(skinHexOf(look), look); else dressUp(myFrog, look); myFrog.group.visible = true; }
+function hideMyFrog() { if (myFrog) myFrog.group.visible = false; }
+function canRide() { return state !== 'menu' && !player.iced && !player.out; }
+function nearHog() {
+  if (player.hog) return player.hog;
+  let best = null, bd = 3.4;
+  for (const h of hogs) {
+    const d = Math.hypot(player.pos.x - h.pos.x, player.pos.z - h.pos.z);
+    if (d < bd && Math.abs(player.pos.y - h.pos.y - 1) < 2.5 && h.seats.includes(null)) { bd = d; best = h; }
+  }
+  return best;
+}
+let hogTipped = false;
+function enterHog(h) {
+  const s = h.seats.indexOf(null); if (s < 0) return;
+  h.seats[s] = player; player.hog = h; player.seat = s; player.vel.set(0, 0, 0);
+  hogCam.yaw = h.yaw; hogCam.pos.set(h.pos.x + Math.sin(h.yaw) * 6, h.pos.y + 3, h.pos.z + Math.cos(h.yaw) * 6);
+  showMyFrog(); sfxTone(180, 320, 0.25, 'sawtooth', 0.06); $('hint').classList.add('gone');
+  if (s === 0) { if (!hogTipped) flash('Toadhog!', usedKeys ? 'W and S to drive, A and D to steer, Space to honk. G to hop out.' : 'Drag up to drive, drag sideways to steer.', 3.4, 'var(--leaf)'); hogTipped = true; }
+  else flash(s === 1 ? 'Riding shotgun!' : 'Standing in the back!', 'Drag to look around.', 2, 'var(--leaf)');
+}
+function exitHog() {
+  const h = player.hog; if (!h) return;
+  if (h.seats[player.seat] === player) h.seats[player.seat] = null;
+  const side = player.seat === 1 ? 1 : -1, c = Math.cos(h.yaw), sn = Math.sin(h.yaw);
+  let best = null;
+  for (const sd of [side, -side]) { const x = h.pos.x + sd * 2.4 * c, z = h.pos.z - sd * 2.4 * sn; if (!blockedAt(x, z)) { best = [x, z]; break; } }
+  if (best) player.pos.set(best[0], h.pos.y + 1.2, best[1]); else player.pos.set(h.pos.x, h.pos.y + 2.2, h.pos.z); // nowhere to step: hop out the top
+  player.vel.set(-sn * h.speed * 0.5, 4, -c * h.speed * 0.5);
+  player.yaw = player.seat === 0 ? h.yaw : player.yaw; player.hog = null; player.seat = -1;
+  hideMyFrog(); sfxSlap(0.25);
+}
+function toggleHog() {
+  if (player.hog) { exitHog(); return; }
+  const h = nearHog(); if (h && canRide()) enterHog(h);
+}
+function honk() { sfxTone(392, 392, 0.18, 'square', 0.08); setTimeout(() => sfxTone(330, 330, 0.22, 'square', 0.08), 140); }
+const hogPad = { t: 0, s: 0 };
+function driveInput() {
+  let t = (keys.ArrowUp || keys.KeyW ? 1 : 0) - (keys.ArrowDown || keys.KeyS ? 1 : 0);
+  let s = (keys.ArrowLeft || keys.KeyA ? 1 : 0) - (keys.ArrowRight || keys.KeyD ? 1 : 0);
+  for (const q of pointers.values()) { // touch: drag like a joystick from where your finger went down
+    const ty = (q.sy - q.y) / (innerHeight * 0.16), sx = (q.sx - q.x) / (innerWidth * 0.14);
+    t = Math.abs(ty) < 0.15 ? 0 : clamp(ty, -1, 1); s = Math.abs(sx) < 0.12 ? 0 : clamp(sx, -1, 1);
+  }
+  if (hogPad.t || hogPad.s) { t = clamp(hogPad.t, -1, 1); s = clamp(hogPad.s, -1, 1); }
+  if (player.frozen > 0) t = 0;
+  return [t, s];
+}
+const hogCam = { yaw: 0, pos: new V() }, camGoal = new V(), camLook = new V(), camStep = new V();
+function insideBox(p) { for (const b of boxes) if (!b.hog && p.x > b.min.x && p.x < b.max.x && p.y > b.min.y && p.y < b.max.y && p.z > b.min.z && p.z < b.max.z) return true; return p.y < groundAt(p.x, p.z) + 0.2; }
+function hogCamera(dt) { // chase camera behind the hog, pulled in so it doesn't end up inside a wall or cave roof
+  const h = player.hog;
+  hogCam.yaw = player.seat === 0 ? lerpAngle(hogCam.yaw, h.yaw + (h.speed < -1 ? 0 : 0), Math.min(1, dt * 4)) : player.yaw;
+  camLook.set(h.pos.x, h.pos.y + 1.4, h.pos.z);
+  camGoal.set(camLook.x + Math.sin(hogCam.yaw) * 6.2, camLook.y + 1.6, camLook.z + Math.cos(hogCam.yaw) * 6.2);
+  for (let i = 1; i <= 8; i++) { camStep.lerpVectors(camLook, camGoal, i / 8); if (insideBox(camStep)) { camGoal.lerpVectors(camLook, camGoal, (i - 1.5) / 8); break; } }
+  hogCam.pos.lerp(camGoal, 1 - Math.exp(-dt * 10));
+  camera.position.copy(hogCam.pos);
+  camera.lookAt(camLook.x - Math.sin(hogCam.yaw) * 3, camLook.y, camLook.z - Math.cos(hogCam.yaw) * 3);
+}
+const hogTmp = new V();
+function updateHogs(dt) {
+  const now = performance.now(), host = isHost();
+  if (player.hog) {
+    const h = player.hog;
+    seatPos(h, player.seat, hogTmp);
+    if (player.iced || player.out || player.pos.distanceTo(hogTmp) > 3) { player.hog.seats[player.seat] = null; player.hog = null; player.seat = -1; hideMyFrog(); } // the game moved you
+  }
+  for (const h of hogs) {
+    const d = h.seats[0];
+    if (d === player) { const [t, s] = driveInput(); hogDrive(h, dt, t, s); h.mineT = now; }
+    else if (d && d.isRemote && h.net) {
+      const n = h.net, age = Math.min(0.3, (now - n.t) / 1000), k = 1 - Math.exp(-dt * 12);
+      hogTmp.set(n.x - Math.sin(n.yaw) * n.speed * age, n.y, n.z - Math.cos(n.yaw) * n.speed * age);
+      if (h.pos.distanceTo(hogTmp) > 12) h.pos.copy(hogTmp); else h.pos.lerp(hogTmp, k);
+      h.yaw = lerpAngle(h.yaw, n.yaw, k); h.speed = n.speed; h.steer = n.steer; h.air = n.air; hogPose(h, dt);
+    } else if (!d && !host && h.park && now - h.mineT > 2000) { // parked: go where the host says it is
+      const k = 1 - Math.exp(-dt * 4);
+      if (h.pos.distanceTo(h.park) > 12) h.pos.copy(h.park); else h.pos.lerp(h.park, k);
+      h.yaw = lerpAngle(h.yaw, h.parkYaw, k); h.speed *= Math.exp(-3 * dt); hogPose(h, dt);
+    } else hogDrive(h, dt, 0, 0); // coasting to a stop
+    for (let s = 0; s < 3; s++) { const b = h.seats[s]; if (b && b !== player) { seatPos(h, s, b.pos); b.vel.set(-Math.sin(h.yaw) * h.speed, 0, -Math.cos(h.yaw) * h.speed); } }
+    if (host) { // empty hogs that were left somewhere drive themselves home after a while
+      const empty = !h.seats.some(Boolean), away = Math.hypot(h.pos.x - h.home[0], h.pos.z - h.home[1]) > 6;
+      h.idleT = empty && away ? h.idleT + dt : 0;
+      if (h.idleT > 45 && !bodies.some(b => Math.hypot(b.pos.x - h.home[0], b.pos.z - h.home[1]) < 3)) {
+        h.idleT = 0; h.pos.set(h.home[0], standY(h.home[0], h.home[1]) - R, h.home[1]); h.yaw = h.home[2]; h.speed = h.vy = 0; h.air = false; hogPose(h, 1);
+      }
+    }
+  }
+  if (player.hog) { seatPos(player.hog, player.seat, player.pos); const h = player.hog; player.vel.set(-Math.sin(h.yaw) * h.speed, h.vy, -Math.cos(h.yaw) * h.speed); player.grounded = true; }
+  // a speeding hog sends frogs flying (each device bumps its own frog; the host bumps the computer frogs)
+  for (const b of bodies) b.bumpT = Math.max(0, (b.bumpT || 0) - dt);
+  for (const h of hogs) {
+    if (Math.abs(h.speed) < 4) continue;
+    for (const b of host ? [player, ...ais] : [player]) {
+      if (b.hog || b.bumpT > 0 || b.out) continue;
+      const dx = b.pos.x - h.pos.x, dz = b.pos.z - h.pos.z, dd = Math.hypot(dx, dz) || 1;
+      if (dd > 2.1 || b.pos.y < h.pos.y - 0.3 || b.pos.y > h.pos.y + 2.3) continue;
+      const k = Math.abs(h.speed) * 0.5;
+      b.vel.set(dx / dd * k - Math.sin(h.yaw) * h.speed * 0.4, 6 + k * 0.3, dz / dd * k - Math.cos(h.yaw) * h.speed * 0.4);
+      b.bumpT = 0.8; if (!b.isPlayer) b.hopT = 0.7;
+      if (b === player) { sfxSlap(0.35); rumble(200, 0.7); flash('Boing!', 'A Toadhog bumped you.', 1, '#ffd23f'); }
+      else if (h.seats[0] === player) sfxTone(500, 250, 0.12, 'square', 0.06);
+    }
+  }
+}
+function touching(a, b, reach = 1.3) { // tag reach; a frog driving a speeding toadhog tags with the whole hog
+  const h = a.hog;
+  if (h && a.seat === 0 && Math.abs(h.speed) > 3 && Math.hypot(b.pos.x - h.pos.x, b.pos.z - h.pos.z) < 2.4 && Math.abs(b.pos.y - h.pos.y - 1) < 2) return true;
+  return a.pos.distanceTo(b.pos) < reach;
+}
+function hogNetInfo() {
+  const h = player.hog; if (!h) return 0;
+  if (player.seat !== 0) return [h.idx, player.seat];
+  return [h.idx, 0, ...[h.pos.x, h.pos.y, h.pos.z, h.yaw, h.speed, h.steer].map(r2), h.air ? 1 : 0];
+}
+function hogFromNet(r, q) {
+  const h = Array.isArray(q) ? hogs[q[0] | 0] : null, s = h ? clamp(q[1] | 0, 0, 2) : -1;
+  if (r.hog && (r.hog !== h || r.seat !== s)) { if (r.hog.seats[r.seat] === r) r.hog.seats[r.seat] = null; r.hog = null; r.seat = -1; }
+  if (!h) return;
+  const other = h.seats[s];
+  if (other === player) { // we both jumped into the same seat: the smaller id keeps it, the other slides over or hops out
+    if (myId < r.id) return;
+    h.seats[s] = null; const free = h.seats.indexOf(null, s === 0 ? 1 : 0);
+    if (free >= 0 && free !== s) { h.seats[free] = player; player.seat = free; } else { h.seats[s] = player; exitHog(); }
+  } else if (other && other !== r) { other.hog = null; other.seat = -1; }
+  h.seats[s] = r; r.hog = h; r.seat = s;
+  if (s === 0 && q.length >= 9) {
+    const n = h.net || (h.net = {}), num = v => Number.isFinite(+v) ? +v : 0;
+    Object.assign(n, { x: num(q[2]), y: num(q[3]), z: num(q[4]), yaw: num(q[5]), speed: clamp(num(q[6]), -HOG.rev, HOG.max), steer: clamp(num(q[7]), -1, 1), air: !!q[8], t: performance.now() });
+  }
+}
+
+// ---------- Teleporters: step in one ring, pop out of the other ----------
+function addTeleporter(a, b) {
+  for (const p of [a, b]) {
+    const ring = put(new THREE.Mesh(geo(new THREE.TorusGeometry(1, 0.1, 6, 24)), M.teleRing)); ring.rotation.x = Math.PI / 2; ring.position.set(p.x, p.y + 0.1, p.z);
+    const disc = put(new THREE.Mesh(geo(new THREE.CircleGeometry(0.95, 20)), M.teleGlow)); disc.rotation.x = -Math.PI / 2; disc.position.set(p.x, p.y + 0.05, p.z);
+    const beam = put(new THREE.Mesh(geo(new THREE.CylinderGeometry(0.9, 0.9, 2.4, 16, 1, true)), M.teleGlow)); beam.position.set(p.x, p.y + 1.2, p.z); beam.userData.dyn = true;
+    mapAnims.push((dt, t) => { beam.scale.set(1, 0.8 + Math.sin(t * 3 + p.x) * 0.2, 1); beam.rotation.y = t; });
+  }
+  teleports.push([a, b]);
+}
+function updateTeleports() {
+  if (!teleports.length) return;
+  for (const b of isHost() ? [player, ...ais] : [player]) {
+    if (b.hog) continue;
+    if (b.teleLock) { if (Math.hypot(b.pos.x - b.teleLock.x, b.pos.z - b.teleLock.z) > 1.6) b.teleLock = null; else continue; } // step off before it works again
+    zap: for (const [a, c] of teleports) for (const [from, to] of [[a, c], [c, a]]) {
+      if (Math.hypot(b.pos.x - from.x, b.pos.z - from.z) > 1 || Math.abs(b.pos.y - R - from.y) > 0.9) continue;
+      b.pos.set(to.x, to.y + R + 0.05, to.z); b.vel.set(0, 1, 0); b.teleLock = to;
+      if (b === player) { sfxTone(300, 1400, 0.3, 'sine', 0.1); rumble(100, 0.4); }
+      break zap;
+    }
+  }
+}
+
+// ---------- the Mega Map: forest in the middle, city to the east, snowy peaks to the north, caves underneath ----------
+const MEGA = {
+  floor: -14,
+  caves: [[-32, -8, -14, 12], [-8, 44, -4, 4], [40, 58, -9, 9], [-25, -17, -46, -14], [-26, 2, -64, -46]], // [x0, x1, z0, z1] rooms and tunnels
+  holes: [[-15, -9, 3, 9], [24, 44, -4, 4], [48, 54, 2, 8], [-5, 1, -54, -48]], // openings in the roof
+  region: (x, z) => x >= 34 ? 'city' : z <= -32 ? 'snow' : 'forest',
+};
+const inRect = (r, x, z) => x > r[0] && x < r[1] && z > r[2] && z < r[3];
+const megaGround = (x, z) => MEGA.caves.some(c => inRect(c, x, z)) ? MEGA.floor : 0;
+function megaShell() { // ground, cave roofs with holes, cave floors and walls, from a grid cut along every edge
+  const { caves, holes, region, floor } = MEGA;
+  const xs = new Set([-HALF, HALF, 34]), zs = new Set([-HALF, HALF, -32]);
+  for (const r of caves.concat(holes)) { xs.add(r[0]); xs.add(r[1]); zs.add(r[2]); zs.add(r[3]); }
+  const X = [...xs].sort((a, b) => a - b), Z = [...zs].sort((a, b) => a - b), top = { forest: M.grass, snow: M.snow, city: M.asphalt };
+  const kind = (i, j) => {
+    if (i < 0 || j < 0 || i >= X.length - 1 || j >= Z.length - 1) return 'x';
+    const x = (X[i] + X[i + 1]) / 2, z = (Z[j] + Z[j + 1]) / 2;
+    return (caves.some(c => inRect(c, x, z)) ? holes.some(h => inRect(h, x, z)) ? 'h' : 'r' : 's') + region(x, z);
+  };
+  for (let j = 0; j < Z.length - 1; j++) for (let i = 0; i < X.length - 1;) {
+    const k = kind(i, j); let e = i + 1;
+    while (e < X.length - 1 && kind(e, j) === k) e++;
+    const x0 = X[i], x1 = X[e], z0 = Z[j], z1 = Z[j + 1], reg = k.slice(1);
+    if (k[0] === 's') plane(x0, x1, z0, z1, 0, top[reg]);
+    else {
+      plane(x0, x1, z0, z1, floor, M.stone);
+      if (k[0] === 'r') addBox((x0 + x1) / 2, -0.5, (z0 + z1) / 2, x1 - x0, 1, z1 - z0, top[reg]).floor = true;
+    }
+    i = e;
+  }
+  for (let j = 0; j < Z.length - 1; j++) for (let i = 0; i < X.length - 1; i++) { // walls wherever a cave meets solid ground
+    const k = kind(i, j); if (k[0] === 's') continue;
+    const solid = (a, b) => { const q = kind(a, b); return q === 'x' || q[0] === 's'; };
+    const x0 = X[i], x1 = X[i + 1], z0 = Z[j], z1 = Z[j + 1], ty = k[0] === 'h' ? 0 : -1, hh = ty - floor, cy = (ty + floor) / 2;
+    if (solid(i - 1, j)) addBox(x0 + 0.5, cy, (z0 + z1) / 2, 1, hh, z1 - z0, M.caveWall, true);
+    if (solid(i + 1, j)) addBox(x1 - 0.5, cy, (z0 + z1) / 2, 1, hh, z1 - z0, M.caveWall, true);
+    if (solid(i, j - 1)) addBox((x0 + x1) / 2, cy, z0 + 0.5, x1 - x0, hh, 1, M.caveWall, true);
+    if (solid(i, j + 1)) addBox((x0 + x1) / 2, cy, z1 - 0.5, x1 - x0, hh, 1, M.caveWall, true);
+  }
+  for (const [x0, x1, z0, z1] of [[-HALF - 40, HALF + 40, -HALF - 40, -HALF], [-HALF - 40, HALF + 40, HALF, HALF + 40], [-HALF - 40, -HALF, -HALF, HALF], [HALF, HALF + 40, -HALF, HALF]])
+    plane(x0, x1, z0, z1, 0, z1 <= -HALF ? M.snow : x0 >= HALF ? M.asphalt : M.grass); // past the edges
+}
+function spiralUp(cx, cz, m, post) { // steps winding up out of a cave mouth, around a rock pillar
+  addPillar(cx, cz, 0.9, -MEGA.floor, post, 0.8, MEGA.floor);
+  const list = [];
+  for (let i = 0; i < 11; i++) { const a = i * 0.9; list.push([cx + Math.cos(a) * 2.3, MEGA.floor + 1.25 + i * 1.22, cz + Math.sin(a) * 2.3]); }
+  steps(list, m, 2.0);
+}
+function crystals(x, y, z, m, n = 4) {
+  for (let k = 0; k < n; k++) {
+    const c = put(new THREE.Mesh(geo(facet(new THREE.OctahedronGeometry(1, 0))), m)), s = 0.3 + srnd() * 0.5;
+    c.scale.set(s, s * (2 + srnd() * 2), s); c.position.set(x + (srnd() - .5) * 1.4, y + s, z + (srnd() - .5) * 1.4);
+    c.rotation.set((srnd() - .5) * 0.6, srnd() * 3, (srnd() - .5) * 0.6);
+  }
+}
+function pine(x, z, h, y0 = 0) {
+  addPillar(x, z, 0.35, h * 0.35, M.trunk, 0.3, y0);
+  for (let k = 0; k < 3; k++) {
+    const c = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(2 - k * 0.5, h * 0.35, 7))), k === 2 ? M.snow : M.pine));
+    c.position.set(x, y0 + h * 0.35 + k * h * 0.22 + h * 0.15, z);
+  }
+  blobs.push({ c: new V(x, y0 + h * 0.55, z), r: 1.4 });
+}
+function peak(cx, cz, tiers, stepSide) { // a terraced mountain with snowy ledges and steps up one side
+  tiers.forEach(([w, h], k) => {
+    addBox(cx, h / 2, cz, w, h, w, M.snowCliff, true);
+    addBox(cx, h + 0.12, cz, w, 0.24, w, M.snow, true);
+    const nx = tiers[k + 1]; if (!nx) return;
+    const face = nx[0] / 2 + 1.3, rise = (nx[1] - h) / 4, list = [];
+    for (let s = 1; s <= 3; s++) {
+      const along = (s % 2 ? -1.6 : 1.6);
+      list.push(stepSide === 'x' ? [cx + face, h + s * rise, cz + along] : [cx + along, h + s * rise, cz + face]);
+    }
+    steps(list, M.snowCliff, 2.2);
+  });
+}
+function megaBuild() {
+  const F = MEGA.floor;
+  megaShell(); addWalls(M.cliff);
+  // ---- forest (the middle): the classic treehouse and friends ----
+  addTree(0, 0, 1.3, 15, 5.5);
+  addBox(0, 7, 0, 10, 0.5, 10, M.plank, true);
+  steps([[7, 1.3, 6.5], [9.6, 2.7, 2.8], [9.2, 4.1, -1.6], [6.6, 5.6, -4.6]], M.plank, 2.6, M.trunk);
+  for (const [x, z] of [[-4.6, -4.6], [4.6, -4.6], [-4.6, 4.6], [4.6, 4.6]]) addPillar(x, z, 0.15, 7, M.trunk, 0.15);
+  addTree(-18, -15, 0.9, 10, 4); addBox(-18, 4.6, -15, 5.5, 0.4, 5.5, M.plank, true);
+  addBox(-13.8, 1, -11.5, 3, 2, 3, M.rock, true); addBox(-15.2, 3, -13.2, 2.2, 0.4, 2.2, M.plank, true);
+  addBox(14, 1.2, 14, 4, 2.4, 3, M.rock, true); addBox(16, 2.2, 16.5, 2.5, 4.4, 2.5, M.rock, true);
+  addBox(-12, 0.9, 15, 3.5, 1.8, 3.5, M.rock, true); addBox(9, 0.5, -15, 8, 1, 1.2, M.trunk, true);
+  addJumpWalls(-24, 22, false);
+  // lookout tower with a long log bridge north to the little snowy peak
+  addBox(16, 8, -26, 5, 0.5, 5, M.plank, true);
+  for (const [x, z] of [[14, -24], [18, -24], [14, -28], [18, -28]]) addPillar(x, z, 0.2, 8, M.trunk, 0.2);
+  steps([[19.8, 1.4, -22.6], [19.8, 2.9, -25.6], [19.8, 4.4, -28.6], [16.8, 5.9, -29.8], [13.2, 7.2, -29.8]], M.plank, 2.2, M.trunk);
+  addBox(16, 7.95, -39, 2.4, 0.4, 22, M.plank, true);
+  for (let z = -29; z >= -49; z -= 4) for (const s of [-1, 1]) addPillar(16 + s * 1.3, z, 0.07, 1.1, M.rope, 0.07, 8.1);
+  // a giant tree out west with a platform way up high
+  addTree(-50, 26, 2.1, 16, 7);
+  addBox(-50, 12, 26, 10, 0.5, 10, M.plank, true);
+  const giant = []; for (let i = 0; i < 9; i++) { const a = i * 0.8; giant.push([-50 + Math.cos(a) * 3.8, 1.3 + i * 1.25, 26 + Math.sin(a) * 3.8]); }
+  steps(giant, M.plank, 2.2);
+  addBox(-60, 1.1, 50, 4, 2.2, 3, M.rock, true); addBox(-62, 2.2, 52, 2.5, 4.4, 2.5, M.rock, true);
+  // the road from the forest into the city
+  plane(6, 34, 21, 27, 0.02, M.asphalt);
+  for (let x = 8; x < 34; x += 4) { const l = put(new THREE.Mesh(boxGeo, M.lane)); l.scale.set(2, 0.02, 0.2); l.position.set(x, 0.03, 24); }
+  // cave mouths with steps down
+  spiralUp(-12, 6, M.caveRock, M.caveRock);
+  for (let k = 0; k < 24; k++) { const top = F + (k + 1) * (-F / 24), x = 24 + (k + 0.5) * (20 / 24); addBox(x, (F + top) / 2, 0, 20 / 24 + 0.01, top - F, 6, M.caveRock, true); } // driveable ramp down to the tunnel
+  for (const z of [-4.3, 4.3]) addBox(34, 0.5, z, 20, 1, 0.6, M.escape); // little railings along the ramp
+  // ---- city (the east) ----
+  const B = [[48, -40, 10, 10, 14], [62, -40, 10, 10, 9], [71, -40, 6, 10, 18], [46, -56, 10, 10, 16], [62, -58, 10, 10, 11],
+    [48, -24, 10, 8, 11], [62, -24, 10, 8, 6], [71, -24, 6, 8, 13], [62, 14, 10, 8, 12], [71, 14, 6, 8, 5],
+    [48, 38, 10, 10, 13], [62, 38, 10, 10, 8], [71, 38, 6, 10, 16], [48, 54, 10, 10, 6], [62, 54, 10, 10, 15], [71, 54, 6, 10, 9], [48, 68, 10, 8, 10], [62, 68, 10, 8, 12]];
+  const mats = [M.bldgA, M.bldgB, M.bldgC];
+  B.forEach(([x, z, w, d, h], n) => {
+    addBox(x, h / 2, z, w, h, d, mats[n % 3], true);
+    addBox(x, h + 0.25, z, w + 0.3, 0.5, d + 0.3, M.roofEdge, true);
+    const face = z < 0 ? z + d / 2 + 0.03 : z - d / 2 - 0.03;
+    for (let y = 1.5; y < h - 0.5; y += 2) for (let k = -w / 2 + 1.2; k < w / 2 - 0.6; k += 1.8) { const wn = put(new THREE.Mesh(boxGeo, M.cityWin)); wn.scale.set(0.8, 0.9, 0.05); wn.position.set(x + k, y, face); }
+    if (srnd() > 0.4) addBox(x + w * 0.2, h + 1, z, 1.6, 1.1, 1.4, M.ac, true);
+    const front = z < 0 ? z + d / 2 + 1.1 : z - d / 2 - 1.1, list = [];
+    for (let y = 1.4, k = 0; y < h; y += 1.7, k++) list.push([x + (k % 2 ? 1.6 : -1.6), y, front]);
+    steps(list, M.escape, 1.8);
+  });
+  // skybridge from the tall tower to the top of the little snowy peak
+  addBox(29.75, 15.8, -58, 22.5, 0.4, 2.4, M.crane, true);
+  for (let x = 20; x <= 40; x += 4) for (const s of [-1, 1]) addPillar(x, -58 + s * 1.15, 0.07, 1.1, M.crane, 0.07, 16);
+  const carCols = [M.carA, M.carB, M.carC];
+  for (const [x, z] of [[38, -12], [37, 6], [52, 30], [66, 30], [38, 58], [55, -48]]) { addBox(x, 0.6, z, 1.8, 1.2, 3.6, carCols[Math.floor(srnd() * 3)], true); addBox(x, 1.5, z + 0.3, 1.6, 0.6, 2, M.cityWin, true); }
+  for (const z of [-30, -6, 20, 46, 72]) for (const x of [35, 41]) { addPillar(x, z, 0.12, 5, M.ac, 0.1); const l = put(new THREE.Mesh(ballGeo, M.lamp)); l.scale.setScalar(0.3); l.position.set(x, 5.1, z); }
+  for (let z = -70; z < 74; z += 5) { const l = put(new THREE.Mesh(boxGeo, M.lane)); l.scale.set(0.2, 0.02, 2.2); l.position.set(38, 0.03, z); }
+  // subway station underneath, with a train and stairs up to the street
+  spiralUp(51, 5, M.escape, M.ac);
+  addBox(49, F + 1.9, -6.5, 14, 3.2, 3, M.train, true); addBox(49, F + 1.2, -4.98, 14.02, 0.4, 0.05, M.trainStripe);
+  for (let x = 43.5; x < 55; x += 2.2) { const w = put(new THREE.Mesh(boxGeo, M.cityWin)); w.scale.set(1.3, 1, 0.05); w.position.set(x, F + 2.4, -4.97); }
+  plane(40.5, 57.5, -8.5, 8.5, F + 0.02, M.tile);
+  // ---- caves underneath ----
+  const crys = [M.crysA, M.crysB, M.crysC], taken = [[-12, 6]];
+  for (let i = 0; i < 9; i++) { const x = -30 + srnd() * 20, z = -12 + srnd() * 22; if (Math.hypot(x + 12, z - 6) > 4.5) crystals(x, F, z, crys[i % 3]); }
+  for (const [x, z, h, m] of [[-27, -8, 3, M.mushA], [-25, 8, 4.2, M.mushB], [-19, -4, 2.6, M.mushB], [-28, 2, 5, M.mushA]]) { addPillar(x, z, 0.35, h, M.stem, 0.3, F); addCap(x, F + h + 0.3, z, 2 + srnd() * 0.6, m); }
+  for (const [x, z] of [[-22, 2], [-16, -9], [-29, 9]]) addPillar(x, z, 0.6, -F - 1, M.caveRock, 0.35, F);
+  const pool = put(new THREE.Mesh(geo(new THREE.CircleGeometry(3, 10)), M.glowPool)); pool.rotation.x = -Math.PI / 2; pool.position.set(-20, F + 0.03, -6);
+  for (let i = 0; i < 30; i++) { // stalactites hanging from the cave roof
+    const r = MEGA.caves[i % MEGA.caves.length], x = r[0] + 1.5 + srnd() * (r[1] - r[0] - 3), z = r[2] + 1.5 + srnd() * (r[3] - r[2] - 3);
+    if (MEGA.holes.some(hh => inRect([hh[0] - 1, hh[1] + 1, hh[2] - 1, hh[3] + 1], x, z))) continue;
+    const h = 1 + srnd() * 2.2, c = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(0.3 + srnd() * 0.3, h, 6))), M.caveRock)); c.rotation.x = Math.PI; c.position.set(x, -1 - h / 2, z);
+  }
+  for (let x = -4; x < 40; x += 8) for (const z of [-3.45, 3.45]) { const l = put(new THREE.Mesh(boxGeo, M.tunnelLamp)); l.scale.set(0.8, 0.3, 0.1); l.position.set(x, F + 4, z); }
+  for (let z = -42; z < -16; z += 8) for (const x of [-24.45, -17.55]) { const l = put(new THREE.Mesh(boxGeo, M.tunnelLamp)); l.scale.set(0.1, 0.3, 0.8); l.position.set(x, F + 4, z); }
+  // ice cave under the peaks
+  const ice = addBox(-12, F + 0.05, -55, 24, 0.1, 16, M.ice); ice.ice = true;
+  spiralUp(-2, -51, M.iceWall, M.snowCliff);
+  for (let i = 0; i < 8; i++) crystals(-24 + srnd() * 18, F, -62 + srnd() * 14, M.ice, 3);
+  for (const [x, z, h] of [[-20, -50, 3], [-14, -60, 4.5], [-8, -56, 2.4]]) { const b = addBox(x, F + h / 2, z, 2.4, h, 2.4, M.ice, true); b.ice = true; }
+  // ---- snowy peaks (the north) ----
+  peak(-48, -56, [[34, 5], [28, 10], [22, 15], [16, 20], [10, 25], [5, 30]], 'x');
+  peak(16, -58, [[22, 4], [16, 8], [10, 12], [5, 16]], 'z');
+  addPillar(-48, -56, 0.08, 2.5, M.trunk, 0.08, 30.24); addBox(-47.4, 32.2, -56, 1.1, 0.6, 0.05, M.rbR); // flag on the very top
+  addBox(-14, 1.8, -38, 7, 3.6, 5.5, M.cabin, true); addBox(-14, 3.95, -38, 7.8, 0.7, 6.3, M.snowRoof, true);
+  steps([[-9.3, 1.3, -40.5], [-9.6, 2.8, -38]], M.cabin, 2);
+  const pond = addBox(-12, 0.05, -70, 12, 0.1, 6, M.ice); pond.ice = true;
+  for (const [x, z] of [[4, -44], [-4, -60], [28, -40]]) {
+    addPillar(x, z, 0.7, 1.4, M.snow, 0.6);
+    const mid = put(new THREE.Mesh(ballGeo, M.snow)); mid.scale.setScalar(0.5); mid.position.set(x, 1.7, z);
+    const head = put(new THREE.Mesh(ballGeo, M.snow)); head.scale.setScalar(0.34); head.position.set(x, 2.35, z);
+    const nose = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(0.06, 0.3, 6))), M.carrot)); nose.rotation.x = -Math.PI / 2; nose.position.set(x, 2.35, z - 0.45);
+  }
+  // ---- trees and rocks everywhere ----
+  const holeNear = (x, z, m) => MEGA.holes.some(hh => inRect([hh[0] - m, hh[1] + m, hh[2] - m, hh[3] + m], x, z));
+  taken.push([0, 0], [-18, -15], [14, 14], [-12, 15], [9, -15], [-14, -12], [-24, 22], [16, -26], [-50, 26], [-61, 51], [-14, -38], [-12, -70], [4, -44], [-4, -60], [28, -40]);
+  const inPeak = (x, z) => Math.max(Math.abs(x + 48), Math.abs(z + 56)) < 19 || Math.max(Math.abs(x - 16), Math.abs(z + 58)) < 13;
+  const clearOf = (x, z) => !holeNear(x, z, 3) && !(z > 18 && z < 30 && x > 3) && !(x > 12 && x < 20 && z < -22) && Math.hypot(x + 4, z - 30) > 5; // cave mouths, the road, the bridge, the parked hog
+  scatter(60, 5.5, taken, (x, z) => MEGA.region(x, z) === 'forest' && Math.hypot(x, z) > 10 && clearOf(x, z),
+    (x, z) => addTree(x, z, 0.5 + srnd() * 0.45, 6 + srnd() * 5, 2.4 + srnd() * 1.6));
+  scatter(34, 5, taken, (x, z) => MEGA.region(x, z) === 'snow' && !inPeak(x, z) && !holeNear(x, z, 3) && !(x > 13 && x < 19) && x < 31, (x, z) => pine(x, z, 5 + srnd() * 4));
+  scatter(14, 6, taken, (x, z) => MEGA.region(x, z) === 'forest' && Math.hypot(x, z) > 12 && clearOf(x, z), (x, z) => { const s = 1 + srnd() * 2; addBox(x, s / 2, z, s * 1.2, s, s, M.rock, true); });
+  addEdgeRocks(M.cliff, 40, 7);
+  // ---- toadhogs ----
+  addHog(10, 24, -Math.PI / 2, M.hogGreen);
+  addHog(38, 40, 0, M.hogBlue);
+  addHog(-4, 30, Math.PI / 2, M.hogSand);
+  // getting darker underground, and snow falling only up in the peaks
+  const sky = new THREE.Color(0xa9d9e6), dark = new THREE.Color(0x17132a), mix = new THREE.Color();
+  let wasUnder = 0;
+  mapAnims.push(() => {
+    const c = camera.position, u = clamp((-c.y - 1) / 3, 0, 1);
+    if (u > 0 || wasUnder > 0) {
+      mix.copy(sky).lerp(dark, u);
+      if (u > 0) scene.background.copy(mix); else scene.background.setHex(0xa9d9e6);
+      scene.fog.color.copy(scene.background); scene.fog.near = 30 - 22 * u; scene.fog.far = 105 - 60 * u; hemiLight.intensity = 0.85 - 0.25 * u;
+    }
+    wasUnder = u;
+    if (fxPoints) { fxPoints.position.set(c.x, Math.max(0, c.y - 8), c.z); fxPoints.visible = c.z < -26 && c.x < 36 && c.y > -1; }
+  });
+}
+
+// ---------- Frog Gulch: a long grassy box canyon with a base at each end, made for driving toadhogs ----------
+function gulchGround(x, z) {
+  const ax = Math.abs(x), az = Math.abs(z);
+  const hills = 1.1 * Math.sin(x * 0.17 + 0.6) * Math.sin(z * 0.12 + 1.1) + 0.7 * Math.sin(z * 0.27 - x * 0.08 + 2) + 0.35 * Math.cos(x * 0.33 + z * 0.19);
+  return Math.max(-0.5, (hills + 1) * (1 - smooth(32, 41, az))) + smooth(15, 25, ax) * 5;
+}
+function gulchBase(zc, team) {
+  const s = Math.sign(zc), H = 4, W = 14, T = 0.6, trim = team ? M.hogBlue : M.hogGreen;
+  for (const fz of [zc - s * (W / 2 - T / 2), zc + s * (W / 2 - T / 2)]) { // front and back: a wide doorway you can drive through
+    addBox(-4.75, H / 2, fz, 4.5, H, T, M.baseMetal, true); addBox(4.75, H / 2, fz, 4.5, H, T, M.baseMetal, true); addBox(0, H - 0.5, fz, 5, 1, T, M.baseMetal);
+  }
+  for (const fx of [-(W / 2 - T / 2), W / 2 - T / 2]) { // sides: a frog-sized door
+    addBox(fx, H / 2, zc - 4.25, T, H, 5.5, M.baseMetal, true); addBox(fx, H / 2, zc + 4.25, T, H, 5.5, M.baseMetal, true); addBox(fx, H - 0.5, zc, T, 1, 3, M.baseMetal);
+  }
+  addBox(0, H + 0.25, zc, W + 0.6, 0.5, W + 0.6, M.baseDark, true); // roof
+  for (const [x, z, w, d] of [[0, zc - s * 7.1, 15.2, 0.4], [0, zc + s * 7.1, 15.2, 0.4], [7.1, zc, 0.4, 15.2]]) addBox(x, H + 0.85, z, w, 0.7, d, M.baseMetal, true); // roof rail, open on the stair side
+  for (const [x, z, w, d] of [[0, zc - s * 7.32, 14.4, 0.06], [0, zc + s * 7.32, 14.4, 0.06], [-7.32, zc, 0.06, 14.4], [7.32, zc, 0.06, 14.4]]) {
+    const st = put(new THREE.Mesh(boxGeo, trim)); st.scale.set(w, 0.5, d); st.position.set(x, H - 1.6, z); // team stripe
+  }
+  const banner = put(new THREE.Mesh(boxGeo, trim)); banner.scale.set(4.2, 1.2, 0.08); banner.position.set(0, H - 1.6, zc - s * 7.36);
+  steps([[-8.4, 1.1, zc + s * 5.4], [-8.4, 2.2, zc + s * 3.2], [-8.4, 3.3, zc + s * 1.0], [-8.4, 4.4, zc - s * 1.2]], M.baseDark, 2.2, M.baseMetal);
+  addBox(4.5, 0.5, zc + s * 4.5, 1.6, 1, 1.6, M.chest, true); addBox(4.5, 1.4, zc + s * 4.5, 1.1, 0.8, 1.1, M.chest, true); // crates
+  addBox(-4.5, 0.5, zc + s * 4.6, 1.6, 1, 1.6, M.chest, true);
+}
+function gulchBuild() {
+  const g = new THREE.PlaneGeometry(HALF * 2 + 40, HALF * 2 + 40, 64, 64); g.rotateX(-Math.PI / 2);
+  const pos = g.attributes.position; for (let i = 0; i < pos.count; i++) pos.setY(i, gulchGround(pos.getX(i), pos.getZ(i)));
+  put(new THREE.Mesh(geo(facet(g)), M.gulchGrass)); g.dispose();
+  addWalls(M.gulchCliff);
+  for (const s of [-1, 1]) { // canyon walls down both long sides, and across both ends
+    for (let z = -HALF; z < HALF; z += 8) { const face = 25 + srnd() * 2.5, h = 15 + srnd() * 7; addBox(s * (face + HALF) / 2, h / 2, z + 4, HALF - face, h, 8.4, srnd() > 0.5 ? M.gulchCliff : M.gulchCliffDark, true); }
+    for (let x = -26; x < 26; x += 8) { const face = 56 + srnd() * 2, h = 16 + srnd() * 6; addBox(x + 4, h / 2, s * (face + HALF) / 2, 8.4, h, HALF - face, srnd() > 0.5 ? M.gulchCliff : M.gulchCliffDark, true); }
+    // a perch on each wall, reached by climbing or by the teleporter on top of that team's base
+    addBox(s * 23.2, 9.2, s * 16, 4, 0.6, 7, M.gulchCliffDark, true);
+    for (const [dx, h, dz] of [[20.5, 1.6, 21.5], [21.5, 3.2, 19]]) { const gy = gulchGround(s * dx, s * dz); addBox(s * dx, gy + h / 2, s * dz, 2.4, h + 1, 2.4, M.rock, true); }
+  }
+  gulchBase(48, 0); gulchBase(-48, 1);
+  addTeleporter(new V(0, 4.5, 48), new V(23.2, 9.5, 16));
+  addTeleporter(new V(0, 4.5, -48), new V(-23.2, 9.5, -16));
+  // the big rock arch in the middle; a toadhog fits through
+  const g0 = Math.min(gulchGround(-3.4, 0), gulchGround(3.4, 0)) - 1;
+  for (const s of [-1, 1]) addBox(s * 3.4, g0 + 3.5, 0, 2.4, 7, 5, M.gulchCliff, true);
+  addBox(0, g0 + 6.5, 0, 9.2, 1.6, 5, M.gulchCliffDark, true);
+  for (const [x, z, w, h, d] of [[-7, 2, 3, 3, 3.5], [7.5, -2, 3.5, 2.4, 3], [-5, -5, 2, 1.8, 2]]) addBox(x, gulchGround(x, z) + h / 2 - 0.4, z, w, h, d, M.rock, true);
+  const taken = [[0, 0], [-7, 2], [7.5, -2], [-5, -5], [0, 48], [0, -48], [23, 16], [-23, -16], [20, 20], [-20, -20], [-11, 40], [11, 40], [-11, -40], [11, -40]];
+  const hogLane = (x, z) => Math.abs(Math.abs(x) - 11) < 4 && Math.abs(z) > 22; // keep the way out of each base clear
+  scatter(16, 6, taken, (x, z) => Math.abs(x) < 20 && Math.abs(z) < 36 && !hogLane(x, z), (x, z) => { const s = 0.9 + srnd() * 1.6; addBox(x, gulchGround(x, z) + s / 2 - 0.3, z, s * 1.3, s, s * 1.1, M.rock, true); });
+  scatter(14, 6, taken, (x, z) => Math.abs(x) < 21 && Math.abs(z) < 54 && !(Math.abs(x) < 10 && Math.abs(z) > 38) && !hogLane(x, z), (x, z) => addTree(x, z, 0.45 + srnd() * 0.3, 5 + srnd() * 3, 2.2 + srnd() * 1.2, { y0: gulchGround(x, z) - 0.2 }));
+  addTufts(M.leafB, 260); addClouds();
+  addHog(-11, 40, 0, M.hogGreen); addHog(11, 40, 0, M.hogGreen);
+  addHog(11, -40, Math.PI, M.hogBlue); addHog(-11, -40, Math.PI, M.hogBlue);
+}
+
 const MAPS = {
   forest: {
     label: 'Forest', sky: 0xa9d9e6, fog: [16, 64], hemi: [0xe8f6ff, 0x3d5a24, 0.85], sun: 0.75,
@@ -759,6 +1328,18 @@ const MAPS = {
         (x, z) => addTree(x, z, 0.5 + srnd() * 0.45, 6 + srnd() * 5, 2.4 + srnd() * 1.6));
       addTufts(M.leafB, 220); addClouds();
     },
+  },
+  mega: {
+    label: 'Mega Map', sky: 0xa9d9e6, fog: [30, 105], hemi: [0xe8f6ff, 0x3d5a24, 0.85], sun: 0.75, fx: 'snow',
+    half: 75, far: 150, ground: megaGround, spawn: [0, 17], ring: [0, 0, 15], ctf: [[-8, 0, 40], [52, 0, -32]],
+    idle: ["This map is HUGE!", "Race you to the snowy peaks!", "Let's explore the caves!", "Who wants to drive the Toadhog?", "Meet me on the skybridge!", "I found the subway!"],
+    build: megaBuild,
+  },
+  gulch: {
+    label: 'Frog Gulch', sky: 0x9fd3f2, fog: [40, 135], hemi: [0xeef8ff, 0x5a7a3a, 0.9], sun: 0.8,
+    half: 60, far: 170, ground: gulchGround, spawn: [0, 30], ring: [0, 28, 10], ctf: [[0, 0, 48], [0, 0, -48]],
+    idle: ["Get in the Toadhog!", "I call driving!", "Hop in the back!", "Let's take the teleporter!", "Green team, go go go!", "Beep beep!"],
+    build: gulchBuild,
   },
   caves: {
     label: 'Crystal Caves', sky: 0x17132a, fog: [10, 46], hemi: [0x9a8fe0, 0x2a2238, 0.75], sun: 0.3,
@@ -1762,6 +2343,10 @@ function buildMap(key) {
   for (const c of [...mapGroup.children]) mapGroup.remove(c);
   ownGeos.forEach(g => g.dispose()); ownGeos = [];
   boxes.length = trees.length = blobs.length = ledges.length = 0; water = null;
+  for (const h of hogs) for (const b of h.seats) if (b) { b.hog = null; b.seat = -1; }
+  hogs = []; teleports = []; if (typeof hideMyFrog === 'function') hideMyFrog();
+  HALF = mp.half || 30; groundAt = mp.ground || flatGround;
+  camera.far = mp.far || 140; camera.updateProjectionMatrix();
   seed = 11;
   G = mp.gravity || 18; airDrag = mp.swim ? 1.3 : 0.15;
   slowZones = mp.slow || [];
@@ -1839,9 +2424,15 @@ function mapAvailable(key) {
   const v = seasonToday(), [a, b] = sz;
   return a <= b ? v >= a && v <= b : v >= a || v <= b;
 }
+function standY(x, z) { // where a frog would stand: the ground, or a floor slab over a cave
+  let y = groundAt(x, z);
+  for (const b of boxes) if (b.floor && x > b.min.x && x < b.max.x && z > b.min.z && z < b.max.z && b.max.y > y) y = b.max.y;
+  return y + R;
+}
 function blockedAt(x, z) {
-  for (const b of boxes) if (b.min.y < 1.5 && x > b.min.x - R - 0.3 && x < b.max.x + R + 0.3 && z > b.min.z - R - 0.3 && z < b.max.z + R + 0.3) return true;
-  for (const t of trees) if (t.y0 < 1.5 && Math.hypot(x - t.x, z - t.z) < t.r + R + 0.3) return true;
+  const g = standY(x, z) - R;
+  for (const b of boxes) if (b.min.y < g + 1.5 && b.max.y > g + 0.1 && x > b.min.x - R - 0.3 && x < b.max.x + R + 0.3 && z > b.min.z - R - 0.3 && z < b.max.z + R + 0.3) return true;
+  for (const t of trees) if (t.y0 < g + 1.5 && t.h > g && Math.hypot(x - t.x, z - t.z) < t.r + R + 0.3) return true;
   return false;
 }
 function spawnAt(x, z, out) { // like findSpot, but on Sky Islands everyone starts on top of the middle island
@@ -1851,7 +2442,7 @@ function spawnAt(x, z, out) { // like findSpot, but on Sky Islands everyone star
 }
 function findSpot(x, z, out) {
   for (let i = 0; i < 40 && blockedAt(x, z); i++) { x += (Math.random() - .5) * 4; z += (Math.random() - .5) * 4; x = clamp(x, -HALF + 2, HALF - 2); z = clamp(z, -HALF + 2, HALF - 2); }
-  return out.set(x, R, z);
+  return out.set(x, standY(x, z), z);
 }
 buildMap('forest'); // the saved map is built at the end of startup, once every helper it may use exists
 
@@ -1859,7 +2450,8 @@ buildMap('forest'); // the saved map is built at the end of startup, once every 
 const tq = new V(), tn = new V();
 function collide(b) {
   const p = b.pos, v = b.vel;
-  if (p.y < R) { p.y = R; if (v.y < 0) v.y = 0; b.grounded = true; }
+  const gy = groundAt(p.x, p.z) + R;
+  if (p.y < gy) { p.y = gy; if (v.y < 0) v.y = 0; b.grounded = true; }
   for (const bx of boxes) {
     if (p.x < bx.min.x - R || p.x > bx.max.x + R || p.y < bx.min.y - R || p.y > bx.max.y + R || p.z < bx.min.z - R || p.z > bx.max.z + R) continue;
     tq.copy(p).clamp(bx.min, bx.max); tn.subVectors(p, tq);
@@ -1909,7 +2501,7 @@ function physics(b, dt) {
 const sN = new V(), wallN = new V();
 let wallGap = 99, wallBox = null;
 function surfaceGap(p) {
-  let best = p.y - R; wallGap = 99; wallBox = null; sN.set(0, 1, 0);
+  let best = p.y - groundAt(p.x, p.z) - R; wallGap = 99; wallBox = null; sN.set(0, 1, 0);
   for (const b of boxes) {
     tq.copy(p).clamp(b.min, b.max); tn.subVectors(p, tq);
     const len = tn.length(), d = len - R;
@@ -2494,6 +3086,8 @@ const SONGS = {
   icecastle: { bpm: 92, root: 64, scale: 'minor', lead: 'bell',   drums: 'soft',  prog: [0, 5, 3, 6], seed: 163, pad: true, echo: true },
   stump:   { bpm: 100, root: 62, scale: 'major', lead: 'flute',   drums: 'light', prog: [0, 3, 4, 0], seed: 199, pad: true },
   backrooms: { bpm: 72, root: 58, scale: 'lydian', lead: 'bell',  drums: 'soft',  prog: [0, 1, 0, 5], seed: 167, pad: true, echo: true },
+  mega:    { bpm: 108, root: 62, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 4, 5, 3], seed: 211, echo: true },
+  gulch:   { bpm: 84,  root: 57, scale: 'minor', lead: 'flute',   drums: 'heavy', prog: [0, 5, 3, 4], seed: 223, pad: true, echo: true },
   manor:   { bpm: 86,  root: 57, scale: 'phrygian', lead: 'bell', drums: 'soft',  prog: [0, 1, 0, 5], seed: 171, pad: true, echo: true },
   farm:    { bpm: 104, root: 62, scale: 'major', lead: 'pluck',   drums: 'light', prog: [0, 3, 4, 0], seed: 173 },
   santa:   { bpm: 120, root: 67, scale: 'major', lead: 'bell',    drums: 'light', prog: [0, 3, 4, 0], seed: 179, echo: true },
@@ -2642,6 +3236,7 @@ function flash(big, small = '', secs = 2.2, color = 'var(--bone)') {
 
 function startRound(firstId, seed) {
   setTimeout(() => { sendHere(); renderOnline(); }, 500);
+  if (player.hog) exitHog();
   state = 'play'; chooseSong(); startMusic(); roundTime = 0; playerTaggedThisRound = false;
   resetModeState(); if (mode !== 'king') kingEnd();
   questEvent('mode', 1, mode); questEvent('map', 1, mapKey);
@@ -2824,13 +3419,14 @@ function drawAI(ai, t) {
   ai.group.position.copy(ai.pos); ai.group.scale.setScalar(ai.size || 1);
   animateAcc(ai, t);
   const hv = Math.hypot(ai.vel.x, ai.vel.z);
-  if (hv > 0.5) {
+  if (ai.hog) ai.yaw = ai.hog.yaw;
+  else if (hv > 0.5) {
     const target = Math.atan2(-ai.vel.x, -ai.vel.z);
     let d = target - ai.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); ai.yaw += d * 0.2;
   }
   ai.group.rotation.y = ai.yaw;
   const reach = 0.35 + ai.swing * 1.3 + Math.sin(t * 6 + ai.wander) * 0.08;
-  ai.arms[0].rotation.x = reach; ai.arms[1].rotation.x = reach;
+  ai.arms[0].rotation.x = ai.hog && ai.seat === 0 ? 1.3 : reach; ai.arms[1].rotation.x = ai.hog && ai.seat === 0 ? 1.3 : reach;
   ai.arms[0].rotation.z = -0.15; ai.arms[1].rotation.z = 0.15;
   if (ai.it && ai.frozen > 0) ai.skin.emissive.setHex(Math.sin(t * 20) > 0 ? 0xaa3300 : LAVA_GLOW);
 }
@@ -3145,7 +3741,7 @@ for (const a of ALL_AIS) {
 // what frogs call each map when they talk about where they are
 const PLACE = { forest: 'forest', caves: 'cave', canyon: 'canyon', beach: 'beach', snow: 'mountain', volcano: 'volcano', sky: 'sky', moon: 'moon',
   candy: 'candy land', spooky: 'spooky woods', city: 'city', pond: 'pond', swamp: 'swamp', garden: 'garden', canopy: 'rainforest', cove: 'cove',
-  reef: 'reef', toys: 'toy room', icecastle: 'castle', stump: 'stump', backrooms: 'maze', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
+  reef: 'reef', toys: 'toy room', icecastle: 'castle', stump: 'stump', backrooms: 'maze', mega: 'mega map', gulch: 'gulch', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
   rainbow: 'meadow', eggs: 'meadow', fireworks: 'lake' };
 function fill(text, ai, extra) {
   extra = extra || {};
@@ -3460,6 +4056,7 @@ function addRemote(id) {
 }
 function removeRemote(id) {
   const r = remotes.get(id); if (!r) return;
+  if (r.hog && r.hog.seats[r.seat] === r) r.hog.seats[r.seat] = null;
   scene.remove(r.group); r.tag.remove(); remotes.delete(id);
   bodies.splice(bodies.indexOf(r), 1);
   ais.forEach(a => { if (a.followBody === r) { a.followBody = null; a.follow = 0; } });
@@ -3470,7 +4067,7 @@ function snapshot() {
   for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0), r2(b.score || 0), r2(b.size || 1), b.hits || 0, b.tags || 0, b.tagged || 0];
   return { n: ais.length, m: mapKey, mo: mode, st: state, rt: r2(roundTime), ot: r2(overT), d: diff,
     ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null,
-    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
+    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, hg: hogs.length ? hogs.map(h => [h.pos.x, h.pos.y, h.pos.z, h.yaw].map(r2)) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
 }
 let joinWait = false;
 function applySnapshot(s, from) {
@@ -3502,6 +4099,7 @@ function applySnapshot(s, from) {
     b.feastScore = fs || 0;
   }
   if (s.pf !== undefined) potato.fuse = s.pf;
+  if (Array.isArray(s.hg)) s.hg.forEach((q, i) => { const h = hogs[i]; if (h && Array.isArray(q)) { (h.park || (h.park = new V())).set(+q[0] || 0, +q[1] || 0, +q[2] || 0); h.parkYaw = +q[3] || 0; } });
   for (const [id, row] of Object.entries(s.it)) { const b = byId(id); if (b) { b.kingScore = row[6] || 0; b.score = row[7] || 0; b.size = row[8] || 1; b.hits = row[9] || 0; b.tags = row[10] || 0; b.tagged = row[11] || 0; } }
   if (MODE2[mode]) { MODE2[mode].active = true; if (s.ms && MODE2[mode].apply && state !== 'menu') MODE2[mode].apply(s.ms); }
   for (const [k, m] of Object.entries(MODE2)) if (k !== mode && m.active) { m.active = false; if (m.end) m.end(); }
@@ -3562,8 +4160,9 @@ async function joinNet(code, lobby, role = 'auto') {
     const wasQuiet = performance.now() - r.netT > 2500;
     r.netPos.set(p[0], p[1], p[2]); r.netVel.set(p[3], p[4], p[5]); r.netT = performance.now();
     r.hostClaim = typeof p[6] === 'string' ? p[6].slice(0, 40) : null;
+    hogFromNet(r, p[7]);
     if (wasQuiet) pickHost();
-    if (r.pos.y < -10) r.pos.copy(r.netPos);
+    if (r.pos.y < -40) r.pos.copy(r.netPos);
   };
   net.snap.onMessage = (s, { peerId }) => { const r = remotes.get(peerId); if (r) r.seenT = performance.now(); applySnapshot(s, peerId); };
   net.ev.onMessage = (e, { peerId }) => {
@@ -3597,13 +4196,13 @@ const ahead = new V();
 function predict(out, p, v, age) {
   const t = Math.min(0.3, Math.max(0, age));
   const air = Math.abs(v.y) > 0.5;
-  out.set(p.x + v.x * t, Math.max(R, p.y + v.y * t - (air ? 0.5 * G * t * t : 0)), p.z + v.z * t);
+  out.set(p.x + v.x * t, Math.max(groundAt(p.x, p.z) + R, p.y + v.y * t - (air ? 0.5 * G * t * t : 0)), p.z + v.z * t);
 }
 let tagReqCd = 0;
 function netTick() {
   if (!net) return;
   try {
-    net.pos.send([player.pos.x, player.pos.y, player.pos.z, player.vel.x, player.vel.y, player.vel.z].map(r2).concat([net.hostId]));
+    net.pos.send([player.pos.x, player.pos.y, player.pos.z, player.vel.x, player.vel.y, player.vel.z].map(r2).concat([net.hostId, hogNetInfo()]));
     if (isHost() && !document.hidden) net.snap.send(snapshot());
     const now = performance.now();
     if (now - (net.lastHostCheck || 0) > 1000) { net.lastHostCheck = now; pickHost(); }
@@ -3650,7 +4249,7 @@ const cleanCode = v => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
 const pointers = new Map();
 let pushedDistance = 0, slapCd = 0;
 function armPush(dy, fingerSpeed, turn = 0) {
-  if (player.frozen > 0) return false;
+  if (player.frozen > 0 || player.hog) return false;
   const gap = surfaceGap(player.pos);
   if (gap > REACH) return false;
   const wall = wallGap < REACH * 0.85, jw = wall && wallBox && wallBox.jump; // jump walls fling you up and away
@@ -3681,6 +4280,7 @@ canvas.addEventListener('pointermove', e => {
   const p = pointers.get(e.pointerId);
   if (!p || state === 'menu') return;
   const now = performance.now(), dx = e.clientX - p.x, dy = e.clientY - p.y, dt = Math.max(8, now - p.t);
+  if (player.hog) { if (player.seat !== 0) player.yaw -= dx * 0.0048; p.x = e.clientX; p.y = e.clientY; p.t = now; return; } // driving reads the drag in driveInput
   player.yaw -= dx * 0.0048;
   const planted = armPush(dy, Math.abs(dy) / dt);
   if (planted && !p.planted && slapCd <= 0) { sfxSlap(0.22); slapCd = 0.12; }
@@ -3722,6 +4322,7 @@ addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const talkOpen = !$('talk').hidden;
   if (wardrobeOpen) { if (e.code === 'Escape') closeWardrobe(); return; }
+  if (!$('frogsPanel').hidden) { if (e.code === 'Escape') $('frogsClose').click(); return; }
   if (state === 'menu') {
     if (e.code === 'Digit1') begin('infection', 0, 'host');
     else if (e.code === 'Digit2') begin('classic', 0, 'host');
@@ -3733,6 +4334,7 @@ addEventListener('keydown', e => {
     else if (e.code === 'Digit8') begin('king', 0, 'host');
     else if (e.code === 'KeyQ') $('questsBtn').click();
     else if (e.code === 'KeyR') openWardrobe();
+    else if (e.code === 'KeyF') $('frogsBtn').click();
     else if (e.code === 'KeyO') begin(mode, 1);
     return;
   }
@@ -3743,6 +4345,8 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyP') { toggleScores(false); togglePlayers(); return; }
   if (e.code === 'KeyL') { toggleScores(); return; }
   if (e.code === 'KeyF') { tryThrow(); return; }
+  if (e.code === 'KeyG') { toggleHog(); return; }
+  if (e.code === 'Space' && player.hog && !e.repeat) honk();
   if (e.code === 'KeyI') { modeRules(); return; }
   if (e.code === 'KeyM') { setMusic(!musicOn); return; }
   if (e.code === 'KeyT' || e.code === 'Enter') { e.preventDefault(); openTalk(talkOpen ? talkTarget : null); $('sayInput').focus(); return; }
@@ -3770,6 +4374,7 @@ function keyMove() {
   if (did) keyCd = keys.Space ? 0.35 : 0.28;
 }
 function keyJump() {
+  if (player.hog) return false;
   if (player.frozen > 0 || surfaceGap(player.pos) > REACH) return false;
   const wall = wallGap < REACH * 0.85, jw = wall && wallBox && wallBox.jump;
   player.vel.y = Math.max(player.vel.y, jw ? 10.5 : wall ? 8.5 : 7);
@@ -3799,6 +4404,8 @@ const MAP_INFO = {
   reef: 'Underwater! Swim slowly around a sunken ship, a giant clam, coral and a kelp forest.',
   toys: "A giant bedroom and you're toy-sized! Bounce on the bed, climb block towers and dive in the ball pit.",
   icecastle: 'A slippery ice castle with towers, walkways on the walls and an icy courtyard to slide on.',
+  mega: 'One giant world! Forest in the middle, a city to the east, snowy peaks to the north and caves underneath, joined by tunnels, a subway, bridges and a skybridge. Toadhogs to drive!',
+  gulch: 'A long grassy canyon with a base at each end. Drive the Toadhogs, take the teleporters up to the cliff perches, and squeeze through the rock arch.',
   stump: 'A giant hollow tree stump to hang out in. Climb the mushroom shelves inside, run along the rim and hop down the roots.',
   backrooms: 'Endless yellow rooms, soggy carpet and humming lights. Climb the walls and swing from the ceiling!',
   manor: 'A haunted mansion with two floors, flickering candles, floating ghosts and a hedge maze. Boo!',
@@ -3930,6 +4537,7 @@ $('modeKing').addEventListener('click', () => begin('king', 0, 'host'));
 document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode, 0, 'host')));
 $('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (16)'; });
 $('menuBtn').addEventListener('click', () => {
+  if (player.hog) exitHog();
   state = 'menu'; pointers.clear(); showBest();
   $('menu').hidden = false; $('hud').hidden = true;
   bodies.forEach(b => setLava(b, false));
@@ -4051,7 +4659,7 @@ function mysteryAppear() {
   const m = pickMystery();
   const ang = player.yaw + Math.PI * (0.4 + Math.random() * 1.2), d = m.key === 'golden' || m.key === 'glitch' ? 10 + Math.random() * 6 : 15 + Math.random() * 8;
   findSpot(clamp(player.pos.x - Math.sin(ang) * d, -HALF + 3, HALF - 3), clamp(player.pos.z - Math.cos(ang) * d, -HALF + 3, HALF - 3), m.pos);
-  m.baseY = MAPS[mapKey].spawnHigh ? player.pos.y : R;
+  m.baseY = MAPS[mapKey].spawnHigh ? player.pos.y : m.pos.y;
   if (m.key === 'shadow') { // somewhere high and far, if the map has a good spot
     const spots = ledges.filter(l => l.max.y > 2 && l.max.y < 16 && flat(player.pos, { x: (l.min.x + l.max.x) / 2, z: (l.min.z + l.max.z) / 2 }) > 15);
     if (spots.length) { const l = pick(spots); m.pos.set((l.min.x + l.max.x) / 2, 0, (l.min.z + l.max.z) / 2); m.baseY = l.max.y + R; }
@@ -4274,7 +4882,7 @@ function spawnFlies() { // buzzing flies to catch, some up high
     spots.push(new V((l.min.x + l.max.x) / 2, l.max.y + 0.75, (l.min.z + l.max.z) / 2));
   }
   for (let i = 0; i < 40 && spots.length < 14; i++) {
-    const v = findSpot((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, new V()); v.y = 0.9;
+    const v = findSpot((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, new V()); v.y += 0.4;
     if (!water || v.z < water.z) spots.push(v);
   }
   for (const p of spots) {
@@ -4435,6 +5043,7 @@ function ctfAssignTeams(keep) {
 }
 function ctfRespawn(b, fresh) {
   if (b.isRemote) return;
+  if (b === player && player.hog) exitHog();
   const base = ctf.bases[b.team || 0];
   b.pos.set(base.x + (Math.random() - 0.5) * 3, base.y + R + 0.05, base.z + (Math.random() - 0.5) * 3); b.vel.set(0, 0, 0);
   b.frozen = fresh ? 0 : 1.5; b.immune = 2;
@@ -4656,7 +5265,7 @@ function feastSpots(seed) {
   for (let i = 0; i < 8 && high.length; i++) { const l = high[Math.floor(r() * high.length)]; out.push(new V((l.min.x + l.max.x) / 2, l.max.y + 0.75, (l.min.z + l.max.z) / 2)); }
   for (let i = 0; i < 200 && out.length < 30; i++) {
     const x = (r() - 0.5) * 52, z = (r() - 0.5) * 52;
-    if (!blockedAt(x, z) && (!water || z < water.z)) out.push(new V(x, MAPS[mapKey].spawnHigh ? 9 : 0.9, z));
+    if (!blockedAt(x, z) && (!water || z < water.z)) out.push(new V(x, MAPS[mapKey].spawnHigh ? 9 : standY(x, z) + 0.4, z));
   }
   return out;
 }
@@ -4809,6 +5418,44 @@ function renderQuests() {
 }
 $('questsBtn').addEventListener('click', () => { initAudio(); renderQuests(); $('questsPanel').hidden = false; });
 $('questsClose').addEventListener('click', () => { $('questsPanel').hidden = true; });
+
+// Meet the frogs: who each computer frog is, with a button to hear its voice
+const FROG_BIO = {
+  Red: ['The Speedster', 'Thinks he is the fastest frog ever and wants to race everybody.', 'Spicy grasshoppers'],
+  Blue: ['The Chill Dude', 'Super relaxed. Would rather nap in a hammock than run.', 'Crunchy beetles'],
+  Yellow: ['The Bouncy One', 'Bursting with energy and totally in love with flies.', 'Flies, flies, FLIES!'],
+  Purple: ['The Professor', 'The smart one. Knows lots of facts and loves to explain things.', 'Crickets and mealworms'],
+  Teal: ['The Shy One', 'A little nervous, but very sweet once you say hi.', 'Teeny tiny ants and flowers'],
+  Orange: ['The Pirate Captain', 'Captain Orange sails the treetops looking for treasure. Arr!', 'Coconuts and sea biscuits'],
+  Pink: ['The Princess', 'Princess Pink rules the jungle. You may call her Your Majesty.', 'Sparkly dragonflies'],
+  Green: ['The Coach', 'Coach Green wants everyone to get strong. Drop and give him ten!', 'Protein flies'],
+  Silver: ['The Grandpa', 'The oldest frog in the pond. Slow, wise and full of stories.', 'Crickets and leaf tea'],
+};
+function renderFrogs() {
+  const list = $('frogList'); list.innerHTML = '';
+  for (const [name, skin, sig] of AI_DEFS) {
+    const [title, about, food] = FROG_BIO[name], persona = PERSONA[name];
+    const li = document.createElement('li'); li.className = 'mf';
+    li.style.setProperty('--skin', hex(skin)); li.style.setProperty('--sig', hex(sig));
+    li.innerHTML = '<span class="face" aria-hidden="true"></span><b></b><p></p><small></small><q aria-live="polite"></q><button class="hi" type="button">Say hi</button>';
+    li.querySelector('b').innerHTML = `${name} <span>· ${title}</span>`;
+    li.querySelector('p').textContent = about;
+    li.querySelector('small').textContent = 'Favorite food: ' + food;
+    li.querySelector('.hi').addEventListener('click', () => {
+      const line = pick(persona.l.name).replace(/\{place\}/g, 'jungle');
+      li.querySelector('q').textContent = line;
+      if (!voicesOn || !window.speechSynthesis) return;
+      try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(line); u.pitch = persona.pitch; u.rate = persona.rate;
+        speechSynthesis.speak(u);
+      } catch (e) {}
+    });
+    list.append(li);
+  }
+}
+$('frogsBtn').addEventListener('click', () => { initAudio(); renderFrogs(); $('frogsPanel').hidden = false; $('frogsClose').focus({ preventScroll: true }); });
+$('frogsClose').addEventListener('click', () => { $('frogsPanel').hidden = true; try { speechSynthesis.cancel(); } catch (e) {} });
 loadQuests();
 
 // ---------- King of the Lily Pad ----------
@@ -4834,7 +5481,7 @@ function kingPlace(x, y, z) {
       x = clamp(x, -HALF + 4, HALF - 4); z = clamp(z, -HALF + 4, HALF - 4);
       if (!blockedAt(x, z) && (!water || z < water.z)) break;
     }
-    y = mp.spawnHigh ? 8 : 0;
+    y = mp.spawnHigh ? 8 : standY(x, z) - R;
     if (mp.spawnHigh) { x = clamp(x, -5, 5); z = clamp(z, -5, 5); }
   }
   kingPad.pos.set(x, y, z);
@@ -4912,7 +5559,7 @@ function rumble(ms = 120, strength = 0.5) {
 }
 // menu navigation: move focus through the visible buttons of whatever panel is on top
 function padFocusables() {
-  const root = !$('questsPanel').hidden ? $('questsPanel') : wardrobeOpen ? $('wardrobe') : !$('menu').hidden ? $('menu') : !$('talk').hidden ? $('talk') : !$('players').hidden ? $('players') : null;
+  const root = !$('frogsPanel').hidden ? $('frogsPanel') : !$('questsPanel').hidden ? $('questsPanel') : wardrobeOpen ? $('wardrobe') : !$('menu').hidden ? $('menu') : !$('talk').hidden ? $('talk') : !$('players').hidden ? $('players') : null;
   if (!root) return [];
   return [...root.querySelectorAll('button')].filter(el => !el.disabled && el.offsetParent !== null && !el.closest('[hidden]'));
 }
@@ -4923,7 +5570,8 @@ function padMoveFocus(step) {
   next.focus({ preventScroll: false }); next.scrollIntoView({ block: 'nearest' });
 }
 function padBack() {
-  if (!$('questsPanel').hidden) $('questsClose').click();
+  if (!$('frogsPanel').hidden) $('frogsClose').click();
+  else if (!$('questsPanel').hidden) $('questsClose').click();
   else if (wardrobeOpen) closeWardrobe();
   else if (!$('scores').hidden) toggleScores(false);
   else if (!$('players').hidden) togglePlayers(false);
@@ -4937,7 +5585,7 @@ function pollGamepad(dt) {
   const pressed = i => b(i) && !padPrev[i];
   const dz = v => Math.abs(v) < 0.18 ? 0 : v;
   const lx = dz(p.axes[0] || 0), ly = dz(p.axes[1] || 0), rx = dz(p.axes[2] || 0);
-  const inMenu = state === 'menu' || !$('questsPanel').hidden || wardrobeOpen;
+  const inMenu = state === 'menu' || !$('questsPanel').hidden || !$('frogsPanel').hidden || wardrobeOpen;
   if (inMenu || !$('players').hidden) {
     padNavT -= dt;
     const up = b(PAD.UP) || ly < -0.5 || b(PAD.LEFT) || lx < -0.5, down = b(PAD.DOWN) || ly > 0.5 || b(PAD.RIGHT) || lx > 0.5;
@@ -4949,7 +5597,10 @@ function pollGamepad(dt) {
   } else if (state !== 'menu') {
     const talkOpen = !$('talk').hidden;
     player.yaw -= rx * 2.8 * dt;
-    if (keyCd <= 0 && player.frozen <= 0) {
+    hogPad.t = player.hog ? -ly + (b(PAD.RT) ? 1 : 0) - (b(PAD.LT) ? 1 : 0) : 0; hogPad.s = player.hog ? -lx : 0;
+    if (pressed(PAD.LB)) toggleHog();
+    if (player.hog) { if (pressed(PAD.A)) honk(); }
+    else if (keyCd <= 0 && player.frozen <= 0) {
       const power = b(PAD.RT) || b(PAD.LT) ? 1.8 : 0.9, mag = Math.hypot(lx, ly);
       let did = false;
       if (pressed(PAD.A) || (b(PAD.A) && keyCd <= 0 && player.grounded)) did = keyJump();
@@ -5483,7 +6134,8 @@ const MODE2 = {
   lava: { ly: -0.6, mesh: null, grace: 6,
     start() {
       this.ly = (MAPS[mapKey].spawnHigh ? 0 : 0) - 0.6; this.grace = 6;
-      if (!this.mesh) { this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2 + 2, HALF * 2 + 2), new THREE.MeshLambertMaterial({ color: 0xff5a1f, emissive: 0xc83a00, transparent: true, opacity: 0.92 })); this.mesh.rotation.x = -Math.PI / 2; }
+      if (this.mesh && this.mesh.userData.half !== HALF) { scene.remove(this.mesh); this.mesh = null; }
+      if (!this.mesh) { this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2 + 2, HALF * 2 + 2), new THREE.MeshLambertMaterial({ color: 0xff5a1f, emissive: 0xc83a00, transparent: true, opacity: 0.92 })); this.mesh.rotation.x = -Math.PI / 2; this.mesh.userData.half = HALF; }
       scene.add(this.mesh);
       for (const b of bodies) setOut(b, false);
       flash('The floor is lava!', 'It rises slowly. Climb high and stay out of it!', 3, 'var(--lava)');
@@ -6003,9 +6655,10 @@ function update(dt, t) {
 
   const steps = 2, h = dt / steps;
   const host = isHost();
-  for (let i = 0; i < steps; i++) { physics(player, h); if (host) for (const a of ais) physics(a, h); }
+  for (let i = 0; i < steps; i++) { if (!player.hog) physics(player, h); if (host) for (const a of ais) physics(a, h); }
   if (host) for (const a of ais) aiThink(a, dt);
   netFrame(dt);
+  updateHogs(dt); updateTeleports();
   for (const b of bodies) { b.frozen = Math.max(0, b.frozen - dt); b.immune = Math.max(0, b.immune - dt); }
 
   if (state === 'play') {
@@ -6016,7 +6669,7 @@ function update(dt, t) {
     tagReqCd -= dt;
     if (net && !host && player.it && !player.out && player.frozen <= 0 && tagReqCd <= 0 && ['infection', 'classic', 'potato', 'freeze', 'hide', 'bat', 'shrink', 'tongue', 'gravity'].includes(mode)) {
       for (const b of bodies) {
-        if (b === player || b.it || b.immune > 0 || b.iced || b.out || player.pos.distanceTo(b.pos) >= (mode === 'tongue' ? 3.6 : 1.3)) continue;
+        if (b === player || b.it || b.immune > 0 || b.iced || b.out || !touching(player, b, mode === 'tongue' ? 3.6 : 1.3)) continue;
         net.ev.send({ k: 'tagreq', b: b.id }, { target: net.hostId }); tagReqCd = 0.4; break;
       }
     }
@@ -6031,7 +6684,7 @@ function update(dt, t) {
       if (!a.it || a.frozen > 0 || a.isRemote || a.out) continue;
       for (const b of bodies) {
         if (b.it || b.immune > 0 || b === a || b.out) continue;
-        if (a.pos.distanceTo(b.pos) < 1.3) { doTag(a, b); break outer; }
+        if (touching(a, b)) { doTag(a, b); break outer; }
       }
     }
   } else if (state === 'over') {
@@ -6042,8 +6695,14 @@ function update(dt, t) {
   const climbing = player.wall && player.vel.y > 1;
   const targetPitch = clamp(-0.12 + player.vel.y * 0.025 + (climbing ? 0.25 : 0), -0.4, 0.45);
   player.pitch += (targetPitch - player.pitch) * Math.min(1, dt * 4);
-  camera.position.set(player.pos.x, player.pos.y + 0.28 * (player.size || 1), player.pos.z);
-  camera.rotation.set(player.pitch, player.yaw, 0);
+  if (player.hog) {
+    hogCamera(dt);
+    const f = myFrog, h = player.hog;
+    if (f) { f.group.position.copy(player.pos); f.group.rotation.set(0, h.yaw, 0); f.arms.forEach(a => { a.rotation.x = player.seat === 0 ? 1.3 : 0.4 + Math.sin(t * 3) * 0.1; }); animateAcc(f, t); f.skin.emissive.setHex(player.it ? LAVA_GLOW : skinGlowOf(look)); }
+  } else {
+    camera.position.set(player.pos.x, player.pos.y + 0.28 * (player.size || 1), player.pos.z);
+    camera.rotation.set(player.pitch, player.yaw, 0);
+  }
 
   // hands
   const inReach = player.frozen <= 0 && surfaceGap(player.pos) < REACH;
@@ -6101,6 +6760,9 @@ function update(dt, t) {
       if (net.splitT > 6 && !net.splitWarned) { net.splitWarned = true; flash('Some devices can\u2019t reach each other', 'You may be in separate games. Everyone tap Menu, then Join again. Same Wi-Fi helps.', 6, 'var(--lava)'); }
       if (!split) net.splitWarned = false;
     }
+    const nh = state === 'play' || state === 'over' ? nearHog() : null, hgb = $('hogBtn');
+    hgb.hidden = !nh || (!player.hog && !canRide());
+    if (nh) hgb.textContent = (player.hog ? 'Hop out' : nh.seats[0] === null ? 'Drive' : 'Hop in') + (usedKeys ? ' (G)' : '');
     $('playersBtn').textContent = net ? `Players ${remotes.size + 1}` : 'Players';
     if (!$('players').hidden) renderPlayers();
     const hb = $('hostBtn');
@@ -6166,6 +6828,7 @@ function modeRules() { // the same one-line rules the menu buttons show
   flash(MODE_NAMES[mode] || 'Ribbit Tag', `${rules} Map: ${MAPS[mapKey].label}.`, 4, 'var(--leaf)');
 }
 $('info').addEventListener('click', e => { e.currentTarget.blur(); modeRules(); });
+$('hogBtn').addEventListener('click', e => { e.currentTarget.blur(); toggleHog(); });
 function showGfx() { document.querySelectorAll('#gfxSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === gfx))); }
 const gfxAtLoad = gfx;
 document.querySelectorAll('#gfxSeg button').forEach(b => b.addEventListener('click', () => {
@@ -6195,7 +6858,8 @@ function frame(now) {
   adaptQuality(raw);
   const wantShadow = shadowsWanted() && !(MODE2.bat && MODE2.bat.active);
   if (sun.castShadow !== wantShadow) sun.castShadow = wantShadow;
-  skyDome.position.copy(camera.getWorldPosition(skyPos)); skyDome.visible = scene.background.getHex() === skyDome.userData.hex;
+  skyDome.position.copy(camera.getWorldPosition(skyPos));
+  { const sx = Math.round(skyPos.x / 4) * 4, sz = Math.round(skyPos.z / 4) * 4; sun.position.set(sx + 20, Math.max(0, skyPos.y) + 40, sz + 10); sun.target.position.set(sx, Math.max(0, skyPos.y), sz); } skyDome.visible = scene.background.getHex() === skyDome.userData.hex;
   pollGamepad(dt);
   const t = now / 1000;
   if (state === 'menu') {
@@ -6213,7 +6877,7 @@ function frame(now) {
     }
     hands.forEach(hd => { hd.visible = false; });
   } else {
-    hands.forEach(hd => { hd.visible = true; });
+    hands.forEach(hd => { hd.visible = !player.hog; });
     update(dt, t);
   }
   for (const a of ais) drawAI(a, t);
