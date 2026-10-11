@@ -2412,6 +2412,11 @@ document.addEventListener('visibilitychange', () => {
 // the first tap or key anywhere starts the menu music
 const firstGesture = () => { initAudio(); chooseSong(); startMusic(); removeEventListener('pointerdown', firstGesture); removeEventListener('keydown', firstGesture); };
 addEventListener('pointerdown', firstGesture); addEventListener('keydown', firstGesture);
+// iPad Safari sometimes won't open the keyboard on a tap inside a no-select page; focusing during the tap fixes it
+document.addEventListener('touchend', e => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') && document.activeElement !== t) { t.focus(); try { t.setSelectionRange(t.value.length, t.value.length); } catch (err) {} }
+}, { passive: true });
 
 // ---------- Game state ----------
 let state = 'menu', mode = 'infection', diff = 1, roundTime = 0, overT = 0, survived = 0, playerTaggedThisRound = false;
