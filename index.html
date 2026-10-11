@@ -196,6 +196,24 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .online .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--leaf); box-shadow: 0 0 0 0 rgba(143,209,98,.6); animation: onlinePulse 2s infinite; }
 @keyframes onlinePulse { 70% { box-shadow: 0 0 0 7px rgba(143,209,98,0); } 100% { box-shadow: 0 0 0 0 rgba(143,209,98,0); } }
 @media (prefers-reduced-motion: reduce) { .online .dot { animation: none; } }
+.friends { margin: 0 0 12px; padding: 10px 12px; border-radius: 16px; background: rgba(10,26,16,.45); }
+.fr-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fr-head .spacer { flex: 1; }
+#frCount { font-size: .85rem; font-weight: 800; color: var(--leaf); }
+.fr-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.fr-list li { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.fr-list .fr-dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: rgba(244,236,217,.3); }
+.fr-list li.on .fr-dot { background: var(--leaf); }
+.fr-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.fr-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-who small { font-size: .8rem; opacity: .75; }
+.fr-list .fr-join { background: var(--leaf); color: var(--ink); }
+.fr-list .fr-x { background: transparent; opacity: .6; padding: 7px 10px; }
+.fr-empty { font-size: .85rem; opacity: .75; }
+.fr-add { margin-top: 10px; display: grid; gap: 8px; }
+.fr-mine { font-size: .9rem; }
+.fr-mine b { font-family: var(--display); font-weight: 400; font-size: 1.35rem; letter-spacing: .08em; color: var(--leaf); margin-left: 4px; }
+.fr-add .row { margin-top: 0; }
 .more-btn { width: 100%; margin-top: 10px; font: inherit; font-weight: 800; border: 2px dashed var(--leaf); background: transparent; color: var(--bone); border-radius: 14px; padding: 9px 14px; cursor: pointer; }
 .more-btn[aria-expanded="true"] { border-style: solid; }
 .more-btn:focus-visible { outline: 3px solid var(--bone); outline-offset: 2px; }
@@ -346,6 +364,19 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       </div>
             <button class="mode join" id="joinBtn" type="button" hidden><b id="joinTitle">Join</b><small>Plays whatever map and mode your friends are on.</small></button>
       <button class="mode online" id="onlineBtn" type="button"><b>Play online</b><small>Join a public game with other Ribbit Tag players. No chat, and names are hidden.</small></button>
+      <div class="friends" id="friends">
+        <div class="fr-head"><span class="label">Friends</span><span id="frCount"></span><span class="spacer"></span><button class="pill-btn" id="frAddBtn" type="button" aria-expanded="false" aria-controls="frAdd">Add a friend</button></div>
+        <ul class="fr-list" id="frList"></ul>
+        <div class="fr-add" id="frAdd" hidden>
+          <p class="fr-mine">Your friend code:<b id="frMine"></b></p>
+          <div class="row">
+            <label class="label" for="frIn">Friend's code</label>
+            <input class="name-in" id="frIn" type="text" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="characters" placeholder="ABC-123">
+            <button class="pill-btn" id="frSave" type="button">Add</button>
+          </div>
+          <p class="note" id="frNote">Swap codes with a friend and add each other. Only frogs who have your code can see when you're online.</p>
+        </div>
+      </div>
       <div class="row">
         <span class="label">1. Pick a map</span>
         <div class="seg maps" id="maps"></div>
@@ -862,14 +893,14 @@ function hogDrive(h, dt, thr, str) {
   }
   h.pos.x += -Math.sin(h.yaw) * h.speed * dt; h.pos.z += -Math.cos(h.yaw) * h.speed * dt;
   const hit = hogWalls(h);
-  if (hit > 5 && h.seats.includes(player)) { sfxSlap(0.3); rumble(120, Math.min(1, hit / 12)); }
+  if (hit > 5 && h.seats.includes(player)) { sfxSlap(0.3); sfxTone(140, 55, 0.2, 'triangle', Math.min(0.2, hit / 60)); rumble(120, Math.min(1, hit / 12)); }
   h.pos.x = clamp(h.pos.x, -HALF + HOG.r, HALF - HOG.r); h.pos.z = clamp(h.pos.z, -HALF + HOG.r, HALF - HOG.r);
   const gy = hogGround(h, h.pos.x, h.pos.z), ball = h.pos.y + h.vy * dt - 0.5 * G * dt * dt;
   if (gy >= ball || (!h.air && h.pos.y - gy < 0.25)) { // on the ground (it catches us before gravity would)
     const climb = gy - h.pos.y, fall = h.vy, wasAir = h.air;
     h.vy = wasAir || Math.abs(climb) > 0.3 ? 0 : clamp(climb / dt, -14, 14); // following hills keeps the bounce for crests
     h.pos.y = gy; h.air = false;
-    if (wasAir && fall < -7 && h.seats.includes(player)) { sfxSlap(0.4); rumble(160, 0.6); }
+    if (wasAir && fall < -7 && h.seats.includes(player)) { sfxSlap(0.4); sfxTone(110, 45, 0.25, 'triangle', 0.16); rumble(160, 0.6); }
   } else { h.air = true; h.vy -= G * dt; h.pos.y = ball; }
   hogPose(h, dt);
 }
@@ -910,7 +941,7 @@ function enterHog(h) {
   const s = h.seats.indexOf(null); if (s < 0) return;
   h.seats[s] = player; player.hog = h; player.seat = s; player.vel.set(0, 0, 0);
   hogCam.yaw = h.yaw; hogCam.pos.set(h.pos.x + Math.sin(h.yaw) * 6, h.pos.y + 3, h.pos.z + Math.cos(h.yaw) * 6);
-  showMyFrog(); sfxTone(180, 320, 0.25, 'sawtooth', 0.06); $('hint').classList.add('gone');
+  showMyFrog(); if (s === 0) { sfxTone(60, 150, 0.3, 'sawtooth', 0.09); setTimeout(() => sfxTone(80, 190, 0.35, 'sawtooth', 0.08), 330); } else sfxSlap(0.2); $('hint').classList.add('gone');
   if (s === 0) { if (!hogTipped) flash('Toadhog!', usedKeys ? 'W and S to drive, A and D to steer, Space to honk. G to hop out.' : 'Drag up to drive, drag sideways to steer.', 3.4, 'var(--leaf)'); hogTipped = true; }
   else flash(s === 1 ? 'Riding shotgun!' : 'Standing in the back!', 'Drag to look around.', 2, 'var(--leaf)');
 }
@@ -964,7 +995,8 @@ function updateHogs(dt) {
   }
   for (const h of hogs) {
     const d = h.seats[0];
-    if (d === player) { const [t, s] = driveInput(); hogDrive(h, dt, t, s); h.mineT = now; }
+    h.thr = 0;
+    if (d === player) { const [t, s] = driveInput(); h.thr = t; hogDrive(h, dt, t, s); h.mineT = now; }
     else if (d && d.isRemote && h.net) {
       const n = h.net, age = Math.min(0.3, (now - n.t) / 1000), k = 1 - Math.exp(-dt * 12);
       hogTmp.set(n.x - Math.sin(n.yaw) * n.speed * age, n.y, n.z - Math.cos(n.yaw) * n.speed * age);
@@ -999,6 +1031,54 @@ function updateHogs(dt) {
       if (b === player) { sfxSlap(0.35); rumble(200, 0.7); flash('Boing!', 'A Toadhog bumped you.', 1, '#ffd23f'); }
       else if (h.seats[0] === player) sfxTone(500, 250, 0.12, 'square', 0.06);
     }
+  }
+}
+// engine noise: a chugging motor that revs with speed and throttle, plus tyre squeal in hard turns
+let loopNoiseBuf = null;
+function hogVoice(h) {
+  if (h.voice) return h.voice;
+  if (!loopNoiseBuf) {
+    loopNoiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+    const d = loopNoiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const out = actx.createGain(); out.gain.value = 0; out.connect(actx.destination);
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 400; lp.connect(out);
+  const chug = actx.createGain(); chug.gain.value = 0.7; chug.connect(lp);
+  const a = actx.createOscillator(); a.type = 'sawtooth'; a.frequency.value = 40; a.connect(chug);
+  const b = actx.createOscillator(); b.type = 'square'; b.frequency.value = 20; const bg = actx.createGain(); bg.gain.value = 0.5; b.connect(bg); bg.connect(chug);
+  const lfo = actx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 7; const lg = actx.createGain(); lg.gain.value = 0.3; lfo.connect(lg); lg.connect(chug.gain);
+  const ns = actx.createBufferSource(); ns.buffer = loopNoiseBuf; ns.loop = true;
+  const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1900; bp.Q.value = 1.4;
+  const sk = actx.createGain(); sk.gain.value = 0; ns.connect(bp); bp.connect(sk); sk.connect(actx.destination);
+  for (const n of [a, b, lfo, ns]) n.start();
+  return (h.voice = { out, lp, a, b, lfo, sk, nodes: [a, b, lfo, ns], dieT: 0 });
+}
+function stopHogVoice(h) {
+  const v = h.voice; if (!v) return;
+  for (const n of v.nodes) try { n.stop(); } catch (e) {}
+  v.out.disconnect(); v.sk.disconnect(); h.voice = null;
+}
+function hogAudio() {
+  if (!actx) return;
+  const t = actx.currentTime, ears = camera.position;
+  for (const h of hogs) {
+    const d = h.pos.distanceTo(ears), mine = h.seats.includes(player);
+    const near = mine ? 1 : clamp(1 - d / 35, 0, 1);
+    if (state === 'menu' || near <= 0 || !(h.seats[0] || Math.abs(h.speed) > 1)) { // engine off: fade out, then let it go
+      const v = h.voice; if (!v) continue;
+      if (!v.dieT) { v.dieT = t + 0.4; v.out.gain.setTargetAtTime(0, t, 0.08); v.sk.gain.setTargetAtTime(0, t, 0.05); }
+      else if (t > v.dieT) stopHogVoice(h);
+      continue;
+    }
+    const v = hogVoice(h); v.dieT = 0;
+    const sp = Math.abs(h.speed) / HOG.max, rev = Math.max(Math.abs(h.thr || 0), h.seats[0] && h.seats[0].isRemote ? sp : 0) + (h.air && h.seats[0] ? 0.6 : 0);
+    const f = 36 + sp * 75 + rev * 16;
+    v.a.frequency.setTargetAtTime(f, t, 0.08); v.b.frequency.setTargetAtTime(f * 0.5, t, 0.08);
+    v.lfo.frequency.setTargetAtTime(6 + sp * 24 + rev * 4, t, 0.1);
+    v.lp.frequency.setTargetAtTime(320 + sp * 900 + rev * 350, t, 0.1);
+    v.out.gain.setTargetAtTime(0.085 * near * (0.5 + sp * 0.5 + rev * 0.15), t, 0.1);
+    const skid = !h.air && Math.abs(h.speed) > 7 ? clamp(Math.abs(h.steer) - 0.45, 0, 0.55) * (Math.abs(h.speed) / HOG.max) : 0;
+    v.sk.gain.setTargetAtTime(skid * 0.16 * near, t, 0.05);
   }
 }
 function touching(a, b, reach = 1.3) { // tag reach; a frog driving a speeding toadhog tags with the whole hog
@@ -2343,7 +2423,7 @@ function buildMap(key) {
   for (const c of [...mapGroup.children]) mapGroup.remove(c);
   ownGeos.forEach(g => g.dispose()); ownGeos = [];
   boxes.length = trees.length = blobs.length = ledges.length = 0; water = null;
-  for (const h of hogs) for (const b of h.seats) if (b) { b.hog = null; b.seat = -1; }
+  for (const h of hogs) { stopHogVoice(h); for (const b of h.seats) if (b) { b.hog = null; b.seat = -1; } }
   hogs = []; teleports = []; if (typeof hideMyFrog === 'function') hideMyFrog();
   HALF = mp.half || 30; groundAt = mp.ground || flatGround;
   camera.far = mp.far || 140; camera.updateProjectionMatrix();
@@ -6883,6 +6963,7 @@ function frame(now) {
   for (const a of ais) drawAI(a, t);
   for (const r of remotes.values()) drawAI(r, t);
   updateParticles(dt, t);
+  hogAudio();
   for (const f of mapAnims) f(dt, t);
   renderer.render(scene, camera);
 }
