@@ -48,7 +48,7 @@ It runs on tablets (including Amazon Fire tablets), phones, and computers. There
 | `M` | Music on/off |
 | `Esc` | Close a panel, or go back to the menu |
 
-On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freeze Tag, `5` Hot Potato, `6` Fly Feast, `7` Free Play, `O` Play online, `R` Wardrobe.
+On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freeze Tag, `5` Hot Potato, `6` Fly Feast, `7` Free Play, `8` King of the Lily Pad, `Q` Daily quests, `O` Play online, `R` Wardrobe.
 
 ## Game modes
 
@@ -58,7 +58,12 @@ On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freez
 - **Freeze Tag**: tagged frogs freeze into ice. Touch a frozen friend to free them. The taggers win if everyone is frozen; the runners win if anyone is still free after 2 minutes.
 - **Hot Potato**: one frog holds a buzzing hot fly that beeps faster and faster. Tag someone to pass it. When it pops, whoever holds it is out. Last frog standing wins.
 - **Fly Feast**: catch the most flies in 90 seconds. Everyone in a room sees the same flies.
+- **King of the Lily Pad**: stand on the golden lily pad alone to score a point every second, and bump other frogs off it. The pad moves every 35 seconds. First to 60 wins.
 - **Free Play**: no tagging. Explore, climb, bounce, talk to the frogs, and catch flies.
+
+## Daily quests
+
+Every day brings three new quests, like "Catch 25 flies", "Unfreeze 4 frogs in Freeze Tag", or "Be king of the lily pad for 40 seconds". Finish one and claim its fly reward from **Daily quests** on the menu. New quests arrive at midnight.
 
 ## Maps
 

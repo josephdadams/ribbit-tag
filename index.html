@@ -39,7 +39,7 @@ h1 span { color: var(--lava); display: block; }
 .modes .mode { padding: 11px 13px; }
 .modes .mode b { font-size: 1.3rem; }
 .modes .mode small { font-size: .8rem; display: block; }
-.modes .mode.freemode { grid-column: span 2; }
+.mode.kingmode { background: linear-gradient(90deg, #ffd23f, #ffb02e); box-shadow: 0 5px 0 #b8841a; }
 .mode.freezemode { background: #a8e0ff; box-shadow: 0 5px 0 #5a9cc4; }
 .mode.potatomode { background: #ff9f5a; box-shadow: 0 5px 0 #c4602a; }
 .mode.feastmode { background: #ffd23f; box-shadow: 0 5px 0 #b8941a; }
@@ -157,6 +157,25 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .pl-help { margin-top: 10px; font-size: .85rem; line-height: 1.35; background: rgba(255,255,255,.05); border-radius: 12px; padding: 8px 10px; }
 .pl-help ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 .pl-help em { font-style: normal; text-decoration: underline; }
+#questsPanel { position: fixed; inset: 0; z-index: 4; display: grid; place-items: center; padding: 16px; background: rgba(10,26,16,.6); }
+.qp-card { width: min(460px, 100%); max-height: 100%; overflow-y: auto; background: var(--jungle); border: 3px solid var(--canopy); border-radius: 20px; padding: 16px; }
+.qp-card h2 { font-family: var(--display); font-weight: 400; font-size: 1.6rem; margin: 0; }
+#questList { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.quest { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; background: var(--canopy); border-radius: 14px; padding: 10px 12px; }
+.quest b { grid-column: 1; font-weight: 800; }
+.quest .qbar { grid-column: 1; height: 10px; border-radius: 999px; background: var(--ink); overflow: hidden; }
+.quest .qbar i { display: block; height: 100%; background: var(--leaf); border-radius: 999px; }
+.quest small { grid-column: 1; font-weight: 700; font-size: .8rem; opacity: .8; font-variant-numeric: tabular-nums; }
+.quest .claim, .quest .got { grid-column: 2; grid-row: 1 / span 3; }
+.quest .claim { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; background: #ffd23f; color: var(--ink); }
+.quest .claim:focus-visible { outline: 3px solid var(--bone); outline-offset: 2px; }
+.quest.done { box-shadow: inset 0 0 0 2px #ffd23f; }
+.quest.claimed { opacity: .65; }
+.quest.claimed .qbar i { background: #ffd23f; }
+.quests-btn { margin-top: 10px; }
+.quests-btn.ready { border-color: #ffd23f; animation: qpulse 1.4s ease-in-out infinite; }
+@keyframes qpulse { 50% { box-shadow: 0 0 0 4px rgba(255,210,63,.35); } }
+@media (prefers-reduced-motion: reduce) { .quests-btn.ready { animation: none; } }
 #update { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 5; font: inherit; font-weight: 800; border: 0;
   border-radius: 999px; padding: 10px 18px; background: var(--leaf); color: var(--ink); cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,.35); max-width: calc(100% - 32px); }
 .bubble.myst { color: #1b1530; font-style: italic; }
@@ -259,8 +278,10 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <button class="mode freezemode" id="modeFreeze" type="button"><b>Freeze Tag</b><small>Tagged frogs freeze. Touch frozen friends to free them.</small></button>
         <button class="mode potatomode" id="modePotato" type="button"><b>Hot Potato</b><small>Pass the buzzing hot fly before it pops!</small></button>
         <button class="mode feastmode" id="modeFeast" type="button"><b>Fly Feast</b><small>Catch the most flies in 90 seconds.</small></button>
+        <button class="mode kingmode" id="modeKing" type="button"><b>King of the Lily Pad</b><small>Hold the golden pad alone to score. Bump others off!</small></button>
         <button class="mode freemode" id="modeFree" type="button"><b>Free Play</b><small>No tagging. Explore, climb and catch flies.</small></button>
       </div>
+      <button class="wardrobe-btn quests-btn" id="questsBtn" type="button"><span>Daily quests</span><span class="wb-count" id="questCount">0/3</span></button>
       <button class="wardrobe-btn" id="wardrobeBtn" type="button"><span>Wardrobe</span><span class="wb-count"><svg class="ban" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="7.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(-25 7.5 9)"/><ellipse cx="16.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(25 16.5 9)"/><ellipse cx="12" cy="14" rx="3.6" ry="5.4" fill="#1b1b22"/><circle cx="10.6" cy="9.6" r="1.3" fill="#d62828"/><circle cx="13.4" cy="9.6" r="1.3" fill="#d62828"/></svg><span id="menuFlies">0</span></span></button>
       <div class="row">
         <span class="label">Frog speed</span>
@@ -318,12 +339,19 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">&uarr;</span><span>Next to a tree or rock wall? Keep swiping down to <strong>climb</strong> it. The treehouse has steps.</span></li>
         <li><span class="ic hot">!</span><span>Your hands go see-through when there is nothing close enough to grab. The arrow at the top points to the lava frog.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
-        <li><span class="ic">Key</span><span><strong>Keyboard:</strong> <kbd>W</kbd> push forward, <kbd>S</kbd> back, <kbd>A</kbd> <kbd>D</kbd> turn, <kbd>Q</kbd> <kbd>E</kbd> sideways, <kbd>Space</kbd> jump, hold <kbd>Shift</kbd> for big pushes. <kbd>T</kbd> talk, <kbd>1</kbd>–<kbd>9</kbd> quick replies, <kbd>Tab</kbd> next frog, <kbd>H</kbd> be host, <kbd>M</kbd> music on/off, <kbd>P</kbd> player list, <kbd>Esc</kbd> menu. On the menu: <kbd>1</kbd> Infection, <kbd>2</kbd> Classic, <kbd>3</kbd> Capture the Lily Pad, <kbd>4</kbd> Freeze Tag, <kbd>5</kbd> Hot Potato, <kbd>6</kbd> Fly Feast, <kbd>7</kbd> Free Play, <kbd>O</kbd> Play online, <kbd>R</kbd> Wardrobe.</span></li>
+        <li><span class="ic">Key</span><span><strong>Keyboard:</strong> <kbd>W</kbd> push forward, <kbd>S</kbd> back, <kbd>A</kbd> <kbd>D</kbd> turn, <kbd>Q</kbd> <kbd>E</kbd> sideways, <kbd>Space</kbd> jump, hold <kbd>Shift</kbd> for big pushes. <kbd>T</kbd> talk, <kbd>1</kbd>–<kbd>9</kbd> quick replies, <kbd>Tab</kbd> next frog, <kbd>H</kbd> be host, <kbd>M</kbd> music on/off, <kbd>P</kbd> player list, <kbd>Esc</kbd> menu. On the menu: <kbd>1</kbd> Infection, <kbd>2</kbd> Classic, <kbd>3</kbd> Capture the Lily Pad, <kbd>4</kbd> Freeze Tag, <kbd>5</kbd> Hot Potato, <kbd>6</kbd> Fly Feast, <kbd>7</kbd> Free Play, <kbd>8</kbd> King of the Lily Pad, <kbd>Q</kbd> Daily quests, <kbd>O</kbd> Play online, <kbd>R</kbd> Wardrobe.</span></li>
       </ul>
     </div>
   </div>
 </div>
 
+<div id="questsPanel" hidden>
+  <div class="qp-card">
+    <div class="pl-head"><h2>Daily quests</h2><span class="spacer"></span><button id="questsClose" class="pill-btn" type="button">Close</button></div>
+    <ul id="questList"></ul>
+    <p class="note" id="questReset"></p>
+  </div>
+</div>
 <button id="update" type="button" hidden>A new version is ready. Tap to update.</button>
 <div id="wardrobe" hidden>
   <div class="wr-panel">
@@ -347,7 +375,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-4';
+const APP_VERSION = 'ribbit-5';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -1170,7 +1198,7 @@ function collide(b) {
     if (d < 1e-5) { tn.set(0, 1, 0); p.y = bx.max.y + R; }
     else { tn.multiplyScalar(1 / d); p.addScaledVector(tn, R - d); }
     const vn = v.dot(tn);
-    if (bx.bounce && tn.y > 0.6 && vn < -2) { v.y = Math.max(bx.bounce, -vn * 0.85); if (b.isPlayer) sfxTone(260, 620, 0.16, 'sine', 0.1); continue; }
+    if (bx.bounce && tn.y > 0.6 && vn < -2) { v.y = Math.max(bx.bounce, -vn * 0.85); if (b.isPlayer) { sfxTone(260, 620, 0.16, 'sine', 0.1); questEvent('bounce'); } continue; }
     if (vn < 0) v.addScaledVector(tn, -vn);
     if (tn.y > 0.6) { b.grounded = true; if (bx.ice) b.onIce = true; } else if (Math.abs(tn.y) < 0.5) b.wall = true;
   }
@@ -1856,7 +1884,8 @@ function flash(big, small = '', secs = 2.2, color = 'var(--bone)') {
 
 function startRound(firstId, seed) {
   state = 'play'; chooseSong(); startMusic(); roundTime = 0; playerTaggedThisRound = false;
-  resetModeState();
+  resetModeState(); if (mode !== 'king') kingEnd();
+  questEvent('mode', 1, mode); questEvent('map', 1, mapKey);
   if (mode === 'ctf') { ctfStartRound(); return; }
   ctfEnd();
   const mp = MAPS[mapKey];
@@ -1869,6 +1898,7 @@ function startRound(firstId, seed) {
   ais.forEach(a => { a.follow = 0; a.talkCd = 3 + Math.random() * 3; });
   if (mode === 'free') { if (net && isHost()) net.ev.send({ k: 'round', first: null }); flash('Free Play', 'No tagging. Explore, bounce, climb and catch flies!', 2.8, 'var(--leaf)'); return; }
   if (mode === 'feast') { feastStart(seed); return; }
+  if (mode === 'king') { kingStart(); return; }
   const ids = Array.isArray(firstId) ? firstId : firstId ? [firstId] : [];
   let firsts = ids.map(id => byId(id)).filter(Boolean);
   if (!firsts.length) firsts = shuffled(ais).slice(0, mode === 'freeze' && bodies.length >= 8 ? 2 : 1);
@@ -1907,7 +1937,7 @@ function doTag(a, b) {
     } else if (mode === 'potato') flash('Hot fly!', `${a.name} passed it to you. Pass it on, quick!`, 2, 'var(--lava)');
     else flash("You're it!", `${a.name} tagged you. Frozen for 2 seconds, then go get someone.`, 2.6, 'var(--lava)');
   } else if (a.isPlayer) {
-    addFlies(3);
+    addFlies(3); questEvent('tag');
     flash(mode === 'potato' ? 'Passed it!' : mode === 'classic' ? 'Tagged!' : `Got ${b.name}!`, mode === 'classic' ? `${b.name} is it now. Run!` : '', 1.8, 'var(--leaf)');
   }
   if (mode === 'infection' && bodies.every(x => x.it)) {
@@ -1917,7 +1947,7 @@ function doTag(a, b) {
     survived = roundTime;
     if (survived > best) { best = survived; try { localStorage.setItem('ribbit-best', String(best)); } catch (e) {} }
     state = 'over'; overT = 5;
-    addFlies(10);
+    addFlies(10); questEvent('win');
     flash('Last frog standing!', `You win! Survived ${fmt(survived)}. +10 flies!`, 4.6, 'var(--leaf)');
     sfxTone(400, 900, 0.5, 'triangle', 0.15);
   }
@@ -2418,6 +2448,7 @@ function openTalk(ai) {
 }
 function playerSays(text) {
   text = text.trim(); if (!text) return;
+  questEvent('talk');
   if (!talkTarget) openTalk();
   const ai = talkTarget;
   setTimeout(() => reply(ai, text), 450);
@@ -2576,10 +2607,10 @@ function removeRemote(id) {
 const r2 = x => Math.round(x * 100) / 100;
 function snapshot() {
   const it = {};
-  for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0];
+  for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0)];
   return { n: ais.length, m: mapKey, mo: mode, st: state, rt: r2(roundTime), ot: r2(overT), d: diff,
     ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null,
-    pf: mode === 'potato' ? r2(potato.fuse) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
+    pf: mode === 'potato' ? r2(potato.fuse) : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
 }
 let joinWait = false;
 function applySnapshot(s, from) {
@@ -2611,6 +2642,9 @@ function applySnapshot(s, from) {
     b.feastScore = fs || 0;
   }
   if (s.pf !== undefined) potato.fuse = s.pf;
+  for (const [id, row] of Object.entries(s.it)) { const b = byId(id); if (b) b.kingScore = row[6] || 0; }
+  if (s.kp && mode === 'king') { if (!kingPad.group || kingPad.mapKey !== mapKey) kingBuild(); kingPlace(s.kp[0], s.kp[1], s.kp[2]); }
+  else if (mode !== 'king') kingEnd();
   if (s.fe) {
     if (!feast.group || feast.seed !== s.fe[0] || feast.mapKey !== mapKey) feastBuild(s.fe[0]);
     feast.flies.forEach((f, i) => { f.active = s.fe[1][i] === '1'; });
@@ -2661,6 +2695,8 @@ async function joinNet(code, lobby) {
   net.snap.onMessage = (s, { peerId }) => applySnapshot(s, peerId);
   net.ev.onMessage = (e, { peerId }) => {
     if (e.k === 'round' && peerId === net.hostId) startRound(e.first, e.seed);
+    else if (e.k === 'q' && peerId === net.hostId) questEvent(String(e.ev), Math.min(10, +e.n || 1));
+    else if (e.k === 'bump' && peerId === net.hostId) { player.vel.set(+e.x || 0, +e.y || 6, +e.z || 0); sfxSlap(0.35); flash('Bumped!', 'Someone knocked you off the pad.', 1.4, '#ffd23f'); }
     else if (e.k === 'msg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 140), 2.6, /^(#[0-9a-f]{3,6}|var\(--[a-z]+\))$/i.test(e.color || '') ? e.color : 'var(--bone)');
     else if (e.k === 'home' && peerId === net.hostId) { ctfRespawn(player, false); flash('Tagged!', 'Back to your base.', 2, TEAM_CSS[1 - (player.team || 0)]); }
     else if (e.k === 'ctfmsg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 120), 2.6, TEAM_CSS[e.team] || 'var(--bone)');
@@ -2807,6 +2843,8 @@ addEventListener('keydown', e => {
     else if (e.code === 'Digit5') begin('potato');
     else if (e.code === 'Digit6') begin('feast');
     else if (e.code === 'Digit7') begin('free');
+    else if (e.code === 'Digit8') begin('king');
+    else if (e.code === 'KeyQ') $('questsBtn').click();
     else if (e.code === 'KeyR') openWardrobe();
     else if (e.code === 'KeyO') begin(mode, 1);
     return;
@@ -2915,6 +2953,7 @@ $('modeFreeze').addEventListener('click', () => begin('freeze'));
 $('modePotato').addEventListener('click', () => begin('potato'));
 $('modeFeast').addEventListener('click', () => begin('feast'));
 $('modeFree').addEventListener('click', () => begin('free'));
+$('modeKing').addEventListener('click', () => begin('king'));
 $('menuBtn').addEventListener('click', () => {
   state = 'menu'; pointers.clear(); showBest();
   $('menu').hidden = false; $('hud').hidden = true;
@@ -2922,7 +2961,7 @@ $('menuBtn').addEventListener('click', () => {
   $('talk').hidden = true; talkTarget = null; togglePlayers(false);
   ais.forEach(a => { a.bubble.hidden = true; a.bubbleT = 0; a.follow = 0; });
   try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
-  leaveNet(); joinWait = false; ctfEnd(); resetModeState(); if (potato.mesh) { scene.remove(potato.mesh); potato.mesh = null; } if (feast.group) { scene.remove(feast.group); feast.group = null; } if (mysteryActive) mysteryVanish(mysteryActive, 'off'); Object.values(mysteries).forEach(m => { m.bubble.hidden = true; }); chooseSong();
+  leaveNet(); joinWait = false; ctfEnd(); kingEnd(); resetModeState(); showQuestBadge(); if (potato.mesh) { scene.remove(potato.mesh); potato.mesh = null; } if (feast.group) { scene.remove(feast.group); feast.group = null; } if (mysteryActive) mysteryVanish(mysteryActive, 'off'); Object.values(mysteries).forEach(m => { m.bubble.hidden = true; }); chooseSong();
 });
 $('roomIn').addEventListener('input', e => {
   const v = cleanCode(e.target.value); if (v !== e.target.value) e.target.value = v;
@@ -3140,6 +3179,7 @@ function playerRow(b, me) {
   if (b.out) { st.textContent = 'Out'; st.style.background = '#9aa0a6'; st.style.color = '#0a1a10'; }
   if (mode === 'feast' && state !== 'menu') { st.textContent = `${b.feastScore || 0} ${(b.feastScore || 0) === 1 ? 'fly' : 'flies'}`; st.style.background = '#ffd23f'; st.style.color = '#0a1a10'; }
   if (mode === 'free' && state !== 'menu') st.textContent = 'Playing';
+  if (mode === 'king' && state !== 'menu') { st.textContent = `${Math.floor(b.kingScore || 0)}s`; st.style.background = '#ffd23f'; st.style.color = '#0a1a10'; }
   if (mode === 'ctf' && state !== 'menu') {
     st.textContent = ctf.flags.some(F => F.carrier === b) ? 'Has lotus' : TEAM_NAMES[b.team || 0];
     st.style.background = TEAM_CSS[b.team || 0]; st.style.color = '#0a1a10';
@@ -3233,7 +3273,7 @@ function updatePickups(dt, t) {
     pk.mesh.rotation.y = -ph;
     if (pk.wings) { const f = Math.sin(t * 60) * 0.6; pk.wings[0].rotation.z = 0.3 + f; pk.wings[1].rotation.z = -0.3 - f; }
     if (state === 'play' && pk.pos.distanceTo(player.pos) < 1.25) {
-      pk.mesh.visible = false; pk.t = 25; addFlies(1); sfxTone(1200, 300, 0.12, 'square', 0.06); sfxSlap(0.12);
+      pk.mesh.visible = false; pk.t = 25; addFlies(1); questEvent('fly'); sfxTone(1200, 300, 0.12, 'square', 0.06); sfxSlap(0.12);
     }
   }
 }
@@ -3302,7 +3342,7 @@ function wear(item) {
   if (item.secret && !owned.has(key)) { $('wrMsg').textContent = item.hint || 'This one is a secret...'; return; }
   if (!owned.has(key)) {
     if (flies < item.cost) { $('wrMsg').textContent = `You need ${item.cost - flies} more flies for the ${item.name}. Keep playing to earn them!`; sfxTone(220, 160, 0.15, 'square', 0.06); return; }
-    flies -= item.cost; owned.add(key);
+    flies -= item.cost; owned.add(key); questEvent('buy');
     $('wrMsg').textContent = `You got the ${item.name}!`; sfxTone(660, 1320, 0.3, 'triangle', 0.14);
   }
   look = Object.assign({}, look, { [item.slot]: item.id });
@@ -3393,6 +3433,7 @@ function ctfSendHome(b, by) {
   else ctfRespawn(b, false);
   if (b === player) flash('Tagged!', `${by.name || 'Someone'} sent you back to base.`, 2, TEAM_CSS[by.team]);
   else if (by === player) { flash('Tagged!', `${b.name} goes back to base.`, 1.6, TEAM_CSS[player.team]); addFlies(1); }
+  questFor(by, 'tag');
   sfxTone(500, 160, 0.25, 'triangle', 0.08);
 }
 function ctfUpdate(dt, t) {
@@ -3415,10 +3456,12 @@ function ctfUpdate(dt, t) {
       if (Fe.carrier === b && Fm.state === 'home' && flat(b.pos, ctf.bases[my]) < 2.8 && Math.abs(b.pos.y - ctf.bases[my].y) < 3) {
         ctf.score[my]++; Fe.state = 'home'; Fe.carrier = null; Fe.pos.copy(ctf.bases[en]);
         if (b === player) addFlies(3);
+        questFor(b, 'capture');
         sfxTone(520, 1040, 0.4, 'triangle', 0.14);
         if (ctf.score[my] >= CTF_WIN) {
           state = 'over'; overT = 6;
           ctfAnnounce(`${TEAM_NAMES[my]} team wins!`, `${ctf.score[0]} to ${ctf.score[1]}. New game soon.`, my, 5.5);
+          bodies.filter(x => x.team === my).forEach(x => questFor(x, 'win'));
           if (player.team === my) addFlies(10);
         } else ctfAnnounce(`${TEAM_NAMES[my]} team scores!`, `${b === player ? 'You' : b.name} brought the lotus home. ${ctf.score[0]} to ${ctf.score[1]}`, my, 3);
         if (!b.isPlayer && !b.isRemote) say(b, pick(["We scored!", "Point for us!", "Ribbit-tastic!"]));
@@ -3472,7 +3515,8 @@ const MODE_NAMES = { infection: 'Infection', classic: 'Classic Tag', ctf: 'Captu
 const FREEZE_TIME = 120, FEAST_TIME = 90;
 const potato = { fuse: 20, beepT: 0, mesh: null };
 const feast = { seed: 0, flies: [], group: null };
-function announce(big, small, color, secs = 2.6) {
+function announce(big, small, color, secs = 2.6, winner) {
+  if (winner) (Array.isArray(winner) ? winner : [winner]).forEach(w => questFor(w, 'win'));
   flash(big, small, secs, color || 'var(--bone)');
   if (net && isHost()) net.ev.send({ k: 'msg', big, small, color });
 }
@@ -3504,6 +3548,7 @@ function freezeHit(a, b) {
   sfxTone(1200, 600, 0.3, 'sine', 0.1);
   if (b === player) flash('Frozen!', 'Wait for a teammate to touch you.', 2.2, '#bfe9ff');
   else if (a === player) flash('Frozen!', `${b.name} is an ice cube.`, 1.5, '#bfe9ff');
+  questFor(a, 'tag');
   if (!b.isPlayer && !b.isRemote && Math.random() < 0.6) say(b, pick(["Brrr! Help!", "I'm an ice cube!", "Somebody unfreeze me!"]));
 }
 function freezeUpdate() {
@@ -3517,14 +3562,15 @@ function freezeUpdate() {
       setIce(b, false);
       if (b === player) flash('Unfrozen!', `${a.name || 'A friend'} saved you. Go!`, 1.6, 'var(--leaf)');
       else if (a === player) { flash('Rescued!', `You unfroze ${b.name}.`, 1.5, 'var(--leaf)'); addFlies(1); }
+      questFor(a, 'rescue');
       if (!b.isPlayer && !b.isRemote) say(b, pick(["Thanks!", "Free again!", "Phew!"]));
     }
   }
   const runners = bodies.filter(b => !b.it);
   if (runners.length && runners.every(b => b.iced)) {
-    state = 'over'; overT = 6; announce('Everyone is frozen!', 'The taggers win. New round soon.', '#bfe9ff', 5);
+    state = 'over'; overT = 6; announce('Everyone is frozen!', 'The taggers win. New round soon.', '#bfe9ff', 5, bodies.filter(b => b.it));
   } else if (roundTime >= FREEZE_TIME) {
-    state = 'over'; overT = 6; announce('Runners win!', `${runners.filter(b => !b.iced).length} frogs stayed free. New round soon.`, 'var(--leaf)', 5);
+    state = 'over'; overT = 6; announce('Runners win!', `${runners.filter(b => !b.iced).length} frogs stayed free. New round soon.`, 'var(--leaf)', 5, runners);
     if (!player.it) addFlies(5);
   }
 }
@@ -3558,7 +3604,7 @@ function potatoUpdate(dt, t) {
   if (left.length <= 1) {
     const w = left[0];
     state = 'over'; overT = 6;
-    announce(w === player ? 'You win!' : `${w ? w.name : 'Nobody'} wins!`, `${holder === player ? 'You' : holder.name} popped last. New round soon.`, 'var(--leaf)', 5);
+    announce(w === player ? 'You win!' : `${w ? w.name : 'Nobody'} wins!`, `${holder === player ? 'You' : holder.name} popped last. New round soon.`, 'var(--leaf)', 5, w);
     if (w === player) addFlies(10);
     return;
   }
@@ -3613,13 +3659,14 @@ function feastUpdate(dt, t) {
     for (const b of bodies) if (f.pos.distanceTo(b.pos) < 1.4) {
       f.active = false; f.t = 6; b.feastScore = (b.feastScore || 0) + 1;
       if (b === player) { addFlies(1); sfxTone(1200, 300, 0.12, 'square', 0.06); }
+      questFor(b, 'fly');
       break;
     }
   }
   if (roundTime >= FEAST_TIME) {
     const w = feastLeader();
     state = 'over'; overT = 7;
-    announce(w === player ? 'You win the Fly Feast!' : `${w.name} wins the Fly Feast!`, `${w.feastScore || 0} flies caught. New round soon.`, '#ffd23f', 5.5);
+    announce(w === player ? 'You win the Fly Feast!' : `${w.name} wins the Fly Feast!`, `${w.feastScore || 0} flies caught. New round soon.`, '#ffd23f', 5.5, w);
     if (w === player) addFlies(5);
   }
 }
@@ -3632,12 +3679,177 @@ function feastNearest(from) {
 function modeGoal(ai) {
   if (mode === 'ctf') return ctfTarget(ai);
   if (mode === 'feast') { const f = feastNearest(ai.pos); return f ? f.pos : null; }
+  if (mode === 'king' && kingPad.group) return kingPad.pos;
   if (mode === 'freeze' && !ai.it && !bodies.some(b => b.it && b.pos.distanceTo(ai.pos) < 9)) {
     let best = null, bd = 30;
     for (const b of bodies) if (b.iced && b !== ai) { const d = b.pos.distanceTo(ai.pos); if (d < bd) { bd = d; best = b; } }
     return best ? best.pos : null;
   }
   return null;
+}
+
+// ---------- Daily quests ----------
+// Three quests a day, picked from the date so they're the same all day. Progress is saved on this device.
+// The host tells each player about things only the host can see (wins, captures, rescues, time as king).
+const QUEST_POOL = [
+  { id: 'fly', ev: 'fly', amounts: [15, 25, 40], reward: [10, 15, 25], text: n => `Catch ${n} flies` },
+  { id: 'tag', ev: 'tag', amounts: [3, 6, 10], reward: [10, 15, 25], text: n => `Tag ${n} frogs` },
+  { id: 'safe', ev: 'safe', amounts: [60, 120, 240], reward: [10, 15, 25], text: n => `Stay safe for ${n} seconds in tag games` },
+  { id: 'win', ev: 'win', amounts: [1, 2, 3], reward: [15, 25, 40], text: n => `Win ${n} game${n > 1 ? 's' : ''}` },
+  { id: 'modes', ev: 'mode', set: true, amounts: [2, 3, 4], reward: [10, 15, 20], text: n => `Play ${n} different game modes` },
+  { id: 'maps', ev: 'map', set: true, amounts: [2, 3, 5], reward: [10, 15, 20], text: n => `Play on ${n} different maps` },
+  { id: 'bounce', ev: 'bounce', amounts: [5, 10, 20], reward: [10, 15, 20], text: n => `Bounce on lily pads ${n} times` },
+  { id: 'height', ev: 'height', max: true, amounts: [8, 12, 16], reward: [10, 15, 20], text: n => `Climb ${n} meters high` },
+  { id: 'talk', ev: 'talk', amounts: [3, 5, 8], reward: [5, 10, 15], text: n => `Talk to the frogs ${n} times` },
+  { id: 'rescue', ev: 'rescue', amounts: [2, 4, 6], reward: [10, 15, 25], text: n => `Unfreeze ${n} frogs in Freeze Tag` },
+  { id: 'capture', ev: 'capture', amounts: [1, 2, 3], reward: [15, 25, 35], text: n => `Capture ${n} lotus${n > 1 ? 'es' : ''} in Capture the Lily Pad` },
+  { id: 'king', ev: 'king', amounts: [20, 40, 60], reward: [10, 15, 25], text: n => `Be king of the lily pad for ${n} seconds` },
+  { id: 'buy', ev: 'buy', amounts: [1, 1, 2], reward: [5, 5, 10], text: n => `Buy ${n} new item${n > 1 ? 's' : ''} in the Wardrobe` },
+];
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+let quests = null, questSaveT = 0;
+function makeQuests(date) {
+  let h = 2166136261; for (const c of date) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  const r = () => (h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, (h % 10000) / 10000);
+  const pool = QUEST_POOL.slice(), list = [];
+  while (list.length < 3) { const q = pool.splice(Math.floor(r() * pool.length), 1)[0]; const lvl = Math.floor(r() * 3); list.push({ id: q.id, target: q.amounts[lvl], reward: q.reward[lvl], progress: 0, seen: [], done: false, claimed: false }); }
+  return { date, list };
+}
+function loadQuests() {
+  try { quests = JSON.parse(localStorage.getItem('ribbit-quests') || 'null'); } catch (e) { quests = null; }
+  if (!quests || quests.date !== today() || !Array.isArray(quests.list)) { quests = makeQuests(today()); saveQuests(); }
+  showQuestBadge();
+}
+function saveQuests() { try { localStorage.setItem('ribbit-quests', JSON.stringify(quests)); } catch (e) {} }
+const questDef = id => QUEST_POOL.find(q => q.id === id);
+function questEvent(ev, amount = 1, key) {
+  if (!quests) return;
+  if (quests.date !== today()) loadQuests();
+  let changed = false;
+  for (const q of quests.list) {
+    const def = questDef(q.id);
+    if (!def || def.ev !== ev || q.done) continue;
+    if (def.set) { if (key && !q.seen.includes(key)) { q.seen.push(key); q.progress = q.seen.length; changed = true; } }
+    else if (def.max) { const v = Math.floor(amount); if (v > q.progress) { q.progress = v; changed = true; } }
+    else { q.progress += amount; changed = true; }
+    if (q.progress >= q.target) {
+      q.progress = q.target; q.done = true;
+      flash('Quest complete!', `${def.text(q.target)}. Claim ${q.reward} flies in Daily quests.`, 2.4, '#ffd23f');
+      sfxTone(660, 990, 0.25, 'triangle', 0.12);
+      saveQuests(); showQuestBadge();
+    }
+  }
+  if (changed && performance.now() - questSaveT > 2000) { questSaveT = performance.now(); saveQuests(); }
+}
+// host: credit a quest to whoever earned it, even on another device
+function questFor(body, ev, amount = 1) {
+  if (body === player) questEvent(ev, amount);
+  else if (body && body.isRemote && net) net.ev.send({ k: 'q', ev, n: amount }, { target: body.id });
+}
+function showQuestBadge() {
+  const ready = quests ? quests.list.filter(q => q.done && !q.claimed).length : 0;
+  $('questCount').textContent = ready ? `${ready} ready` : `${quests ? quests.list.filter(q => q.claimed).length : 0}/3`;
+  $('questsBtn').classList.toggle('ready', ready > 0);
+}
+function renderQuests() {
+  if (quests.date !== today()) loadQuests();
+  const list = $('questList'); list.innerHTML = '';
+  for (const q of quests.list) {
+    const def = questDef(q.id); if (!def) continue;
+    const li = document.createElement('li'); li.className = 'quest' + (q.claimed ? ' claimed' : q.done ? ' done' : '');
+    const name = document.createElement('b'); name.textContent = def.text(q.target);
+    const bar = document.createElement('span'); bar.className = 'qbar'; const fill = document.createElement('i'); fill.style.width = `${Math.round(q.progress / q.target * 100)}%`; bar.append(fill);
+    const meta = document.createElement('small'); meta.textContent = `${Math.floor(q.progress)} / ${q.target} · ${q.reward} flies`;
+    li.append(name, bar, meta);
+    if (q.done && !q.claimed) {
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'claim'; btn.textContent = `Claim ${q.reward}`;
+      btn.addEventListener('click', () => { q.claimed = true; addFlies(q.reward); saveQuests(); showQuestBadge(); renderQuests(); sfxTone(660, 1320, 0.3, 'triangle', 0.14); });
+      li.append(btn);
+    } else if (q.claimed) { const c = document.createElement('small'); c.className = 'got'; c.textContent = 'Claimed'; li.append(c); }
+    list.append(li);
+  }
+  const now = new Date(), midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), mins = Math.round((midnight - now) / 60000);
+  $('questReset').textContent = `New quests in ${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+$('questsBtn').addEventListener('click', () => { initAudio(); renderQuests(); $('questsPanel').hidden = false; });
+$('questsClose').addEventListener('click', () => { $('questsPanel').hidden = true; });
+loadQuests();
+
+// ---------- King of the Lily Pad ----------
+// A golden lily pad with a crown. Stand on it alone to score a point a second; bump others off it.
+// It moves every 35 seconds. First to 60 wins, or the most after 3 minutes. The host keeps score.
+const KING_WIN = 60, KING_TIME = 180, KING_MOVE = 35;
+const kingPad = { pos: new V(), group: null, crown: null, padMat: null, moveT: KING_MOVE, mapKey: '' };
+function kingBuild() {
+  if (kingPad.group) scene.remove(kingPad.group);
+  const g = kingPad.group = new THREE.Group(); scene.add(g); kingPad.mapKey = mapKey;
+  kingPad.padMat = new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0x6a4e00 });
+  const pad = new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(2.3, 2.3, 0.14, 20, 1, false, 0.3, Math.PI * 2 - 0.6))), kingPad.padMat); pad.position.y = 0.07; g.add(pad);
+  const rim = new THREE.Mesh(ctfGeo.rim, goldMat); rim.scale.setScalar(0.9); rim.rotation.x = Math.PI / 2; rim.position.y = 0.12; g.add(rim);
+  kingPad.crown = new THREE.Group(); scene.add(kingPad.crown);
+  const c = new THREE.Group(); c.position.set(0, -0.78, 0.1); kingPad.crown.add(c); HAT_BUILD.crown(c); kingPad.crown.scale.setScalar(1.8);
+  kingPlace();
+}
+function kingPlace(x, y, z) {
+  if (x === undefined) {
+    const mp = MAPS[mapKey];
+    for (let i = 0; i < 30; i++) {
+      x = mp.ring[0] + (Math.random() - 0.5) * 26; z = mp.ring[1] + (Math.random() - 0.5) * 26;
+      x = clamp(x, -HALF + 4, HALF - 4); z = clamp(z, -HALF + 4, HALF - 4);
+      if (!blockedAt(x, z) && (!water || z < water.z)) break;
+    }
+    y = mp.spawnHigh ? 8 : 0;
+    if (mp.spawnHigh) { x = clamp(x, -5, 5); z = clamp(z, -5, 5); }
+  }
+  kingPad.pos.set(x, y, z);
+  if (kingPad.group) kingPad.group.position.copy(kingPad.pos);
+}
+function onKingPad(b) { return !b.out && flat(b.pos, kingPad.pos) < 2.3 && Math.abs(b.pos.y - R - kingPad.pos.y) < 1.2; }
+function kingStart() {
+  kingBuild(); kingPad.moveT = KING_MOVE;
+  for (const b of bodies) { b.kingScore = 0; b.kingAcc = 0; }
+  if (net && isHost()) net.ev.send({ k: 'round', first: null });
+  flash('King of the Lily Pad!', 'Stand on the golden pad alone to score. Bump others off!', 3, '#ffd23f');
+}
+function kingLeader() { let w = null; for (const b of bodies) if (!w || (b.kingScore || 0) > (w.kingScore || 0)) w = b; return w; }
+function kingUpdate(dt, t) {
+  if (!kingPad.group || kingPad.mapKey !== mapKey) kingBuild();
+  const on = bodies.filter(onKingPad), holder = on.length === 1 ? on[0] : null;
+  // crown floats over the king, or over the pad
+  if (holder) kingPad.crown.position.set(holder.pos.x, holder.pos.y + 1.55 + Math.sin(t * 4) * 0.05, holder.pos.z);
+  else kingPad.crown.position.set(kingPad.pos.x, kingPad.pos.y + 1.8 + Math.sin(t * 2) * 0.15, kingPad.pos.z);
+  kingPad.crown.rotation.y = t * 1.5;
+  kingPad.padMat.emissive.setHex(on.length > 1 ? (Math.sin(t * 12) > 0 ? 0x8a1a00 : 0x6a4e00) : holder ? 0x9a7200 : 0x6a4e00);
+  if (!isHost() || state !== 'play') return;
+  if ((kingPad.moveT -= dt) <= 0) { kingPad.moveT = KING_MOVE; kingPlace(); announce('The lily pad moved!', 'Follow the arrow to the new spot.', '#ffd23f', 2); }
+  if (holder) {
+    holder.kingScore = (holder.kingScore || 0) + dt;
+    holder.kingAcc = (holder.kingAcc || 0) + dt;
+    if (holder.kingAcc >= 1) { holder.kingAcc -= 1; questFor(holder, 'king', 1); }
+  }
+  // bumps: touching a frog that's on the pad knocks it off
+  for (const a of bodies) for (const b of bodies) {
+    if (a === b || a.out || b.out || (b.bumpCd || 0) > 0 || !onKingPad(b) || a.pos.distanceTo(b.pos) > 1.25) continue;
+    if (onKingPad(a) && a.vel.lengthSq() < b.vel.lengthSq()) continue; // both on the pad: the faster frog wins the shove
+    const push = tn.subVectors(b.pos, a.pos).setY(0); if (push.lengthSq() < 1e-4) push.set(Math.random() - 0.5, 0, Math.random() - 0.5);
+    push.normalize();
+    b.bumpCd = 0.9; a.bumpCd = 0.4;
+    if (b.isRemote) { if (net) net.ev.send({ k: 'bump', x: r2(push.x * 8), y: 6, z: r2(push.z * 8) }, { target: b.id }); }
+    else { b.vel.x = push.x * 8; b.vel.z = push.z * 8; b.vel.y = 6; }
+    if (a === player || b === player) { sfxSlap(0.35); sfxTone(300, 120, 0.15, 'square', 0.06); }
+    if (b === player) flash('Bumped!', `${a.name || 'Someone'} knocked you off the pad.`, 1.4, '#ffd23f');
+  }
+  for (const b of bodies) if (b.bumpCd > 0) b.bumpCd -= dt;
+  const lead = kingLeader();
+  if (lead && (lead.kingScore >= KING_WIN || roundTime >= KING_TIME)) {
+    state = 'over'; overT = 6;
+    announce(lead === player ? 'You are the King of the Lily Pad!' : `${lead.name} is the King of the Lily Pad!`, `${Math.floor(lead.kingScore)} seconds on the pad. New round soon.`, '#ffd23f', 5, lead);
+    if (lead === player) addFlies(10);
+  }
+}
+function kingEnd() {
+  if (kingPad.group) { scene.remove(kingPad.group); kingPad.group = null; }
+  if (kingPad.crown) { scene.remove(kingPad.crown); kingPad.crown = null; }
 }
 
 // ---------- Loop ----------
@@ -3661,6 +3873,8 @@ function update(dt, t) {
   if (state === 'play') {
     roundTime += dt;
     if (!player.it) { stats.safe += dt; safeAcc += dt; if (safeAcc >= 10) { safeAcc -= 10; addFlies(1); } }
+    if (!player.it && !player.iced && !player.out && ['infection', 'classic', 'freeze', 'potato'].includes(mode)) questEvent('safe', dt);
+    questEvent('height', player.pos.y - R);
     tagReqCd -= dt;
     if (net && !host && player.it && !player.out && player.frozen <= 0 && tagReqCd <= 0 && ['infection', 'classic', 'potato', 'freeze'].includes(mode)) {
       for (const b of bodies) {
@@ -3673,6 +3887,7 @@ function update(dt, t) {
     else if (mode === 'freeze') { if (host) freezeUpdate(); }
     else if (mode === 'feast') feastUpdate(dt, t);
     else if (mode === 'free') { /* just play */ }
+    else if (mode === 'king') kingUpdate(dt, t);
     else if (host) outer: for (const a of bodies) {
       if (!a.it || a.frozen > 0 || a.isRemote || a.out) continue;
       for (const b of bodies) {
@@ -3715,10 +3930,11 @@ function update(dt, t) {
   if (hudT <= 0) {
     hudT = 0.2;
     const st = $('status');
-    const modeChip = { freeze: player.iced ? 'FROZEN!' : player.it ? 'TAGGER' : 'RUNNER', potato: player.out ? 'OUT' : player.it ? 'HOT FLY!' : 'SAFE', feast: `${player.feastScore || 0} ${(player.feastScore || 0) === 1 ? 'FLY' : 'FLIES'}`, free: 'FREE PLAY' }[mode];
+    const onPad = mode === 'king' && kingPad.group && onKingPad(player), padCount = mode === 'king' ? bodies.filter(onKingPad).length : 0;
+    const modeChip = { king: onPad ? (padCount === 1 ? 'KING!' : 'CONTESTED!') : `${Math.floor(player.kingScore || 0)}s`, freeze: player.iced ? 'FROZEN!' : player.it ? 'TAGGER' : 'RUNNER', potato: player.out ? 'OUT' : player.it ? 'HOT FLY!' : 'SAFE', feast: `${player.feastScore || 0} ${(player.feastScore || 0) === 1 ? 'FLY' : 'FLIES'}`, free: 'FREE PLAY' }[mode];
     if (modeChip) {
       st.textContent = modeChip; st.className = 'chip';
-      st.style.background = mode === 'freeze' ? (player.it ? 'var(--lava)' : '#bfe9ff') : mode === 'potato' ? (player.it ? 'var(--lava)' : player.out ? '#9aa0a6' : 'var(--leaf)') : mode === 'feast' ? '#ffd23f' : 'var(--leaf)';
+      st.style.background = mode === 'king' ? (onPad ? (padCount === 1 ? '#ffd23f' : 'var(--lava)') : 'var(--bone)') : mode === 'freeze' ? (player.it ? 'var(--lava)' : '#bfe9ff') : mode === 'potato' ? (player.it ? 'var(--lava)' : player.out ? '#9aa0a6' : 'var(--leaf)') : mode === 'feast' ? '#ffd23f' : 'var(--leaf)';
       st.style.color = 'var(--ink)';
     } else if (mode === 'ctf') {
       const carrying = ctf.flags.some(F => F.carrier === player);
@@ -3729,7 +3945,9 @@ function update(dt, t) {
       st.className = 'chip ' + (player.it ? 'lava' : 'safe'); st.style.background = ''; st.style.color = '';
     }
     const runners = bodies.filter(b => !b.it), lead = mode === 'feast' ? feastLeader() : null;
-    $('info').textContent = mode === 'freeze' ? `Frozen ${runners.filter(b => b.iced).length}/${runners.length} · ${fmt(Math.max(0, FREEZE_TIME - roundTime))} left`
+    const kl = mode === 'king' ? kingLeader() : null;
+    $('info').textContent = mode === 'king' ? `Leader: ${kl ? (kl === player ? 'You' : kl.name) + ' ' + Math.floor(kl.kingScore || 0) + 's' : '-'} · first to ${KING_WIN} · ${fmt(Math.max(0, KING_TIME - roundTime))}`
+      : mode === 'freeze' ? `Frozen ${runners.filter(b => b.iced).length}/${runners.length} · ${fmt(Math.max(0, FREEZE_TIME - roundTime))} left`
       : mode === 'potato' ? `${bodies.filter(b => !b.out).length} frogs left`
       : mode === 'feast' ? `${fmt(Math.max(0, FEAST_TIME - roundTime))} left · Leader: ${lead ? (lead === player ? 'You' : lead.name) + ' ' + (lead.feastScore || 0) : '-'}`
       : mode === 'free' ? 'Free play · explore and catch flies'
@@ -3752,6 +3970,13 @@ function update(dt, t) {
     const radar = $('radar');
     const nf = mode === 'feast' && state === 'play' ? feastNearest(player.pos) : null;
     if (mode === 'free') radar.hidden = true;
+    else if (mode === 'king' && kingPad.group && state === 'play') {
+      const g = kingPad.pos, ang = Math.atan2(-(g.x - player.pos.x), -(g.z - player.pos.z));
+      let rel = ang - player.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+      radar.hidden = onPad; radar.className = 'hunt';
+      radar.querySelector('.arrow').style.transform = `rotate(${-rel}rad)`;
+      $('radarTxt').textContent = `Golden pad ${Math.round(flat(g, player.pos))} m`;
+    }
     else if (nf) {
       const ang = Math.atan2(-(nf.pos.x - player.pos.x), -(nf.pos.z - player.pos.z));
       let rel = ang - player.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
