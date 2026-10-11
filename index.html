@@ -556,7 +556,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-26';
+const APP_VERSION = 'ribbit-27';
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
 const V = THREE.Vector3;
@@ -4126,12 +4126,14 @@ setVoices(voicesOn);
 // ---------- Look around (tablet motion) ----------
 // Turning the tablet turns your head. Yaw goes into player.yaw so pushes still go where you look; up/down only tilts the camera.
 // Tablets without a gyroscope (most Fire tablets) only know which way is down, so leaning them like a steering wheel turns instead.
-let tiltOn = false, tiltSeen = false, tiltGyro = false, tiltLook = 0, tiltLast = null, tiltPitch0 = null, tiltRoll0 = null;
+let tiltOn = false, tiltSeen = false, tiltGyro = false, tiltLook = 0, tiltLast = null, tiltPitch0 = null, tiltRoll0 = null, tiltOrient = false;
+const tiltGrav = { up: 0, right: 0, z: 0, n: 0 };
 const tiltRaw = { yaw: 0, pitch: 0, roll: 0 };
 const tiltQ = new THREE.Quaternion(), tiltE = new THREE.Euler(), tiltBack = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)), tiltScr = new THREE.Quaternion(), tiltZ = new THREE.Vector3(0, 0, 1);
 try { tiltOn = localStorage.getItem('ribbit-tilt') === '1'; } catch (e) {}
 function onTilt(e) {
   if (e.beta == null || e.gamma == null) return;
+  tiltOrient = true;
   const d = Math.PI / 180, scr = (screen.orientation ? screen.orientation.angle : window.orientation || 0) * d;
   const gyro = e.alpha != null;
   if (!tiltNoteSet || gyro !== tiltGyro) { tiltSeen = true; tiltGyro = gyro; tiltExplain(); }
@@ -4139,6 +4141,20 @@ function onTilt(e) {
   tiltQ.setFromEuler(tiltE).multiply(tiltBack).multiply(tiltScr.setFromAxisAngle(tiltZ, -scr));
   tiltE.setFromQuaternion(tiltQ, 'YXZ');
   tiltRaw.pitch = tiltE.x; tiltRaw.yaw = tiltE.y; tiltRaw.roll = tiltE.z;
+}
+// Fire tablets often send no orientation at all (the browser builds it from a gyroscope they don't have),
+// but the accelerometer still says which way is down, which is all tilting needs.
+function onTiltMotion(e) {
+  const g = e.accelerationIncludingGravity;
+  if (tiltOrient || !g || g.x == null || g.y == null || g.z == null) return;
+  const a = (screen.orientation ? screen.orientation.angle : window.orientation || 0) * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+  // turn the reading into screen directions, then smooth out shaky hands
+  const up = g.x * sn + g.y * c, right = g.x * c - g.y * sn, k = tiltGrav.n++ ? 0.2 : 1;
+  tiltGrav.up += (up - tiltGrav.up) * k; tiltGrav.right += (right - tiltGrav.right) * k; tiltGrav.z += (g.z - tiltGrav.z) * k;
+  if (tiltGrav.n < 3) return;
+  if (!tiltNoteSet || tiltGyro) { tiltSeen = true; tiltGyro = false; tiltExplain(); }
+  tiltRaw.pitch = -Math.atan2(tiltGrav.z, Math.hypot(tiltGrav.up, tiltGrav.right));
+  tiltRaw.roll = Math.atan2(tiltGrav.right, tiltGrav.up);
 }
 let tiltNoteSet = false, tiltWaitT = 0;
 function tiltExplain() {
@@ -4154,10 +4170,10 @@ function setTilt(on) {
   tiltOn = on;
   document.querySelectorAll('#tiltSeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.t === +on)));
   try { localStorage.setItem('ribbit-tilt', on ? '1' : '0'); } catch (e) {}
-  removeEventListener('deviceorientation', onTilt);
+  removeEventListener('deviceorientation', onTilt); removeEventListener('devicemotion', onTiltMotion); tiltGrav.n = 0;
   tiltRecenter(); tiltLook = 0; tiltNoteSet = false;
   if (on) {
-    addEventListener('deviceorientation', onTilt);
+    addEventListener('deviceorientation', onTilt); addEventListener('devicemotion', onTiltMotion);
     clearTimeout(tiltWaitT);
     tiltWaitT = setTimeout(() => { if (tiltOn && !tiltSeen) { $('tiltNote').hidden = false; $('tiltNote').textContent = "This device doesn't have a motion sensor, so Look around won't do anything here."; } }, 2000);
   }
