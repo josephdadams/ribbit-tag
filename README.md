@@ -86,9 +86,9 @@ Add `?daisy` to the URL to make Daisy09 appear a few seconds into a game.
 
 ## Deploying
 
-The game is published with GitHub Pages from the `main` branch. Push to `main` and the site updates within a minute or two.
+Pushing to `main` deploys the game automatically. The [Deploy to GitHub Pages](.github/workflows/pages.yml) workflow copies the site files, stamps the commit into `APP_VERSION`, and publishes to GitHub Pages, usually within a minute. You can also run it by hand from the **Actions** tab.
 
-Before each release, bump `APP_VERSION` near the top of the script in `index.html`. Players who already have the game open will see a "new version" banner, and players on different versions get a warning in multiplayer.
+Because every deploy gets a new version stamp, players who already have the game open see a "new version" banner, and players on different versions get a warning in multiplayer. Change the base `APP_VERSION` in `index.html` only when you want a new release name.
 
 ## Built with
 
