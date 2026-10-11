@@ -1,0 +1,103 @@
+# Ribbit Tag
+
+A 3D tag game for the browser where you play as a frog with sticky hands and no hopping allowed. You get around by pushing off the ground, walls and trees with your hands, flinging yourself across the map, and staying away from the lava frog.
+
+**Play it:** https://josephdadams.github.io/ribbit-tag/
+
+It runs on tablets (including Amazon Fire tablets), phones, and computers. There is nothing to install.
+
+## How to play
+
+### Touch
+
+- Each thumb is a frog hand. The left side of the screen is your left hand, the right side is your right.
+- **Swipe down** to shove the ground away and launch forward. Faster swipes make bigger leaps.
+- **Swipe sideways** to turn.
+- Next to a tree or wall, keep swiping down to **climb** it.
+- Your hands go see-through when there is nothing close enough to grab.
+- **Tap a frog** (or press **Talk**) to chat with it.
+
+### Keyboard
+
+| Key | Action |
+| --- | --- |
+| `W` / `↑` | Push forward (hold to keep going) |
+| `S` / `↓` | Push backward |
+| `A` `D` / `←` `→` | Turn |
+| `Q` `E` | Push sideways |
+| `Space` | Jump (climbs higher next to a wall) |
+| `Shift` (hold) | Big pushes |
+| `T` or `Enter` | Talk |
+| `1`–`9` | Quick replies while talking |
+| `Tab` | Talk to the next frog |
+| `P` | Player list |
+| `H` | Become the host |
+| `M` | Music on/off |
+| `Esc` | Close a panel, or go back to the menu |
+
+On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `O` Play online, `R` Wardrobe.
+
+## Game modes
+
+- **Infection**: every tag makes another lava frog. Be the last frog standing.
+- **Classic Tag**: one lava frog. Get tagged and you're it.
+- **Capture the Lily Pad**: Green team versus Blue team. Grab the other team's lotus flower, carry it back, and touch your own lily pad while your lotus is safe at home. Intruders tagged on the other team's half go back to their base and drop the lotus. First to 3 captures wins.
+
+## Maps
+
+Forest, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, and City Rooftops.
+
+Some maps change how you move: ice on Snowy Peaks is slippery, water on the Beach and the chocolate river in Candy Land slow you down, and Moon Base has low gravity. Each map has its own music.
+
+## The computer frogs
+
+Up to nine computer frogs play with you, each with a name, a voice, and a personality: Red (the show-off), Blue (super chill), Yellow (hyper), Purple (the smart one, with real frog facts), Teal (shy), Captain Orange (a pirate), Princess Pink, Coach Green, and Grandpa Silver.
+
+They talk during the game and you can talk back with quick replies or by typing. Ask for a joke or a fact, tell one to follow you or stay put, or tease them. All dialogue is scripted and runs on the device; nothing is sent to an AI service. Voices use the device's built-in text-to-speech, and voice input appears only on browsers that offer it.
+
+Every so often a ghost frog named **Daisy09** shows up in the distance, humming. Get close to her to unlock a secret hat. She can be turned off on the menu.
+
+## Wardrobe
+
+Catch flies around each map, stay safe, tag other frogs, and win games to earn flies. Spend them in the Wardrobe on hats, face items, back items (capes, wings, a jetpack), and skin colors. Progress is saved in the browser on each device.
+
+## Multiplayer
+
+- **Friends room:** everyone types the same room code on the menu and taps **Join**. The first player in picks the map and mode.
+- **Play online:** joins a public lobby with anyone else playing (up to 6 people per lobby).
+
+Players connect directly to each other with WebRTC through [Trystero](https://github.com/dmotz/trystero), using public Nostr relays only to find each other. There is no game server. One device acts as the host and runs the computer frogs, tags, and scoring; if it leaves or falls asleep, another player takes over, and anyone can tap **Be host**.
+
+Kid safety: players cannot send each other messages, and in public lobbies everyone's typed name is replaced with a random one like "Frog 4821".
+
+Some networks (school Wi-Fi, some phone data plans) block direct connections. Being on the same Wi-Fi works best. The **Players** list shows connection status and troubleshooting tips.
+
+## Running it locally
+
+The whole game is one file, `index.html`. Serve the folder with any static web server, for example:
+
+```bash
+python3 -m http.server 8000
+```
+
+Then open http://localhost:8000. Multiplayer needs the page served over `http://localhost` or HTTPS.
+
+Add `?daisy` to the URL to make Daisy09 appear a few seconds into a game.
+
+## Deploying
+
+The game is published with GitHub Pages from the `main` branch. Push to `main` and the site updates within a minute or two.
+
+Before each release, bump `APP_VERSION` near the top of the script in `index.html`. Players who already have the game open will see a "new version" banner, and players on different versions get a warning in multiplayer.
+
+## Built with
+
+- [three.js](https://threejs.org/) r128 for the 3D graphics
+- [Trystero](https://github.com/dmotz/trystero) 0.25.4 for peer-to-peer multiplayer
+- The Web Audio API for sound effects and generated music
+- The Web Speech API for the frogs' voices
+- [Lilita One](https://fonts.google.com/specimen/Lilita+One) and [Nunito](https://fonts.google.com/specimen/Nunito) from Google Fonts
+
+All music is generated by the game. Daisy09 hums "Daisy Bell" (Harry Dacre, 1892), which is in the public domain.
+
+Made by Asher and family.
