@@ -35,13 +35,17 @@ It runs on tablets (including Amazon Fire tablets), phones, and computers. There
 | `M` | Music on/off |
 | `Esc` | Close a panel, or go back to the menu |
 
-On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `O` Play online, `R` Wardrobe.
+On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freeze Tag, `5` Hot Potato, `6` Fly Feast, `7` Free Play, `O` Play online, `R` Wardrobe.
 
 ## Game modes
 
 - **Infection**: every tag makes another lava frog. Be the last frog standing.
 - **Classic Tag**: one lava frog. Get tagged and you're it.
 - **Capture the Lily Pad**: Green team versus Blue team. Grab the other team's lotus flower, carry it back, and touch your own lily pad while your lotus is safe at home. Intruders tagged on the other team's half go back to their base and drop the lotus. First to 3 captures wins.
+- **Freeze Tag**: tagged frogs freeze into ice. Touch a frozen friend to free them. The taggers win if everyone is frozen; the runners win if anyone is still free after 2 minutes.
+- **Hot Potato**: one frog holds a buzzing hot fly that beeps faster and faster. Tag someone to pass it. When it pops, whoever holds it is out. Last frog standing wins.
+- **Fly Feast**: catch the most flies in 90 seconds. Everyone in a room sees the same flies.
+- **Free Play**: no tagging. Explore, climb, bounce, talk to the frogs, and catch flies.
 
 ## Maps
 

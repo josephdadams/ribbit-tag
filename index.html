@@ -35,7 +35,17 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--jungle
 h1 { font-family: var(--display); font-weight: 400; font-size: clamp(2.6rem, 7vw, 4.2rem); line-height: .9; margin: 0 0 6px; letter-spacing: .01em; text-wrap: balance; }
 h1 span { color: var(--lava); display: block; }
 .tagline { margin: 0 0 18px; font-size: 1.02rem; opacity: .85; }
-.modes { display: grid; gap: 10px; }
+.modes { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.modes .mode { padding: 11px 13px; }
+.modes .mode b { font-size: 1.3rem; }
+.modes .mode small { font-size: .8rem; display: block; }
+.modes .mode.freemode { grid-column: span 2; }
+.mode.freezemode { background: #a8e0ff; box-shadow: 0 5px 0 #5a9cc4; }
+.mode.potatomode { background: #ff9f5a; box-shadow: 0 5px 0 #c4602a; }
+.mode.feastmode { background: #ffd23f; box-shadow: 0 5px 0 #b8941a; }
+.mode.freemode { background: var(--bone); box-shadow: 0 5px 0 #b7ab92; }
+#hud.iced #vignette { box-shadow: inset 0 0 120px 36px rgba(160,220,255,.6); }
+#hud.out #vignette { box-shadow: inset 0 0 140px 50px rgba(40,40,50,.6); }
 .mode { font: inherit; text-align: left; cursor: pointer; border: 0; border-radius: 16px; padding: 14px 18px; color: var(--ink);
   background: var(--leaf); box-shadow: 0 5px 0 #4c8a2f; transition: transform .08s; }
 .mode.join { width: 100%; margin: 4px 0 10px; background: var(--bone); box-shadow: 0 5px 0 #b7ab92; }
@@ -246,6 +256,10 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <button class="mode lava" id="modeInfection" type="button"><b>Infection</b><small>Every tag makes more lava. Be the last frog standing.</small></button>
         <button class="mode" id="modeClassic" type="button"><b>Classic Tag</b><small>One lava frog. Get tagged and pass it on.</small></button>
         <button class="mode ctfmode" id="modeCtf" type="button"><b>Capture the Lily Pad</b><small>Green vs Blue. Steal the other team's lotus and bring it home.</small></button>
+        <button class="mode freezemode" id="modeFreeze" type="button"><b>Freeze Tag</b><small>Tagged frogs freeze. Touch frozen friends to free them.</small></button>
+        <button class="mode potatomode" id="modePotato" type="button"><b>Hot Potato</b><small>Pass the buzzing hot fly before it pops!</small></button>
+        <button class="mode feastmode" id="modeFeast" type="button"><b>Fly Feast</b><small>Catch the most flies in 90 seconds.</small></button>
+        <button class="mode freemode" id="modeFree" type="button"><b>Free Play</b><small>No tagging. Explore, climb and catch flies.</small></button>
       </div>
       <button class="wardrobe-btn" id="wardrobeBtn" type="button"><span>Wardrobe</span><span class="wb-count"><svg class="ban" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="7.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(-25 7.5 9)"/><ellipse cx="16.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(25 16.5 9)"/><ellipse cx="12" cy="14" rx="3.6" ry="5.4" fill="#1b1b22"/><circle cx="10.6" cy="9.6" r="1.3" fill="#d62828"/><circle cx="13.4" cy="9.6" r="1.3" fill="#d62828"/></svg><span id="menuFlies">0</span></span></button>
       <div class="row">
@@ -304,7 +318,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">&uarr;</span><span>Next to a tree or rock wall? Keep swiping down to <strong>climb</strong> it. The treehouse has steps.</span></li>
         <li><span class="ic hot">!</span><span>Your hands go see-through when there is nothing close enough to grab. The arrow at the top points to the lava frog.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
-        <li><span class="ic">Key</span><span><strong>Keyboard:</strong> <kbd>W</kbd> push forward, <kbd>S</kbd> back, <kbd>A</kbd> <kbd>D</kbd> turn, <kbd>Q</kbd> <kbd>E</kbd> sideways, <kbd>Space</kbd> jump, hold <kbd>Shift</kbd> for big pushes. <kbd>T</kbd> talk, <kbd>1</kbd>–<kbd>9</kbd> quick replies, <kbd>Tab</kbd> next frog, <kbd>H</kbd> be host, <kbd>M</kbd> music on/off, <kbd>P</kbd> player list, <kbd>Esc</kbd> menu. On the menu: <kbd>1</kbd> Infection, <kbd>2</kbd> Classic, <kbd>3</kbd> Capture the Lily Pad, <kbd>O</kbd> Play online, <kbd>R</kbd> Wardrobe.</span></li>
+        <li><span class="ic">Key</span><span><strong>Keyboard:</strong> <kbd>W</kbd> push forward, <kbd>S</kbd> back, <kbd>A</kbd> <kbd>D</kbd> turn, <kbd>Q</kbd> <kbd>E</kbd> sideways, <kbd>Space</kbd> jump, hold <kbd>Shift</kbd> for big pushes. <kbd>T</kbd> talk, <kbd>1</kbd>–<kbd>9</kbd> quick replies, <kbd>Tab</kbd> next frog, <kbd>H</kbd> be host, <kbd>M</kbd> music on/off, <kbd>P</kbd> player list, <kbd>Esc</kbd> menu. On the menu: <kbd>1</kbd> Infection, <kbd>2</kbd> Classic, <kbd>3</kbd> Capture the Lily Pad, <kbd>4</kbd> Freeze Tag, <kbd>5</kbd> Hot Potato, <kbd>6</kbd> Fly Feast, <kbd>7</kbd> Free Play, <kbd>O</kbd> Play online, <kbd>R</kbd> Wardrobe.</span></li>
       </ul>
     </div>
   </div>
@@ -1829,8 +1843,9 @@ function flash(big, small = '', secs = 2.2, color = 'var(--bone)') {
   el.classList.add('show'); flashTimer = secs;
 }
 
-function startRound(firstId) {
+function startRound(firstId, seed) {
   state = 'play'; chooseSong(); startMusic(); roundTime = 0; playerTaggedThisRound = false;
+  resetModeState();
   if (mode === 'ctf') { ctfStartRound(); return; }
   ctfEnd();
   const mp = MAPS[mapKey];
@@ -1840,10 +1855,20 @@ function startRound(firstId) {
     spawnAt(mp.ring[0] + Math.sin(ang) * mp.ring[2], mp.ring[1] + Math.cos(ang) * mp.ring[2], a.pos); a.vel.set(0, 0, 0); a.frozen = 0; a.immune = 0; setLava(a, false);
   });
   bodies.forEach(b => { if (b.isRemote) { setLava(b, false); b.frozen = 0; b.immune = 0; } });
-  const first = (firstId && byId(firstId)) || ais[Math.floor(Math.random() * ais.length)];
-  setLava(first, true); first.frozen = 3;
-  if (net && isHost()) net.ev.send({ k: 'round', first: first === player ? myId : first.id });
-  flash(first === player ? "You're lava!" : `${first.name} is lava!`, first === player ? 'Count to 3, then go get them!' : 'Run! You have 3 seconds.', 2.8, 'var(--lava)');
+  ais.forEach(a => { a.follow = 0; a.talkCd = 3 + Math.random() * 3; });
+  if (mode === 'free') { if (net && isHost()) net.ev.send({ k: 'round', first: null }); flash('Free Play', 'No tagging. Explore, bounce, climb and catch flies!', 2.8, 'var(--leaf)'); return; }
+  if (mode === 'feast') { feastStart(seed); return; }
+  const ids = Array.isArray(firstId) ? firstId : firstId ? [firstId] : [];
+  let firsts = ids.map(id => byId(id)).filter(Boolean);
+  if (!firsts.length) firsts = shuffled(ais).slice(0, mode === 'freeze' && bodies.length >= 8 ? 2 : 1);
+  firsts.forEach(f => { setLava(f, true); f.frozen = 3; });
+  const first = firsts[0];
+  if (mode === 'potato') { potato.fuse = 16 + Math.random() * 10; potato.beepT = 0; }
+  if (net && isHost()) net.ev.send({ k: 'round', first: firsts.map(f => f === player ? myId : f.id) });
+  const names = firsts.map(f => f === player ? 'You' : f.name).join(' and ');
+  if (mode === 'freeze') flash(firsts.includes(player) ? "You're a tagger!" : `${names} ${firsts.length > 1 ? 'are' : 'is'} tagging!`, firsts.includes(player) ? 'Freeze everyone before time runs out.' : 'Tagged frogs freeze. Touch frozen friends to free them.', 3, '#bfe9ff');
+  else if (mode === 'potato') flash(first === player ? 'You have the hot fly!' : `${first.name} has the hot fly!`, 'Tag someone to pass it before it pops!', 2.8, 'var(--lava)');
+  else flash(first === player ? "You're lava!" : `${first.name} is lava!`, first === player ? 'Count to 3, then go get them!' : 'Run! You have 3 seconds.', 2.8, 'var(--lava)');
   ais.forEach(a => { a.follow = 0; a.talkCd = 3 + Math.random() * 3; });
   talkCd = 0; if (!first.isPlayer && !first.isRemote) sayEvent(first, 'startLava');
   setTimeout(() => { const o = pick(ais.filter(a => !a.it)); if (o && state === 'play') sayEvent(o, 'start'); }, 1500);
@@ -1852,8 +1877,8 @@ function startRound(firstId) {
 function doTag(a, b) {
   if (net && isHost()) net.ev.send({ k: 'tag', a: a === player ? myId : a.id, b: b === player ? myId : b.id });
   setLava(b, true);
-  b.frozen = mode === 'classic' ? 2 : 1;
-  if (mode === 'classic') { setLava(a, false); a.immune = 3; }
+  b.frozen = mode === 'classic' ? 2 : mode === 'potato' ? 0.6 : 1;
+  if (mode === 'classic' || mode === 'potato') { setLava(a, false); a.immune = mode === 'potato' ? 1.5 : 3; }
   b.vel.addScaledVector(tn.subVectors(b.pos, a.pos).setY(0).normalize(), 5).y += 4;
   if (b.isPlayer || a.isPlayer) { sfxTone(520, 120, 0.35); sfxSlap(0.35); } else sfxTone(300, 150, 0.15, 'triangle', 0.05);
   b.follow = 0;
@@ -1868,10 +1893,11 @@ function doTag(a, b) {
       playerTaggedThisRound = true; survived = roundTime;
       if (survived > best) { best = survived; try { localStorage.setItem('ribbit-best', String(best)); } catch (e) {} }
       flash("You're lava!", `${a.isPlayer ? '' : a.name + ' got you. '}You lasted ${fmt(survived)}. Now tag the rest!`, 3, 'var(--lava)');
-    } else flash("You're it!", `${a.name} tagged you. Frozen for 2 seconds, then go get someone.`, 2.6, 'var(--lava)');
+    } else if (mode === 'potato') flash('Hot fly!', `${a.name} passed it to you. Pass it on, quick!`, 2, 'var(--lava)');
+    else flash("You're it!", `${a.name} tagged you. Frozen for 2 seconds, then go get someone.`, 2.6, 'var(--lava)');
   } else if (a.isPlayer) {
     addFlies(3);
-    flash(mode === 'classic' ? 'Tagged!' : `Got ${b.name}!`, mode === 'classic' ? `${b.name} is it now. Run!` : '', 1.8, 'var(--leaf)');
+    flash(mode === 'potato' ? 'Passed it!' : mode === 'classic' ? 'Tagged!' : `Got ${b.name}!`, mode === 'classic' ? `${b.name} is it now. Run!` : '', 1.8, 'var(--leaf)');
   }
   if (mode === 'infection' && bodies.every(x => x.it)) {
     state = 'over'; overT = 4.5;
@@ -1891,7 +1917,7 @@ const dir = new V(), away = new V();
 function nearestTarget(ai) {
   let best = null, bd = 1e9;
   for (const b of bodies) {
-    if (b === ai || b.it || b.immune > 0) continue;
+    if (b === ai || b.it || b.immune > 0 || b.iced || b.out) continue;
     const d = Math.hypot(b.pos.x - ai.pos.x, (b.pos.y - ai.pos.y) * 1.5, b.pos.z - ai.pos.z);
     if (d < bd) { bd = d; best = b; }
   }
@@ -1914,7 +1940,7 @@ function aiThink(ai, dt) {
   const sp = DIFF[diff];
   let speed = 3, jumpV = 3.2 + Math.random() * 1.5;
   dir.set(0, 0, 0);
-  const goal = state === 'play' && mode === 'ctf' ? ctfTarget(ai) : null;
+  const goal = state === 'play' && !ai.out ? modeGoal(ai) : null;
   if (goal) {
     dir.set(goal.x - ai.pos.x, 0, goal.z - ai.pos.z);
     const carrying = ctf.flags.some(F => F.carrier === ai);
@@ -1937,7 +1963,7 @@ function aiThink(ai, dt) {
       }
     }
     speed = 6.7 * sp;
-  } else if (state === 'play') {
+  } else if (state === 'play' && !ai.out) {
     let threat = false;
     for (const b of bodies) {
       if (!b.it || b === ai) continue;
@@ -2539,9 +2565,10 @@ function removeRemote(id) {
 const r2 = x => Math.round(x * 100) / 100;
 function snapshot() {
   const it = {};
-  for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(b.frozen), r2(b.immune)];
+  for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0];
   return { n: ais.length, m: mapKey, mo: mode, st: state, rt: r2(roundTime), ot: r2(overT), d: diff,
-    ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null };
+    ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null,
+    pf: mode === 'potato' ? r2(potato.fuse) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
 }
 let joinWait = false;
 function applySnapshot(s, from) {
@@ -2562,11 +2589,23 @@ function applySnapshot(s, from) {
     const a = ais[i]; if (!a) return;
     a.netPos = a.netPos || new V(); a.netPos.set(p[0], p[1], p[2]); a.vel.set(p[3], p[4], p[5]); a.netT = performance.now();
   });
-  for (const [id, [it, fr, im]] of Object.entries(s.it)) {
+  for (const [id, [it, fr, im, iced, out, fs]] of Object.entries(s.it)) {
     const b = byId(id); if (!b) continue;
     if (!!it !== b.it) setLava(b, !!it);
-    b.frozen = fr; b.immune = im;
+    const wasIced = !!b.iced;
+    setIce(b, !!iced); setOut(b, !!out);
+    b.frozen = iced ? 999 : fr; b.immune = im;
+    if (b === player && wasIced !== !!iced) flash(iced ? 'Frozen!' : 'Unfrozen!', iced ? 'Wait for a teammate to touch you.' : 'Go go go!', 1.8, iced ? '#bfe9ff' : 'var(--leaf)');
+    if (b === player && (fs || 0) > (b.feastScore || 0)) { addFlies(fs - (b.feastScore || 0)); sfxTone(1200, 300, 0.12, 'square', 0.06); }
+    b.feastScore = fs || 0;
   }
+  if (s.pf !== undefined) potato.fuse = s.pf;
+  if (s.fe) {
+    if (!feast.group || feast.seed !== s.fe[0] || feast.mapKey !== mapKey) feastBuild(s.fe[0]);
+    feast.flies.forEach((f, i) => { f.active = s.fe[1][i] === '1'; });
+  }
+  if (mode !== 'potato' && potato.mesh) { scene.remove(potato.mesh); potato.mesh = null; }
+  if (mode !== 'feast' && feast.group) { scene.remove(feast.group); feast.group = null; feast.flies = []; }
   if (s.c && mode === 'ctf' && state !== 'menu') ctfApply(s.c); else if (mode !== 'ctf') ctfEnd();
 }
 async function joinNet(code, lobby) {
@@ -2610,13 +2649,14 @@ async function joinNet(code, lobby) {
   };
   net.snap.onMessage = (s, { peerId }) => applySnapshot(s, peerId);
   net.ev.onMessage = (e, { peerId }) => {
-    if (e.k === 'round' && peerId === net.hostId) startRound(e.first);
+    if (e.k === 'round' && peerId === net.hostId) startRound(e.first, e.seed);
+    else if (e.k === 'msg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 140), 2.6, /^(#[0-9a-f]{3,6}|var\(--[a-z]+\))$/i.test(e.color || '') ? e.color : 'var(--bone)');
     else if (e.k === 'home' && peerId === net.hostId) { ctfRespawn(player, false); flash('Tagged!', 'Back to your base.', 2, TEAM_CSS[1 - (player.team || 0)]); }
     else if (e.k === 'ctfmsg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 120), 2.6, TEAM_CSS[e.team] || 'var(--bone)');
     else if (e.k === 'tag' && peerId === net.hostId) { const a = byId(e.a), b = byId(e.b); if (a && b) doTag(a, b); }
     else if (e.k === 'tagreq' && isHost() && state === 'play') {
       const a = remotes.get(peerId), b = byId(String(e.b));
-      if (a && b && a !== b && a.it && a.frozen <= 0 && !b.it && b.immune <= 0 && a.pos.distanceTo(b.pos) < 3.5) doTag(a, b);
+      if (a && b && a !== b && a.it && a.frozen <= 0 && !b.it && !b.iced && !b.out && b.immune <= 0 && a.pos.distanceTo(b.pos) < 3.5) { if (mode === 'freeze') freezeHit(a, b); else doTag(a, b); }
     }
     else if (e.k === 'follow' && isHost()) {
       const a = ais[e.ai], r = remotes.get(peerId);
@@ -2747,6 +2787,10 @@ addEventListener('keydown', e => {
     if (e.code === 'Digit1') begin('infection');
     else if (e.code === 'Digit2') begin('classic');
     else if (e.code === 'Digit3') begin('ctf');
+    else if (e.code === 'Digit4') begin('freeze');
+    else if (e.code === 'Digit5') begin('potato');
+    else if (e.code === 'Digit6') begin('feast');
+    else if (e.code === 'Digit7') begin('free');
     else if (e.code === 'KeyR') openWardrobe();
     else if (e.code === 'KeyO') begin(mode, 1);
     return;
@@ -2851,6 +2895,10 @@ function updateJoinUI() {
 }
 $('modeClassic').addEventListener('click', () => begin('classic'));
 $('modeCtf').addEventListener('click', () => begin('ctf'));
+$('modeFreeze').addEventListener('click', () => begin('freeze'));
+$('modePotato').addEventListener('click', () => begin('potato'));
+$('modeFeast').addEventListener('click', () => begin('feast'));
+$('modeFree').addEventListener('click', () => begin('free'));
 $('menuBtn').addEventListener('click', () => {
   state = 'menu'; pointers.clear(); showBest();
   $('menu').hidden = false; $('hud').hidden = true;
@@ -2858,7 +2906,7 @@ $('menuBtn').addEventListener('click', () => {
   $('talk').hidden = true; talkTarget = null; togglePlayers(false);
   ais.forEach(a => { a.bubble.hidden = true; a.bubbleT = 0; a.follow = 0; });
   try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
-  leaveNet(); joinWait = false; ctfEnd(); daisyVanish(false); daisy.bubble.hidden = true; chooseSong();
+  leaveNet(); joinWait = false; ctfEnd(); resetModeState(); if (potato.mesh) { scene.remove(potato.mesh); potato.mesh = null; } if (feast.group) { scene.remove(feast.group); feast.group = null; } daisyVanish(false); daisy.bubble.hidden = true; chooseSong();
 });
 $('roomIn').addEventListener('input', e => {
   const v = cleanCode(e.target.value); if (v !== e.target.value) e.target.value = v;
@@ -3007,6 +3055,10 @@ function playerRow(b, me) {
   const st = document.createElement('span');
   st.className = 'pl-state ' + (b.it ? 'lava' : 'safe');
   st.textContent = b.it ? (b.frozen > 0 ? 'Frozen' : 'Lava') : 'Safe';
+  if (b.iced) { st.textContent = 'Frozen'; st.style.background = '#bfe9ff'; st.style.color = '#0a1a10'; }
+  if (b.out) { st.textContent = 'Out'; st.style.background = '#9aa0a6'; st.style.color = '#0a1a10'; }
+  if (mode === 'feast' && state !== 'menu') { st.textContent = `${b.feastScore || 0} ${(b.feastScore || 0) === 1 ? 'fly' : 'flies'}`; st.style.background = '#ffd23f'; st.style.color = '#0a1a10'; }
+  if (mode === 'free' && state !== 'menu') st.textContent = 'Playing';
   if (mode === 'ctf' && state !== 'menu') {
     st.textContent = ctf.flags.some(F => F.carrier === b) ? 'Has lotus' : TEAM_NAMES[b.team || 0];
     st.style.background = TEAM_CSS[b.team || 0]; st.style.color = '#0a1a10';
@@ -3333,6 +3385,179 @@ function ctfApply(c) {
   });
 }
 
+// ---------- More modes: Freeze Tag, Hot Potato, Fly Feast, Free Play ----------
+const MODE_NAMES = { infection: 'Infection', classic: 'Classic Tag', ctf: 'Capture the Lily Pad', freeze: 'Freeze Tag', potato: 'Hot Potato', feast: 'Fly Feast', free: 'Free Play' };
+const FREEZE_TIME = 120, FEAST_TIME = 90;
+const potato = { fuse: 20, beepT: 0, mesh: null };
+const feast = { seed: 0, flies: [], group: null };
+function announce(big, small, color, secs = 2.6) {
+  flash(big, small, secs, color || 'var(--bone)');
+  if (net && isHost()) net.ev.send({ k: 'msg', big, small, color });
+}
+function setIce(b, on) {
+  if (!!b.iced === on) return;
+  b.iced = on; b.frozen = on ? 999 : 0; if (!on) b.immune = 2;
+  const c = on ? 0xbfe9ff : b.it ? LAVA : (b.isPlayer ? skinHexOf(look) : b.skinHex), e = on ? 0x2a5a7a : b.it ? LAVA_GLOW : 0;
+  if (b.isPlayer) { handMat.color.setHex(c); handMat.emissive.setHex(e); $('hud').classList.toggle('iced', on); }
+  else { b.skin.color.setHex(c); b.skin.emissive.setHex(on ? e : b.it ? LAVA_GLOW : skinGlowOf(b.look)); }
+}
+function setOut(b, on) {
+  if (!!b.out === on) return;
+  b.out = on;
+  if (b.isPlayer) { $('hud').classList.toggle('out', on); handMat.opacity = on ? 0.3 : 1; return; }
+  const ghost = !!(shopItem('skin', b.look && b.look.skin) || {}).ghost;
+  b.skin.transparent = on || ghost; b.skin.opacity = on ? 0.2 : ghost ? 0.5 : 1; b.skin.needsUpdate = true;
+  if (b.acc) b.acc.visible = !on;
+}
+function resetModeState() {
+  for (const b of bodies) { setIce(b, false); setOut(b, false); b.feastScore = 0; }
+  if (potato.mesh && mode !== 'potato') { scene.remove(potato.mesh); potato.mesh = null; }
+  if (feast.group && mode !== 'feast') { scene.remove(feast.group); feast.group = null; feast.flies = []; }
+}
+function shuffled(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// Freeze Tag: taggers freeze runners; runners unfreeze each other with a touch
+function freezeHit(a, b) {
+  setIce(b, true); b.vel.set(0, 0, 0);
+  sfxTone(1200, 600, 0.3, 'sine', 0.1);
+  if (b === player) flash('Frozen!', 'Wait for a teammate to touch you.', 2.2, '#bfe9ff');
+  else if (a === player) flash('Frozen!', `${b.name} is an ice cube.`, 1.5, '#bfe9ff');
+  if (!b.isPlayer && !b.isRemote && Math.random() < 0.6) say(b, pick(["Brrr! Help!", "I'm an ice cube!", "Somebody unfreeze me!"]));
+}
+function freezeUpdate() {
+  for (const a of bodies) {
+    if (!a.it || a.frozen > 0 || a.isRemote) continue;
+    for (const b of bodies) if (!b.it && !b.iced && b.immune <= 0 && a.pos.distanceTo(b.pos) < 1.3) freezeHit(a, b);
+  }
+  for (const a of bodies) {
+    if (a.it || a.iced) continue;
+    for (const b of bodies) if (b.iced && a !== b && a.pos.distanceTo(b.pos) < 1.4) {
+      setIce(b, false);
+      if (b === player) flash('Unfrozen!', `${a.name || 'A friend'} saved you. Go!`, 1.6, 'var(--leaf)');
+      else if (a === player) { flash('Rescued!', `You unfroze ${b.name}.`, 1.5, 'var(--leaf)'); addFlies(1); }
+      if (!b.isPlayer && !b.isRemote) say(b, pick(["Thanks!", "Free again!", "Phew!"]));
+    }
+  }
+  const runners = bodies.filter(b => !b.it);
+  if (runners.length && runners.every(b => b.iced)) {
+    state = 'over'; overT = 6; announce('Everyone is frozen!', 'The taggers win. New round soon.', '#bfe9ff', 5);
+  } else if (roundTime >= FREEZE_TIME) {
+    state = 'over'; overT = 6; announce('Runners win!', `${runners.filter(b => !b.iced).length} frogs stayed free. New round soon.`, 'var(--leaf)', 5);
+    if (!player.it) addFlies(5);
+  }
+}
+
+// Hot Potato: the hot fly gets passed by tagging; when it pops, whoever holds it is out
+function potatoUpdate(dt, t) {
+  const holder = bodies.find(b => b.it && !b.out);
+  if (!potato.mesh) {
+    potato.mesh = new THREE.Group(); scene.add(potato.mesh);
+    part(potato.mesh, ballGeo, new THREE.MeshLambertMaterial({ color: 0xff3b1f, emissive: 0xff2a00 }), 0.16, 0.13, 0.2, 0, 0, 0);
+    const wm = new THREE.MeshLambertMaterial({ color: 0xffe0c0, transparent: true, opacity: 0.6, depthWrite: false });
+    for (const sx of [-1, 1]) part(potato.mesh, ballGeo, wm, 0.18, 0.02, 0.09, sx * 0.17, 0.1, 0);
+  }
+  potato.mesh.visible = !!holder;
+  if (holder) {
+    potato.mesh.position.set(holder.pos.x, holder.pos.y + 1.5 + Math.sin(t * 9) * 0.06, holder.pos.z);
+    potato.mesh.rotation.y = t * 6; potato.mesh.scale.setScalar(1 + Math.max(0, 1 - potato.fuse / 6) * Math.abs(Math.sin(t * 12)) * 0.4);
+  }
+  potato.fuse -= dt;
+  potato.beepT -= dt;
+  if (holder && potato.beepT <= 0) {
+    potato.beepT = clamp(potato.fuse / 8, 0.12, 1);
+    sfxTone(1500, 1400, 0.05, 'square', 0.04 * clamp(1 - holder.pos.distanceTo(player.pos) / 30, 0.2, 1) + (holder === player ? 0.03 : 0));
+  }
+  if (!isHost() || !holder || potato.fuse > 0 || state !== 'play') return;
+  // boom
+  setLava(holder, false); setOut(holder, true);
+  if (actx) { sfxTone(160, 40, 0.6, 'sawtooth', 0.2); sfxSlap(0.5); }
+  for (const b of bodies) { const d = b.pos.distanceTo(holder.pos); if (b !== holder && d < 5 && !b.isRemote) b.vel.addScaledVector(tn.subVectors(b.pos, holder.pos).setY(0).normalize(), 8 * (1 - d / 5)).y += 5; }
+  const left = bodies.filter(b => !b.out);
+  if (left.length <= 1) {
+    const w = left[0];
+    state = 'over'; overT = 6;
+    announce(w === player ? 'You win!' : `${w ? w.name : 'Nobody'} wins!`, `${holder === player ? 'You' : holder.name} popped last. New round soon.`, 'var(--leaf)', 5);
+    if (w === player) addFlies(10);
+    return;
+  }
+  const next = pick(left.filter(b => b.immune <= 0).length ? left.filter(b => b.immune <= 0) : left);
+  setLava(next, true); next.frozen = 1;
+  potato.fuse = 12 + Math.random() * 10;
+  announce('POP!', `${holder === player ? 'You are' : holder.name + ' is'} out. ${next === player ? 'You have' : next.name + ' has'} the hot fly now!`, 'var(--lava)', 2.6);
+}
+
+// Fly Feast: everyone sees the same flies (positions come from one shared seed)
+function feastSpots(seed) {
+  let s = seed % 2147483647 || 1; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const out = [], high = ledges.filter(l => l.max.y > 1.5 && l.max.y < 14 && l.max.x - l.min.x > 1.5);
+  for (let i = 0; i < 8 && high.length; i++) { const l = high[Math.floor(r() * high.length)]; out.push(new V((l.min.x + l.max.x) / 2, l.max.y + 0.75, (l.min.z + l.max.z) / 2)); }
+  for (let i = 0; i < 200 && out.length < 30; i++) {
+    const x = (r() - 0.5) * 52, z = (r() - 0.5) * 52;
+    if (!blockedAt(x, z) && (!water || z < water.z)) out.push(new V(x, MAPS[mapKey].spawnHigh ? 9 : 0.9, z));
+  }
+  return out;
+}
+function feastBuild(seed) {
+  if (feast.group) scene.remove(feast.group);
+  feast.group = new THREE.Group(); scene.add(feast.group); feast.seed = seed; feast.mapKey = mapKey;
+  const body = new THREE.MeshLambertMaterial({ color: 0x1b1b22, emissive: 0x2a2a00 }), wing = new THREE.MeshLambertMaterial({ color: 0xfff3a0, transparent: true, opacity: 0.7, depthWrite: false });
+  feast.flies = feastSpots(seed).map(p => {
+    const m = new THREE.Group(); m.position.copy(p); feast.group.add(m);
+    part(m, ballGeo, body, 0.1, 0.08, 0.14, 0, 0, 0);
+    const wings = [-1, 1].map(sx => part(m, ballGeo, wing, 0.12, 0.015, 0.07, sx * 0.11, 0.07, 0.02));
+    return { pos: p, active: true, t: 0, mesh: m, wings };
+  });
+}
+function feastStart(seed) {
+  feastBuild(seed || Math.floor(Math.random() * 1e9));
+  for (const b of bodies) b.feastScore = 0;
+  if (net && isHost()) net.ev.send({ k: 'round', first: null, seed: feast.seed });
+  flash('Fly Feast!', `Catch the most flies in ${FEAST_TIME} seconds!`, 2.8, '#ffd23f');
+}
+function feastLeader() { let w = null; for (const b of bodies) if (!w || (b.feastScore || 0) > (w.feastScore || 0)) w = b; return w; }
+function feastUpdate(dt, t) {
+  if (!feast.group || feast.mapKey !== mapKey) feastBuild(feast.seed || 1);
+  for (const f of feast.flies) {
+    f.mesh.visible = f.active;
+    if (!f.active) continue;
+    const ph = t * 1.8 + f.pos.x;
+    f.mesh.position.set(f.pos.x + Math.cos(ph) * 0.4, f.pos.y + Math.sin(t * 5 + f.pos.z) * 0.15, f.pos.z + Math.sin(ph) * 0.4);
+    f.mesh.rotation.y = -ph;
+    const fl = Math.sin(t * 60) * 0.6; f.wings[0].rotation.z = fl; f.wings[1].rotation.z = -fl;
+  }
+  if (!isHost() || state !== 'play') return;
+  for (const f of feast.flies) {
+    if (!f.active) { if ((f.t -= dt) <= 0) f.active = true; continue; }
+    for (const b of bodies) if (f.pos.distanceTo(b.pos) < 1.4) {
+      f.active = false; f.t = 6; b.feastScore = (b.feastScore || 0) + 1;
+      if (b === player) { addFlies(1); sfxTone(1200, 300, 0.12, 'square', 0.06); }
+      break;
+    }
+  }
+  if (roundTime >= FEAST_TIME) {
+    const w = feastLeader();
+    state = 'over'; overT = 7;
+    announce(w === player ? 'You win the Fly Feast!' : `${w.name} wins the Fly Feast!`, `${w.feastScore || 0} flies caught. New round soon.`, '#ffd23f', 5.5);
+    if (w === player) addFlies(5);
+  }
+}
+function feastNearest(from) {
+  let best = null, bd = 1e9;
+  for (const f of feast.flies) if (f.active) { const d = from.distanceTo(f.pos); if (d < bd) { bd = d; best = f; } }
+  return best;
+}
+// where a computer frog wants to go in the newer modes (null = use the normal chase/flee brain)
+function modeGoal(ai) {
+  if (mode === 'ctf') return ctfTarget(ai);
+  if (mode === 'feast') { const f = feastNearest(ai.pos); return f ? f.pos : null; }
+  if (mode === 'freeze' && !ai.it && !bodies.some(b => b.it && b.pos.distanceTo(ai.pos) < 9)) {
+    let best = null, bd = 30;
+    for (const b of bodies) if (b.iced && b !== ai) { const d = b.pos.distanceTo(ai.pos); if (d < bd) { bd = d; best = b; } }
+    return best ? best.pos : null;
+  }
+  return null;
+}
+
 // ---------- Loop ----------
 let last = performance.now(), hudT = 0, menuAng = 0;
 const handTarget = new V();
@@ -3355,17 +3580,21 @@ function update(dt, t) {
     roundTime += dt;
     if (!player.it) { stats.safe += dt; safeAcc += dt; if (safeAcc >= 10) { safeAcc -= 10; addFlies(1); } }
     tagReqCd -= dt;
-    if (net && !host && player.it && player.frozen <= 0 && tagReqCd <= 0) {
+    if (net && !host && player.it && !player.out && player.frozen <= 0 && tagReqCd <= 0 && ['infection', 'classic', 'potato', 'freeze'].includes(mode)) {
       for (const b of bodies) {
-        if (b === player || b.it || b.immune > 0 || player.pos.distanceTo(b.pos) >= 1.3) continue;
+        if (b === player || b.it || b.immune > 0 || b.iced || b.out || player.pos.distanceTo(b.pos) >= 1.3) continue;
         net.ev.send({ k: 'tagreq', b: b.id }, { target: net.hostId }); tagReqCd = 0.4; break;
       }
     }
+    if (mode === 'potato') potatoUpdate(dt, t);
     if (mode === 'ctf') ctfUpdate(dt, t);
+    else if (mode === 'freeze') { if (host) freezeUpdate(); }
+    else if (mode === 'feast') feastUpdate(dt, t);
+    else if (mode === 'free') { /* just play */ }
     else if (host) outer: for (const a of bodies) {
-      if (!a.it || a.frozen > 0 || a.isRemote) continue;
+      if (!a.it || a.frozen > 0 || a.isRemote || a.out) continue;
       for (const b of bodies) {
-        if (b.it || b.immune > 0 || b === a) continue;
+        if (b.it || b.immune > 0 || b === a || b.out) continue;
         if (a.pos.distanceTo(b.pos) < 1.3) { doTag(a, b); break outer; }
       }
     }
@@ -3404,7 +3633,12 @@ function update(dt, t) {
   if (hudT <= 0) {
     hudT = 0.2;
     const st = $('status');
-    if (mode === 'ctf') {
+    const modeChip = { freeze: player.iced ? 'FROZEN!' : player.it ? 'TAGGER' : 'RUNNER', potato: player.out ? 'OUT' : player.it ? 'HOT FLY!' : 'SAFE', feast: `${player.feastScore || 0} ${(player.feastScore || 0) === 1 ? 'FLY' : 'FLIES'}`, free: 'FREE PLAY' }[mode];
+    if (modeChip) {
+      st.textContent = modeChip; st.className = 'chip';
+      st.style.background = mode === 'freeze' ? (player.it ? 'var(--lava)' : '#bfe9ff') : mode === 'potato' ? (player.it ? 'var(--lava)' : player.out ? '#9aa0a6' : 'var(--leaf)') : mode === 'feast' ? '#ffd23f' : 'var(--leaf)';
+      st.style.color = 'var(--ink)';
+    } else if (mode === 'ctf') {
       const carrying = ctf.flags.some(F => F.carrier === player);
       st.textContent = player.frozen > 0 ? `FROZEN ${Math.ceil(player.frozen)}` : carrying ? 'GOT THE LOTUS!' : `${TEAM_NAMES[player.team || 0].toUpperCase()} TEAM`;
       st.className = 'chip'; st.style.background = TEAM_CSS[player.team || 0]; st.style.color = 'var(--ink)';
@@ -3412,7 +3646,12 @@ function update(dt, t) {
       st.textContent = player.it ? (player.frozen > 0 ? `FROZEN ${Math.ceil(player.frozen)}` : 'LAVA') : 'SAFE';
       st.className = 'chip ' + (player.it ? 'lava' : 'safe'); st.style.background = ''; st.style.color = '';
     }
-    $('info').textContent = mode === 'ctf' ? `Green ${ctf.score[0]} – ${ctf.score[1]} Blue · first to ${CTF_WIN}`
+    const runners = bodies.filter(b => !b.it), lead = mode === 'feast' ? feastLeader() : null;
+    $('info').textContent = mode === 'freeze' ? `Frozen ${runners.filter(b => b.iced).length}/${runners.length} · ${fmt(Math.max(0, FREEZE_TIME - roundTime))} left`
+      : mode === 'potato' ? `${bodies.filter(b => !b.out).length} frogs left`
+      : mode === 'feast' ? `${fmt(Math.max(0, FEAST_TIME - roundTime))} left · Leader: ${lead ? (lead === player ? 'You' : lead.name) + ' ' + (lead.feastScore || 0) : '-'}`
+      : mode === 'free' ? 'Free play · explore and catch flies'
+      : mode === 'ctf' ? `Green ${ctf.score[0]} – ${ctf.score[1]} Blue · first to ${CTF_WIN}`
       : mode === 'infection'
       ? `Survivors ${bodies.filter(b => !b.it).length} · ${fmt(roundTime)}`
       : `Safe time ${fmt(stats.safe)} · Tagged ${stats.tagged}×`;
@@ -3429,7 +3668,15 @@ function update(dt, t) {
       const d = b.pos.distanceTo(player.pos); if (d < bd) { bd = d; tgt = b; }
     }
     const radar = $('radar');
-    if (mode === 'ctf' && state === 'play' && ctf.flags.length) {
+    const nf = mode === 'feast' && state === 'play' ? feastNearest(player.pos) : null;
+    if (mode === 'free') radar.hidden = true;
+    else if (nf) {
+      const ang = Math.atan2(-(nf.pos.x - player.pos.x), -(nf.pos.z - player.pos.z));
+      let rel = ang - player.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+      radar.hidden = false; radar.className = 'hunt';
+      radar.querySelector('.arrow').style.transform = `rotate(${-rel}rad)`;
+      $('radarTxt').textContent = `Fly ${Math.round(nf.pos.distanceTo(player.pos))} m`;
+    } else if (mode === 'ctf' && state === 'play' && ctf.flags.length) {
       const my = player.team || 0, Fe = ctf.flags[1 - my], Fm = ctf.flags[my];
       const [goal, label] = Fe.carrier === player ? [ctf.bases[my], 'Home'] : Fm.state !== 'home' ? [flagPos(Fm), 'Your lotus'] : [flagPos(Fe), 'Their lotus'];
       const ang = Math.atan2(-(goal.x - player.pos.x), -(goal.z - player.pos.z));
