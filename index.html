@@ -7526,6 +7526,15 @@ const MODE2 = {
         sfxTone(n ? 440 : 880, n ? 440 : 880, n ? 0.18 : 0.4, 'square', 0.09); if (!n) rumble(150, 0.5);
       }, 1500 + i * 1000));
     },
+    putBack(h) {
+      const p = track.pts[h.goodIdx], o = [0, -2.5, 2.5].find(o => !hogs.some(x => x !== h && Math.hypot(x.pos.x - p.x - p.nx * o, x.pos.z - p.z - p.nz * o) < 3)) || 0;
+      h.pos.set(p.x + p.nx * o, p.y, p.z + p.nz * o); h.pos.y = hogGround(h, h.pos.x, h.pos.z);
+      h.yaw = Math.atan2(-p.tx, -p.tz); h.speed = h.vy = h.kx = h.kz = h.yawV = 0; h.air = false; h.offT = 0; h.slipT = 0; hogPose(h, 1);
+      if (h.seats.includes(player)) {
+        seatPos(h, player.seat, player.pos); hogCam.yaw = h.yaw; hogCam.pos.set(h.pos.x + Math.sin(h.yaw) * 6, h.pos.y + 3, h.pos.z + Math.cos(h.yaw) * 6);
+        flash('Back on the track!', '', 1.2, 'var(--leaf)'); sfxTone(400, 900, 0.3, 'sine', 0.08);
+      }
+    },
     progress(b) { // checkpoints passed, plus how far into the next stretch: used to work out places
       const s = b.score || 0, last = (s % 4) * TRACK_N / 4, i = b.kIdx === undefined ? TRACK_N - 1 : b.kIdx;
       return s * TRACK_N / 4 + clamp(((i - last + TRACK_N * 1.5) % TRACK_N) - TRACK_N / 2, -TRACK_N / 4, TRACK_N / 4);
@@ -7560,6 +7569,16 @@ const MODE2 = {
           const go = h.item === 'shell' ? ahead || h.itemT > 9 : h.item === 'peel' ? behind || h.itemT > 7 : h.itemT > 0.8 + (h.idx % 3) * 0.5;
           if (go && state === 'play') kartUse(h);
         }
+      }
+      for (const h of hogs) { // off the track (or took a shortcut)? put it back where it was last really on the road
+        if (!hogMine(h) || !h.seats[0]) continue;
+        const i = trackIdx(h.pos), p = track.pts[i], side = Math.abs((h.pos.x - p.x) * p.nx + (h.pos.z - p.z) * p.nz);
+        if (h.goodIdx === undefined) h.goodIdx = i;
+        const cp = (((h.seats[0].score || 0) % 4) + 1) % 4 * TRACK_N / 4, toCp = (cp - h.goodIdx + TRACK_N) % TRACK_N; // a big jump is fine, skipping a checkpoint isn't
+        const fwd = (i - h.goodIdx + TRACK_N) % TRACK_N, ok = side <= TRACK_W / 2 + 1.9 && h.pos.y > p.y - 2.5 && (fwd <= Math.max(15, toCp + 6) || fwd >= TRACK_N - 30);
+        if (ok) { if (!h.air) { h.goodIdx = i; h.offT = 0; } continue; }
+        h.offT = (h.offT || 0) + dt;
+        if (h.offT > (h.air ? 3 : 1)) this.putBack(h);
       }
       for (const h of hogs) { // hazards: each device handles the hogs it drives
         h.slipT = Math.max(0, (h.slipT || 0) - dt); h.msgT = Math.max(0, (h.msgT || 0) - dt);
