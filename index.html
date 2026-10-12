@@ -105,6 +105,7 @@ h1 span { color: var(--lava); display: block; }
 .spacer { flex: 1; }
 #menuBtn { pointer-events: auto; border: 0; cursor: pointer; }
 #hogBtn { position: absolute; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: var(--leaf); color: var(--ink); font-size: 1.3rem; padding: 12px 22px; touch-action: manipulation; }
+#itemBtn { position: absolute; left: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.4rem; padding: 14px 24px; touch-action: manipulation; box-shadow: 0 4px 0 #b8941a; }
 #radar { position: absolute; top: calc(58px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
 #radar .arrow { width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 18px solid currentColor; display: inline-block; }
 #radar.chase { color: var(--lava); }
@@ -320,6 +321,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
     <button id="menuBtn" class="chip" type="button">Menu</button>
   </div>
   <button id="hogBtn" class="chip" type="button" hidden>Drive</button>
+  <button id="itemBtn" class="chip" type="button" hidden></button>
   <div id="bubbles"></div>
   <div id="scores" hidden>
     <div class="pl-head"><h2 id="scTitle">Scores</h2><span class="spacer"></span><button id="scClose" class="pill-btn" type="button">Close</button></div>
@@ -951,11 +953,14 @@ function hogDrive(h, dt, thr, str) {
   const hit = hogWalls(h);
   if (hit > 5 && h.seats.includes(player)) { sfxSlap(0.3); sfxTone(140, 55, 0.2, 'triangle', Math.min(0.2, hit / 60)); rumble(120, Math.min(1, hit / 12)); }
   h.pos.x = clamp(h.pos.x, -HALF + HOG.r, HALF - HOG.r); h.pos.z = clamp(h.pos.z, -HALF + HOG.r, HALF - HOG.r);
+  // Gravity decides: hit a crest fast enough and the ground drops away faster than you fall, so you fly. A tiny
+  // allowance soaks up little steps; driving slowly over a step still keeps you down.
   const gy = hogGround(h, h.pos.x, h.pos.z), ball = h.pos.y + h.vy * dt - 0.5 * G * dt * dt;
-  if (gy >= ball || (!h.air && h.pos.y - gy < 0.25)) { // on the ground (it catches us before gravity would)
+  if (gy >= ball - 0.05 || (!h.air && h.pos.y - gy < 0.25 && Math.abs(h.speed) < 7 && h.vy < 1)) { // on the ground
     const climb = gy - h.pos.y, fall = h.vy, wasAir = h.air;
-    h.vy = wasAir || Math.abs(climb) > 0.3 ? 0 : clamp(climb / dt, -14, 14); // following hills keeps the bounce for crests
+    h.vy = wasAir || Math.abs(climb) > 0.3 ? 0 : clamp(climb / dt, -14, 14); // following a hill up keeps that speed for the crest
     h.pos.y = gy; h.air = false;
+    if (wasAir && fall < -5) { h.vy = -fall * 0.35; h.air = true; } // a hard landing bounces once
     if (wasAir && fall < -7 && h.seats.includes(player)) { sfxSlap(0.4); sfxTone(110, 45, 0.25, 'triangle', 0.16); rumble(160, 0.6); }
   } else { h.air = true; h.vy -= G * dt; h.pos.y = ball; }
   hogPose(h, dt);
@@ -968,7 +973,7 @@ function hogPose(h, dt) {
     const k = Math.min(1, dt * 10);
     h.pitch += (clamp(Math.atan2(f - b, 2.6), -0.5, 0.5) - h.pitch) * k;
     h.roll += (clamp(Math.atan2(rt - lt, 1.8), -0.4, 0.4) - h.roll) * k;
-  } else h.pitch += (-0.05 - h.pitch) * Math.min(1, dt * 2);
+  } else h.pitch += (clamp(Math.atan2(h.vy, Math.abs(h.speed) + 3), -0.45, 0.45) - h.pitch) * Math.min(1, dt * 3); // nose follows the flight
   h.g.position.copy(p); h.g.rotation.set(h.pitch, h.yaw, h.roll);
   h.spin += h.speed * dt / 0.5;
   for (const w of h.wheels) w.rotation.x = -h.spin;
@@ -1076,6 +1081,8 @@ function hogBumps() {
       const imp = -rel * 0.8; // a bit bouncy
       if (ma) hogKnock(a, nx * imp, nz * imp, oa);
       if (mb) hogKnock(b, -nx * imp, -nz * imp, ob);
+      if (ma && b.starT > 0) kartSpin(a, 'Golden Fly!'); // a hog with a Golden Fly spins out whoever it touches
+      if (mb && a.starT > 0) kartSpin(b, 'Golden Fly!');
       if (-rel > 3 && (a.seats.includes(player) || b.seats.includes(player))) { sfxSlap(0.3); sfxTone(180, 70, 0.15, 'triangle', Math.min(0.18, -rel / 60)); rumble(120, Math.min(1, -rel / 12)); }
     }
   }
@@ -1398,7 +1405,7 @@ function trackGroundGrid() { // the hills: the road's height, sloping down besid
   const n = HALF * 2 + 1, hgt = new Float32Array(n * n), hw = TRACK_W / 2, pts = track.pts;
   for (let gx = 0; gx < n; gx++) for (let gz = 0; gz < n; gz++) {
     const x = gx - HALF, z = gz - HALF; let bi = -1, bd = Infinity;
-    for (let i = 0; i < TRACK_N; i++) { const p = pts[i]; if (p.bridge) continue; const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < bd) { bd = d; bi = i; } }
+    for (let i = 0; i < TRACK_N; i++) { const p = pts[i]; if (p.deck) continue; const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < bd) { bd = d; bi = i; } }
     if (bi < 0 || bd > (hw + 1.6 + TRACK_SLOPE + 2) ** 2) continue;
     let best = Infinity, y = 0;
     for (const j of [bi - 1, bi]) { // project onto the two pieces of road next to the nearest point
@@ -1444,7 +1451,7 @@ function buildTrack() {
     const up = cdist(crossAt[0], TRACK_N - 20) > cdist(crossAt[1], TRACK_N - 20) ? crossAt[0] : crossAt[1], down = up === crossAt[0] ? crossAt[1] : crossAt[0];
     for (let d = -29; d <= 29; d++) {
       const p = P[(up + d + TRACK_N) % TRACK_N], a = Math.abs(d);
-      p.y = a <= 7 ? BRIDGE_H : BRIDGE_H * (0.5 + 0.5 * Math.cos(Math.PI * (a - 7) / 22)); p.bridge = true;
+      p.y = a <= 7 ? BRIDGE_H : BRIDGE_H * (0.5 + 0.5 * Math.cos(Math.PI * (a - 7) / 22)); p.bridge = true; p.deck = a <= 10; // earth ramps, a deck over the road
     }
     mark(up - 32, up + 32, 3); mark(down - 14, down + 14, 1);
   }
@@ -1459,7 +1466,7 @@ function buildTrack() {
     for (let k = 0; k <= len; k++) { const p = P[(a + k) % TRACK_N]; p.y = Math.min(4, p.y + amp * (0.5 - 0.5 * Math.cos(2 * Math.PI * k / len))); }
     mark(a, a + len, 4);
   }
-  P.forEach(p => { p.pad = TRACK_PAD + (p.y > 0.15 && !p.bridge ? TRACK_SLOPE : 0) + (p.tunnel ? 3.5 : 0); });
+  P.forEach(p => { p.pad = TRACK_PAD + (p.y > 0.15 && !p.deck ? TRACK_SLOPE : 0) + (p.tunnel ? 3.5 : 0); });
   // clear the way: anything that would be in the road, the banks or the tunnels goes; the ground and the outer walls stay
   const edge = HALF - 0.3, bb = new THREE.Box3(), mtx = new THREE.Matrix4(), zero = new THREE.Matrix4().makeScale(0, 0, 0), tp = new V();
   for (const c of [...mapGroup.children]) {
@@ -1481,7 +1488,7 @@ function buildTrack() {
   for (const h of hogs) { stopHogVoice(h); mapGroup.remove(h.g); } // the map's own toadhogs make way for the racers'
   for (let i = boxes.length - 1; i >= 0; i--) if (boxes[i].hog) boxes.splice(i, 1);
   hogs = []; water = null;
-  if (P.some(p => p.y > 0.05 && !p.bridge)) groundAt = trackGroundGrid();
+  if (P.some(p => p.y > 0.05 && !p.deck)) groundAt = trackGroundGrid();
   // the road takes the ground's colour, mixed most of the way to asphalt
   const gc = new THREE.Color(themeGround && themeGround.color ? themeGround.color : 0x6a8a4a), road = gc.clone().lerp(new THREE.Color(0x3c3c44), 0.7).getHex();
   if (!roadMats.has(road)) roadMats.set(road, lam(road));
@@ -1490,13 +1497,13 @@ function buildTrack() {
   for (const s of [-1, 1]) {
     trackStrip(s * hw, Y(0.1), s * (hw + 0.8), Y(0.1), M.curbRed, (p, q, i) => (i >> 1) % 2 === 0);
     trackStrip(s * hw, Y(0.1), s * (hw + 0.8), Y(0.1), M.curbWhite, (p, q, i) => (i >> 1) % 2 === 1);
-    const banked = (p, q) => !p.bridge && !q.bridge && (p.y > 0.02 || q.y > 0.02);
+    const banked = (p, q) => !p.deck && !q.deck && (p.y > 0.02 || q.y > 0.02);
     trackStrip(s * (hw + 0.8), Y(0.05), s * (hw + 1.6), Y(0.05), bankMat, banked);
     trackStrip(s * (hw + 1.6), Y(0.05), s * (hw + 1.6 + TRACK_SLOPE), flatY(0.03), bankMat, banked);
     // the bridge's edge and underside
-    trackStrip(s * (hw + 0.8), Y(-0.4), s * (hw + 0.8), Y(0.1), M.archPost, p => p.bridge && p.y > 0.3);
+    trackStrip(s * (hw + 0.8), Y(-0.4), s * (hw + 0.8), Y(0.1), M.archPost, (p, q) => p.deck || q.deck);
   }
-  trackStrip(-hw - 0.8, Y(-0.4), hw + 0.8, Y(-0.4), M.archPost, p => p.bridge && p.y > 0.3);
+  trackStrip(-hw - 0.8, Y(-0.4), hw + 0.8, Y(-0.4), M.archPost, (p, q) => p.deck || q.deck);
   // barriers just past the curbs (tall walls in tunnels): drawn smooth, and felt as a row of small blocks
   P.forEach((p, i) => {
     const q = P[(i + 1) % TRACK_N], wh = p.tunnel ? TUNNEL_H : 1;
@@ -1505,12 +1512,12 @@ function buildTrack() {
       const w = put(new THREE.Mesh(boxGeo, wallMat)); w.scale.set(0.6, wh, Math.hypot(bx - ax, bz - az) + 0.25);
       w.position.set((ax + bx) / 2, yy + wh / 2, (az + bz) / 2); w.rotation.y = Math.atan2(bx - ax, bz - az);
       if (!p.tunnel) { const cap = put(new THREE.Mesh(boxGeo, (i >> 1) % 2 ? M.curbWhite : M.curbRed)); cap.scale.set(0.66, 0.14, w.scale.z); cap.position.set(w.position.x, yy + 1.05, w.position.z); cap.rotation.y = w.rotation.y; }
-      boxes.push({ min: new V(ax - 0.7, p.bridge ? p.y - 0.4 : -0.2, az - 0.7), max: new V(ax + 0.7, p.y + (p.tunnel ? TUNNEL_H : 1.1), az + 0.7) });
+      boxes.push({ min: new V(ax - 0.7, p.deck ? p.y - 0.4 : -0.2, az - 0.7), max: new V(ax + 0.7, p.y + (p.tunnel ? TUNNEL_H : 1.1), az + 0.7) });
     }
-    if (p.bridge && p.y > 0.1) { // the bridge deck, felt as three blocks across
+    if (p.deck) { // the bridge deck, felt as three blocks across
       const hx = 0.75 * Math.abs(p.tx) + 1.75 * Math.abs(p.nx), hz = 0.75 * Math.abs(p.tz) + 1.75 * Math.abs(p.nz);
       for (const o of [-3.4, 0, 3.4]) { const cx = p.x + p.nx * o, cz = p.z + p.nz * o; boxes.push({ min: new V(cx - hx, p.y - 0.4, cz - hz), max: new V(cx + hx, p.y, cz + hz), floor: true }); }
-      if (i % 8 === 0 && p.y > 1.2) for (const s of [-1, 1]) { // pillars, but not on the road below
+      if (i % 4 === 0) for (const s of [-1, 1]) { // pillars, but not on the road below
         const x = p.x + p.nx * s * (hw + 1.8), z = p.z + p.nz * s * (hw + 1.8);
         if (!P.some(u => !u.bridge && Math.hypot(u.x - x, u.z - z) < hw + 2)) addBox(x, (p.y - 0.4) / 2, z, 0.8, p.y - 0.4, 0.8, M.archPost);
       }
@@ -1563,6 +1570,20 @@ function buildTrack() {
     }
     track.haz.push({ i, x, z, y: p.y, r: 2, kind: 'boost' });
   }
+  track.items = [];
+  for (let n = 0, rows = 0; n < 30 && rows < 3; n++) { // rows of ? boxes across the road, well apart
+    const i = spot(); if (i < 0 || track.items.some(b => cdist(b.i, i) < 45)) continue;
+    rows++; const p = P[i];
+    for (const o of [-3.6, -1.2, 1.2, 3.6]) {
+      const g = new THREE.Group(); put(g); part(g, boxGeo, itemBoxMat(), 1.1, 1.1, 1.1, 0, 0, 0);
+      const b = { i, x: p.x + p.nx * o, z: p.z + p.nz * o, y: p.y, g, hideT: 0, ph: o };
+      g.position.set(b.x, p.y + 1.3, b.z); track.items.push(b);
+    }
+  }
+  mapAnims.push((dt, t) => { for (const b of track ? track.items : []) {
+    b.hideT = Math.max(0, b.hideT - dt); b.g.visible = b.hideT <= 0;
+    b.g.rotation.set(0.4, t * 1.5 + b.ph, 0.4); b.g.position.y = b.y + 1.3 + Math.sin(t * 2 + b.ph) * 0.15;
+  } });
   for (let n = 0; n < st.sweepers; n++) { // blocks that slide back and forth across the road
     const i = spot(0, i => P[i].y < 0.1); if (i < 0) continue;
     const p = P[i], g = new THREE.Group(); g.userData.dyn = true; put(g);
@@ -1575,6 +1596,92 @@ function buildTrack() {
     });
     track.haz.push({ i, x: p.x, z: p.z, y: p.y, r: 0, kind: 'sweep' });
   }
+}
+
+// ---- Toadhog Race items: drive through a ? box to get one, F / B / the item button to use it ----
+// Each device works out hits on the hogs it drives (like bumps), and tells everyone else what it threw or dropped.
+const KART_ITEMS = { turbo: ['🔥', 'Turbo'], shell: ['🐢', 'Turtle Shell'], peel: ['🍌', 'Banana Peel'], star: ['⭐', 'Golden Fly'] };
+const kartObjs = []; let kartSeq = 0, itemBoxTex = null;
+Object.assign(M, { shellGreen: lam(0x3fae4a), shellRim: lam(0xf4f1de), peelYellow: lam(0xffe14d), peelTip: lam(0x5a3a1a), goldFly: fx(0xffd23f) });
+function itemBoxMat() {
+  if (!itemBoxTex) {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 64, 64);
+    ['#ff5a5f', '#ffb02e', '#ffe14d', '#52d273', '#4dabff', '#9b5de5'].forEach((col, i) => g.addColorStop(i / 5, col));
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64); x.strokeStyle = '#fff'; x.lineWidth = 5; x.strokeRect(3, 3, 58, 58);
+    x.fillStyle = '#fff'; x.font = 'bold 44px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('?', 32, 35);
+    itemBoxTex = new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(c), emissive: 0x444444, transparent: true, opacity: 0.88 });
+  }
+  return itemBoxTex;
+}
+function kartSend(d) { if (net) net.ev.send({ k: 'm2', d }); }
+function kartSpin(h, msg) { // spun out by a shell, a peel or a Golden Fly
+  if (h.starT > 0 || h.slipT > 0.5) return;
+  h.slipT = 1.6; h.yawV = (Math.random() < 0.5 ? -1 : 1) * 6; h.speed *= 0.35; h.kx = h.kz = 0;
+  if (!h.air) { h.vy = 3; h.air = true; }
+  if (h.seats.includes(player)) { flash(msg, 'Spun out!', 1.2, 'var(--lava)'); sfxTone(700, 150, 0.5, 'sawtooth', 0.08); rumble(300, 0.8); }
+}
+function kartObjMesh(kind) {
+  const g = new THREE.Group(); scene.add(g);
+  if (kind === 'shell') { part(g, ballGeo, M.shellGreen, 0.55, 0.32, 0.55, 0, 0.3, 0); part(g, ballGeo, M.shellRim, 0.6, 0.12, 0.6, 0, 0.18, 0); }
+  else { for (let k = 0; k < 3; k++) part(g, boxGeo, M.peelYellow, 0.22, 0.08, 0.7, Math.sin(k * 2.1) * 0.25, 0.08, Math.cos(k * 2.1) * 0.25, 0, k * 2.1, 0); part(g, ballGeo, M.peelYellow, 0.22, 0.3, 0.22, 0, 0.25, 0); part(g, boxGeo, M.peelTip, 0.08, 0.15, 0.08, 0, 0.55, 0); }
+  return g;
+}
+function kartAddObj(d, own) {
+  const num = v => Number.isFinite(+v) ? +v : 0;
+  if (kartObjs.length > 40 || kartObjs.some(o => o.id === d.id)) return;
+  const kind = d.t === 'shell' ? 'shell' : 'peel';
+  const o = { id: String(d.id).slice(0, 40), kind, pos: new V(num(d.x), num(d.y), num(d.z)), vx: clamp(num(d.vx), -45, 45), vz: clamp(num(d.vz), -45, 45), owner: d.o | 0, life: kind === 'shell' ? 7 : 40, age: 0, hits: 0, g: kartObjMesh(kind) };
+  o.g.position.copy(o.pos); kartObjs.push(o);
+  if (own) kartSend(Object.assign({}, d));
+}
+function kartDropObj(o, tell) { scene.remove(o.g); kartObjs.splice(kartObjs.indexOf(o), 1); if (tell) kartSend({ t: 'ix', id: o.id }); }
+function kartClearObjs() { while (kartObjs.length) kartDropObj(kartObjs[0], false); }
+const shellFeel = { pos: new V(), box: null };
+function kartObjsUpdate(dt) {
+  for (const o of kartObjs.slice()) {
+    o.age += dt; o.life -= dt;
+    if (o.life <= 0) { kartDropObj(o, false); continue; }
+    if (o.kind === 'shell') { // races along the road, bouncing off walls
+      const nx = o.pos.x + o.vx * dt, nz = o.pos.z + o.vz * dt;
+      let hit = null;
+      for (const b of boxes) if (!b.hog && b.min.y < o.pos.y + 0.8 && b.max.y > o.pos.y + 0.25 && nx > b.min.x - 0.4 && nx < b.max.x + 0.4 && nz > b.min.z - 0.4 && nz < b.max.z + 0.4) { hit = b; break; }
+      if (hit) {
+        const px = Math.min(nx - hit.min.x + 0.4, hit.max.x + 0.4 - nx), pz = Math.min(nz - hit.min.z + 0.4, hit.max.z + 0.4 - nz);
+        if (px < pz) o.vx = -o.vx; else o.vz = -o.vz;
+        if (++o.hits > 6) { kartDropObj(o, false); continue; }
+      } else { o.pos.x = nx; o.pos.z = nz; }
+      shellFeel.pos.y = o.pos.y; o.pos.y = hogGround(shellFeel, o.pos.x, o.pos.z);
+      o.g.rotation.y += dt * 12;
+    }
+    o.g.position.copy(o.pos);
+    for (const h of hogs) { // did it get one of the hogs I drive?
+      if (!hogMine(h) || (h.idx === o.owner && o.age < (o.kind === 'shell' ? 0.6 : 1.2))) continue;
+      if ((h.pos.x - o.pos.x) ** 2 + (h.pos.z - o.pos.z) ** 2 > (o.kind === 'shell' ? 2.6 : 1.8) || Math.abs(h.pos.y - o.pos.y) > 1.5) continue;
+      if (!(h.starT > 0)) kartSpin(h, o.kind === 'shell' ? 'Shell hit!' : 'Banana peel!');
+      kartDropObj(o, true); break;
+    }
+  }
+}
+function kartPick(h) { // what comes out of the box: the further back you are, the better it is for catching up
+  const d = h.seats[0], n = bodies.length, place = d && MODE2.kart.active ? MODE2.kart.place(d) : 1, back = n > 1 ? (place - 1) / (n - 1) : 0;
+  const w = back < 0.2 ? { peel: 5, shell: 4, turbo: 1, star: 0 } : back < 0.65 ? { peel: 3, shell: 4, turbo: 3, star: 1 } : { peel: 1, shell: 3, turbo: 4, star: 3 };
+  let r = Math.random() * Object.values(w).reduce((a, b) => a + b, 0);
+  for (const [k, v] of Object.entries(w)) { r -= v; if (r < 0) return k; }
+  return 'turbo';
+}
+function kartUse(h) {
+  const it = h && h.item; if (!it) return false;
+  h.item = null; h.itemT = 0;
+  const fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw), me = h.seats.includes(player), id = `${myId}:${++kartSeq}`;
+  if (it === 'turbo') { h.boostT = 1.8; h.speed = Math.max(h.speed, HOG.max * 1.4); if (me) { flash('Turbo!', '', 0.8, '#ffb02e'); sfxTone(250, 1300, 0.45, 'sawtooth', 0.09); rumble(200, 0.6); } }
+  else if (it === 'star') { h.starT = 6; kartSend({ t: 'star', i: h.idx }); if (me) { flash('Golden Fly!', 'Nothing can stop you. Bump them!', 1.4, '#ffd23f'); sfxTone(500, 1500, 0.6, 'triangle', 0.1); } }
+  else if (it === 'shell') { const sp = Math.max(30, h.speed + 16); kartAddObj({ t: 'shell', id, x: r2(h.pos.x + fx * 2.6), y: r2(h.pos.y), z: r2(h.pos.z + fz * 2.6), vx: r2(fx * sp), vz: r2(fz * sp), o: h.idx }, true); if (me) sfxTone(400, 200, 0.2, 'square', 0.07); }
+  else if (it === 'peel') { kartAddObj({ t: 'peel', id, x: r2(h.pos.x - fx * 2.6), y: r2(h.pos.y), z: r2(h.pos.z - fz * 2.6), o: h.idx }, true); if (me) sfxSlap(0.2); }
+  return true;
+}
+function kartItemLabel(h) {
+  if (h.rollT > 0) { const k = Object.keys(KART_ITEMS)[Math.floor(performance.now() / 90) % 4]; return KART_ITEMS[k][0] + ' …'; }
+  const [ic, nm] = KART_ITEMS[h.item]; return `${ic} ${nm}${usedKeys ? ' (F)' : ''}`;
 }
 
 // ---------- Teleporters: step in one ring, pop out of the other ----------
@@ -5583,7 +5690,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyH') { claimHost(); return; }
   if (e.code === 'KeyP') { toggleScores(false); togglePlayers(); return; }
   if (e.code === 'KeyL') { toggleScores(); return; }
-  if (e.code === 'KeyF') { tryThrow(); return; }
+  if (e.code === 'KeyF') { if (mode === 'kart' && state === 'play' && player.hog && player.seat === 0) kartUse(player.hog); else tryThrow(); return; }
   if (e.code === 'KeyG') { toggleHog(); return; }
   if (e.code === 'Space' && player.hog && !e.repeat) honk();
   if (e.code === 'KeyI') { modeRules(); return; }
@@ -6864,7 +6971,7 @@ function pollGamepad(dt) {
       if (pressed(PAD.RB)) $('talkNext').click();
     }
     if (pressed(PAD.Y)) togglePlayers();
-    if (pressed(PAD.B)) { if ($('talk').hidden && $('players').hidden && tryThrow()) {} else padBack(); }
+    if (pressed(PAD.B)) { if ($('talk').hidden && $('players').hidden && ((mode === 'kart' && player.hog && player.seat === 0 && kartUse(player.hog)) || tryThrow())) {} else padBack(); }
     if (pressed(PAD.BACK)) claimHost();
     if (pressed(PAD.START)) $('menuBtn').click();
   }
@@ -7402,7 +7509,7 @@ const MODE2 = {
       if (!track) buildMap(mapKey);
       const humans = bodies.filter(b => b === player || b.isRemote).map(idOf).sort();
       this.order = Array.isArray(first) && first.length ? first.slice(0, 12) : humans.concat(shuffled(ais).map(idOf)).slice(0, 12);
-      this.makeHogs(this.order.length);
+      this.makeHogs(this.order.length); kartClearObjs(); if (track) for (const b of track.items) b.hideT = 0;
       for (const b of bodies) { b.score = 0; b.frozen = 4.5; b.kIdx = TRACK_N - 1; }
       this.myLap = 0; this.boarded = false; this.board();
       if (isHost()) this.order.forEach((id, s) => {
@@ -7429,9 +7536,34 @@ const MODE2 = {
       if (hogs.length !== this.order.length) this.makeHogs(this.order.length);
       for (const b of bodies) b.kIdx = trackIdx(b.pos);
       if (!this.boarded && player.frozen <= 0) this.board();
+      kartObjsUpdate(dt);
+      for (const h of hogs) { // items: Golden Fly timers for everyone; pickups, the roulette and using them for the hogs I drive
+        if (h.starT > 0) {
+          h.starT -= dt; h.boostT = Math.max(h.boostT || 0, 0.2);
+          if (!h.fly) h.fly = part(h.g, ballGeo, M.goldFly, 0.3, 0.3, 0.3, 0, 2.6, 0);
+          h.fly.visible = true; h.fly.position.set(Math.sin(t * 9) * 1.4, 2.4 + Math.sin(t * 13) * 0.2, Math.cos(t * 9) * 1.4);
+        } else if (h.fly) h.fly.visible = false;
+        if (!hogMine(h)) continue;
+        if (h.rollT > 0 && (h.rollT -= dt) <= 0) { h.item = kartPick(h); h.itemT = 0; if (h.seats.includes(player)) { const [ic, nm] = KART_ITEMS[h.item]; flash(`${ic} ${nm}`, usedKeys ? 'Press F to use it.' : 'Tap the item button to use it.', 1.3, '#ffd23f'); sfxTone(1200, 1200, 0.12, 'square', 0.07); } }
+        if (!h.item && !(h.rollT > 0)) for (const b of track.items) {
+          if (b.hideT > 0 || (h.pos.x - b.x) ** 2 + (h.pos.z - b.z) ** 2 > 2.6 || Math.abs(h.pos.y - b.y) > 2.5) continue;
+          b.hideT = 4; h.rollT = 1; kartSend({ t: 'ib', n: track.items.indexOf(b) });
+          if (h.seats.includes(player)) sfxTone(600, 1400, 0.25, 'triangle', 0.08);
+          break;
+        }
+        const d = h.seats[0];
+        if (h.item && d && d !== player && !d.isRemote) { // a computer frog using its item
+          h.itemT = (h.itemT || 0) + dt;
+          const fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw);
+          const ahead = hogs.some(o => o !== h && o.seats[0] && Math.hypot(o.pos.x - h.pos.x, o.pos.z - h.pos.z) < 30 && ((o.pos.x - h.pos.x) * fx + (o.pos.z - h.pos.z) * fz) / (Math.hypot(o.pos.x - h.pos.x, o.pos.z - h.pos.z) || 1) > 0.95);
+          const behind = hogs.some(o => o !== h && o.seats[0] && Math.hypot(o.pos.x - h.pos.x, o.pos.z - h.pos.z) < 12 && (o.pos.x - h.pos.x) * fx + (o.pos.z - h.pos.z) * fz < 0);
+          const go = h.item === 'shell' ? ahead || h.itemT > 9 : h.item === 'peel' ? behind || h.itemT > 7 : h.itemT > 0.8 + (h.idx % 3) * 0.5;
+          if (go && state === 'play') kartUse(h);
+        }
+      }
       for (const h of hogs) { // hazards: each device handles the hogs it drives
         h.slipT = Math.max(0, (h.slipT || 0) - dt); h.msgT = Math.max(0, (h.msgT || 0) - dt);
-        if (!hogMine(h) || h.air) continue;
+        if (!hogMine(h) || h.air || h.starT > 0) continue;
         const me = h.seats.includes(player);
         for (const z of track.haz) {
           if (!z.r || (h.pos.x - z.x) ** 2 + (h.pos.z - z.z) ** 2 > z.r * z.r || Math.abs(h.pos.y - z.y) > 1.2) continue;
@@ -7490,9 +7622,16 @@ const MODE2 = {
       return { chip: `LAP ${lap}/${TRACK_LAPS} · ${ordinal(this.place(player)).toUpperCase()}`, bg: '#ffd23f', info: `${player.hog ? '' : (usedKeys ? 'Press G by a toadhog to drive · ' : 'Tap Drive to get in a toadhog · ')}Leader: ${lead === player ? 'You' : lead.name} · ${fmt(roundTime)}`, radar: 'hide' };
     },
     row(b) { return `Lap ${Math.min(TRACK_LAPS, Math.floor((b.score || 0) / 4) + 1)} · ${ordinal(this.place(b))}`; },
+    onEvent(d) {
+      if (!d || !track) return;
+      if (d.t === 'shell' || d.t === 'peel') kartAddObj(d, false);
+      else if (d.t === 'ix') { const o = kartObjs.find(x => x.id === d.id); if (o) kartDropObj(o, false); }
+      else if (d.t === 'ib') { const b = track.items[d.n | 0]; if (b) b.hideT = 4; }
+      else if (d.t === 'star') { const h = hogs[d.i | 0]; if (h) h.starT = 6; }
+    },
     snap() { return { o: this.order }; },
     apply(ms) { if (Array.isArray(ms.o) && ms.o.join() !== this.order.join()) { this.order = ms.o.slice(0, 12); this.makeHogs(this.order.length); this.boarded = !this.order.includes(myId); } },
-    end() { this.go++; },
+    end() { this.go++; kartClearObjs(); },
   },
   lava: { ly: -0.6, mesh: null, grace: 6,
     start() {
@@ -8427,6 +8566,8 @@ function update(dt, t) {
     }
     const nh = state === 'play' || state === 'over' ? nearHog() : null, hgb = $('hogBtn');
     hgb.hidden = !nh || (!player.hog && !canRide());
+    const kh = mode === 'kart' && state !== 'menu' && player.hog && player.seat === 0 ? player.hog : null, ib = $('itemBtn');
+    ib.hidden = !(kh && (kh.item || kh.rollT > 0)); if (!ib.hidden) ib.textContent = kartItemLabel(kh);
     if (nh) hgb.textContent = (player.hog ? 'Hop out' : nh.seats[0] === null ? 'Drive' : 'Hop in') + (usedKeys ? ' (G)' : '');
     $('playersBtn').textContent = net ? `Players ${remotes.size + 1}` : 'Players';
     if (!$('players').hidden) renderPlayers();
@@ -8494,6 +8635,7 @@ function modeRules() { // the same one-line rules the menu buttons show
 }
 $('info').addEventListener('click', e => { e.currentTarget.blur(); modeRules(); });
 $('hogBtn').addEventListener('click', e => { e.currentTarget.blur(); toggleHog(); });
+$('itemBtn').addEventListener('click', e => { e.currentTarget.blur(); if (mode === 'kart' && state === 'play' && player.hog && player.seat === 0) kartUse(player.hog); });
 function showGfx() { document.querySelectorAll('#gfxSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === gfx))); }
 const gfxAtLoad = gfx;
 document.querySelectorAll('#gfxSeg button').forEach(b => b.addEventListener('click', () => {
