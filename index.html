@@ -408,7 +408,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <button class="mode kingmode" id="modeKing" type="button"><b>King of the Lily Pad</b><small>Hold the golden pad alone to score. Bump others off!</small></button>
         <button class="mode freemode" id="modeFree" type="button"><b>Free Play</b><small>No tagging. Explore, climb and catch flies.</small></button>
       </div>
-      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (16)</button>
+      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (17)</button>
       <div id="moreModes" hidden>
         <h3 class="more-cat">Tag twists</h3>
         <div class="more-grid">
@@ -428,6 +428,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <h3 class="more-cat">Races and challenges</h3>
         <div class="more-grid">
           <button class="mode mini" data-mode="race" id="mode-race" type="button"><b>Hop Race</b><small>Race through 8 glowing rings in order.</small></button>
+          <button class="mode mini" data-mode="kart" id="mode-kart" type="button"><b>Toadhog Race</b><small>Your map turns into a race track. Drive a toadhog, first to 3 laps wins!</small></button>
           <button class="mode mini" data-mode="lava" id="mode-lava" type="button"><b>Floor Is Lava</b><small>The lava rises. Climb high and stay out of it!</small></button>
           <button class="mode mini" data-mode="swarm" id="mode-swarm" type="button"><b>Bug Swarm</b><small>Everyone together: squash bugs before they reach the lily pad.</small></button>
           <button class="mode mini" data-mode="simon" id="mode-simon" type="button"><b>Simon Says Frog</b><small>Only do it if Grandpa Silver says "Silver says"!</small></button>
@@ -751,7 +752,9 @@ function addPad(x, z, r, y, big) { // a floating lily pad; most of them are boun
   const b = addBox(x, y, z, r * 1.5, 0.12, r * 1.5, M.lilyPad, true, true); b.bounce = big ? 13 : 9;
   if (big) { const f = put(new THREE.Mesh(ballGeo, M.lotusPink)); f.scale.set(0.25, 0.15, 0.25); f.position.set(x + r * 0.4, y + 0.15, z); }
 }
+let themeGround = null, themeWall = null; // the map's own ground and wall look, borrowed for its race track
 function addGround(m) {
+  themeGround = themeGround || m;
   const g = put(new THREE.Mesh(geo(new THREE.PlaneGeometry(HALF * 2 + 40, HALF * 2 + 40)), m));
   g.rotation.x = -Math.PI / 2;
 }
@@ -762,7 +765,7 @@ function addPatches(m, n, rmin, rmax) {
   }
 }
 function addWalls(m, openSide) { // openSide 1 = +z wall is invisible (the ocean)
-  const WH = 16;
+  const WH = 16; themeWall = themeWall || m;
   addBox(0, WH / 2, -HALF - 0.5, HALF * 2 + 2, WH, 1, m);
   addBox(0, WH / 2, HALF + 0.5, HALF * 2 + 2, WH, 1, m, false, openSide === 1);
   addBox(-HALF - 0.5, WH / 2, 0, 1, WH, HALF * 2 + 2, m);
@@ -895,7 +898,7 @@ function hogWalls(h) {
   const p = h.pos, r = HOG.r, lo = p.y + HOG.step, hi = p.y + 1.6;
   let hit = 0;
   for (const b of boxes) {
-    if (b === h.box || b.max.y <= lo || b.min.y >= hi) continue;
+    if (b.hog || b.max.y <= lo || b.min.y >= hi) continue; // other hogs: see hogBumps
     if (p.x < b.min.x - r || p.x > b.max.x + r || p.z < b.min.z - r || p.z > b.max.z + r) continue;
     let nx = p.x - clamp(p.x, b.min.x, b.max.x), nz = p.z - clamp(p.z, b.min.z, b.max.z), d = Math.hypot(nx, nz), pen;
     if (d >= r) continue;
@@ -925,6 +928,11 @@ function hogDrive(h, dt, thr, str) {
     h.yaw += h.steer * HOG.turn * dt * clamp(h.speed / 6, -1, 1);
   }
   h.pos.x += -Math.sin(h.yaw) * h.speed * dt; h.pos.z += -Math.cos(h.yaw) * h.speed * dt;
+  if (h.kx || h.kz || h.yawV) { // still sliding and spinning from a bump
+    h.pos.x += h.kx * dt; h.pos.z += h.kz * dt; h.yaw += h.yawV * dt;
+    const k = Math.exp(-(h.air ? 0.5 : 3.5) * dt); h.kx *= k; h.kz *= k; h.yawV *= Math.exp(-3 * dt);
+    if (Math.abs(h.kx) + Math.abs(h.kz) < 0.05 && Math.abs(h.yawV) < 0.02) h.kx = h.kz = h.yawV = 0;
+  }
   const hit = hogWalls(h);
   if (hit > 5 && h.seats.includes(player)) { sfxSlap(0.3); sfxTone(140, 55, 0.2, 'triangle', Math.min(0.2, hit / 60)); rumble(120, Math.min(1, hit / 12)); }
   h.pos.x = clamp(h.pos.x, -HALF + HOG.r, HALF - HOG.r); h.pos.z = clamp(h.pos.z, -HALF + HOG.r, HALF - HOG.r);
@@ -1022,6 +1030,41 @@ function hogCamera(dt) { // chase camera behind the hog, pulled in so it doesn't
   camera.position.copy(hogCam.pos);
   camera.lookAt(camLook.x - Math.sin(hogCam.yaw) * 3, camLook.y, camLook.z - Math.cos(hogCam.yaw) * 3);
 }
+// Hog meets hog: each is two round bumpers (front and back). Both get shoved, so a nudge from behind speeds you up,
+// a hit in the side slides you over, and a hit near either end spins you. Each device only moves the hogs it runs
+// (its own, plus the computer frogs' on the host) and every device sees the same crash, so both drivers feel it.
+const HOG_BALLS = [0.95, -0.95], HOG_BALL_R = 1.05, hogVa = new V(), hogVb = new V();
+function hogMine(h) { const d = h.seats[0]; return d === player || (isHost() && !(d && d.isRemote)); }
+function hogVel(h, out) { return out.set(-Math.sin(h.yaw) * h.speed + (h.kx || 0), 0, -Math.cos(h.yaw) * h.speed + (h.kz || 0)); }
+function hogKnock(h, ix, iz, along) { // a push: the part along the hog changes its speed, the rest slides it and swings it around
+  const fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw), fw = ix * fx + iz * fz, sx = ix - fx * fw, sz = iz - fz * fw;
+  h.speed = clamp(h.speed + fw, -HOG.rev, HOG.max);
+  h.kx = (h.kx || 0) + sx; h.kz = (h.kz || 0) + sz;
+  const side = sx * -Math.cos(h.yaw) + sz * Math.sin(h.yaw); // which way the nose turns when that end gets shoved
+  h.yawV = clamp((h.yawV || 0) + along * side * 0.25, -3, 3);
+}
+function hogBumps() {
+  for (let i = 0; i < hogs.length; i++) for (let j = i + 1; j < hogs.length; j++) {
+    const a = hogs[i], b = hogs[j], ma = hogMine(a), mb = hogMine(b);
+    if ((!ma && !mb) || Math.hypot(a.pos.x - b.pos.x, a.pos.z - b.pos.z) > 4.6 || Math.abs(a.pos.y - b.pos.y) > 1.5) continue;
+    for (const oa of HOG_BALLS) for (const ob of HOG_BALLS) {
+      const ax = a.pos.x - Math.sin(a.yaw) * oa, az = a.pos.z - Math.cos(a.yaw) * oa, bx = b.pos.x - Math.sin(b.yaw) * ob, bz = b.pos.z - Math.cos(b.yaw) * ob;
+      let nx = ax - bx, nz = az - bz; const d = Math.hypot(nx, nz);
+      if (d >= HOG_BALL_R * 2 || d < 1e-4) continue;
+      nx /= d; nz /= d;
+      const pen = HOG_BALL_R * 2 - d, share = ma && mb ? 0.5 : 1;
+      if (ma) { a.pos.x += nx * pen * share; a.pos.z += nz * pen * share; }
+      if (mb) { b.pos.x -= nx * pen * share; b.pos.z -= nz * pen * share; }
+      hogVel(a, hogVa); hogVel(b, hogVb);
+      const rel = (hogVa.x - hogVb.x) * nx + (hogVa.z - hogVb.z) * nz;
+      if (rel >= 0) continue; // already moving apart
+      const imp = -rel * 0.8; // a bit bouncy
+      if (ma) hogKnock(a, nx * imp, nz * imp, oa);
+      if (mb) hogKnock(b, -nx * imp, -nz * imp, ob);
+      if (-rel > 3 && (a.seats.includes(player) || b.seats.includes(player))) { sfxSlap(0.3); sfxTone(180, 70, 0.15, 'triangle', Math.min(0.18, -rel / 60)); rumble(120, Math.min(1, -rel / 12)); }
+    }
+  }
+}
 const hogTmp = new V();
 function updateHogs(dt) {
   const now = performance.now(), host = isHost();
@@ -1055,6 +1098,7 @@ function updateHogs(dt) {
       }
     }
   }
+  hogBumps();
   if (player.hog) { seatPos(player.hog, player.seat, player.pos); const h = player.hog; player.vel.set(-Math.sin(h.yaw) * h.speed, h.vy, -Math.cos(h.yaw) * h.speed); player.grounded = true; }
   // a speeding hog sends frogs flying (each device bumps its own frog; the host bumps the computer frogs)
   for (const b of bodies) b.bumpT = Math.max(0, (b.bumpT || 0) - dt);
@@ -1185,6 +1229,7 @@ function aiWaypoint(h) { // somewhere open, on about the same level, a good driv
 function aiDriveInput(h, ai, dt) { // [throttle, steer] for a computer frog at the wheel; may hop out instead
   ai.hogT += dt;
   if (ai.iced || ai.out || state === 'menu') { aiLeaveHog(ai); return null; }
+  if (mode === 'kart' && track) return MODE2.kart.drive(h, ai, dt);
   let goal = null, reason = 'ride', flee = false;
   if (state === 'play') {
     const mg = modeGoal(ai);
@@ -1251,6 +1296,111 @@ function hogFromNet(r, q) {
   if (s === 0 && q.length >= 9) {
     const n = h.net || (h.net = {}), num = v => Number.isFinite(+v) ? +v : 0;
     Object.assign(n, { x: num(q[2]), y: num(q[3]), z: num(q[4]), yaw: num(q[5]), speed: clamp(num(q[6]), -HOG.rev, HOG.max), steer: clamp(num(q[7]), -1, 1), air: !!q[8], t: performance.now() });
+  }
+}
+
+// ---------- Toadhog Race: the map you picked, made into a race track ----------
+// A wiggly loop is cut through the map's own scenery (everything in the way is cleared off), then paved with a road,
+// red and white curbs, low barriers in the map's wall colour and a checkered start line. Same shape on every device.
+var trackOn = false, track = null;
+const TRACK_N = 96, TRACK_W = 10, TRACK_PAD = 1.6, TRACK_LAPS = 3;
+Object.assign(M, { curbRed: lam(0xe63946), curbWhite: lam(0xf4f4f0), checkA: lam(0x111111), checkB: lam(0xf8f8f8), archPost: lam(0x5c636b) });
+const roadMats = new Map();
+function trackShape() {
+  let h = 7; for (const c of mapKey) h = (h * 31 + c.charCodeAt(0)) % 1000003;
+  const r = seeded(h), a2 = r() * 6.28, a3 = r() * 6.28, k2 = 0.1 + r() * 0.08, k3 = 0.04 + r() * 0.06, R0 = HALF * 0.58;
+  let raw = [];
+  for (let i = 0; i < TRACK_N; i++) {
+    const th = i / TRACK_N * Math.PI * 2, rr = R0 * (1 + k2 * Math.sin(2 * th + a2) + k3 * Math.sin(3 * th + a3));
+    raw.push([Math.cos(th) * rr, Math.sin(th) * rr]);
+  }
+  const maxR = Math.max(...raw.map(([x, z]) => Math.hypot(x, z))), k = Math.min(1, (HALF - 9) / maxR);
+  const pts = raw.map(([x, z]) => ({ x: x * k, z: z * k }));
+  pts.forEach((p, i) => {
+    const a = pts[(i + TRACK_N - 1) % TRACK_N], b = pts[(i + 1) % TRACK_N], l = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+    p.tx = (b.x - a.x) / l; p.tz = (b.z - a.z) / l;
+    const out = p.x * p.tz - p.z * p.tx > 0 ? 1 : -1; // normal pointing away from the middle of the loop
+    p.nx = p.tz * out; p.nz = -p.tx * out;
+  });
+  return pts;
+}
+function trackNear(x0, x1, z0, z1, pad) { // does this footprint touch the track (or its barriers)?
+  const lim = (TRACK_W / 2 + pad) ** 2;
+  return track.pts.some(p => { const dx = Math.max(x0 - p.x, 0, p.x - x1), dz = Math.max(z0 - p.z, 0, p.z - z1); return dx * dx + dz * dz < lim; });
+}
+function trackIdx(pos) { // the nearest point along the track
+  let bi = 0, bd = Infinity;
+  track.pts.forEach((p, i) => { const d = (p.x - pos.x) ** 2 + (p.z - pos.z) ** 2; if (d < bd) { bd = d; bi = i; } });
+  return bi;
+}
+function trackStrip(off0, off1, y, mat, keep) { // a flat ribbon along the loop between two sideways offsets
+  const pos = [], nor = [];
+  track.pts.forEach((p, i) => {
+    if (keep && !keep(i)) return;
+    const q = track.pts[(i + 1) % TRACK_N];
+    const c = [[p, off0], [p, off1], [q, off1], [q, off0]].map(([u, o]) => [u.x + u.nx * o, y, u.z + u.nz * o]);
+    for (const k of [0, 1, 2, 0, 2, 3]) { pos.push(...c[k]); nor.push(0, 1, 0); }
+  });
+  const g = geo(new THREE.BufferGeometry());
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  const m = put(new THREE.Mesh(g, mat)); m.material.side = THREE.DoubleSide; return m;
+}
+function buildTrack() {
+  track = { pts: trackShape() };
+  // clear the way: anything low enough to drive into goes (overhead platforms, the ground and the outer walls stay)
+  const edge = HALF - 0.3, bb = new THREE.Box3(), mtx = new THREE.Matrix4(), zero = new THREE.Matrix4().makeScale(0, 0, 0), tp = new V();
+  for (const c of [...mapGroup.children]) {
+    if (c.isInstancedMesh) { // grass tufts and such: hide just the ones on the road
+      for (let i = 0; i < c.count; i++) { c.getMatrixAt(i, mtx); tp.setFromMatrixPosition(mtx); if (trackNear(tp.x, tp.x, tp.z, tp.z, TRACK_PAD)) c.setMatrixAt(i, zero); }
+      c.instanceMatrix.needsUpdate = true; continue;
+    }
+    if (c.material === waterMat) { mapGroup.remove(c); continue; }
+    c.updateMatrixWorld(true); bb.setFromObject(c);
+    if (bb.isEmpty() || bb.min.y > 4.5 || bb.min.x < -edge || bb.max.x > edge || bb.min.z < -edge || bb.max.z > edge) continue;
+    if (trackNear(bb.min.x, bb.max.x, bb.min.z, bb.max.z, TRACK_PAD)) mapGroup.remove(c);
+  }
+  const low = b => b.min.y < 4.5 && b.min.x > -edge && b.max.x < edge && b.min.z > -edge && b.max.z < edge;
+  const keepBox = b => !(low(b) && trackNear(b.min.x, b.max.x, b.min.z, b.max.z, TRACK_PAD));
+  for (const arr of [boxes, ledges]) { const k = arr.filter(keepBox); arr.length = 0; arr.push(...k); }
+  const keepT = trees.filter(t => !(t.y0 < 4.5 && trackNear(t.x - t.r, t.x + t.r, t.z - t.r, t.z + t.r, TRACK_PAD))); trees.length = 0; trees.push(...keepT);
+  const keepB = blobs.filter(b => !(b.c.y - b.r < 4.5 && trackNear(b.c.x - b.r, b.c.x + b.r, b.c.z - b.r, b.c.z + b.r, TRACK_PAD))); blobs.length = 0; blobs.push(...keepB);
+  teleports = teleports.filter(pair => !pair.some(p => trackNear(p.x, p.x, p.z, p.z, TRACK_PAD)));
+  for (const h of hogs) { stopHogVoice(h); mapGroup.remove(h.g); } // the map's own toadhogs make way for the racers'
+  for (let i = boxes.length - 1; i >= 0; i--) if (boxes[i].hog) boxes.splice(i, 1);
+  hogs = []; water = null;
+  // the road takes the ground's colour, mixed most of the way to asphalt
+  const gc = new THREE.Color(themeGround && themeGround.color ? themeGround.color : 0x6a8a4a), road = gc.clone().lerp(new THREE.Color(0x3c3c44), 0.7).getHex();
+  if (!roadMats.has(road)) roadMats.set(road, lam(road));
+  const hw = TRACK_W / 2;
+  trackStrip(-hw, hw, 0.08, roadMats.get(road));
+  for (const s of [-1, 1]) { // curbs, striped every two steps
+    trackStrip(s * hw, s * (hw + 0.8), 0.1, M.curbRed, i => (i >> 1) % 2 === 0);
+    trackStrip(s * hw, s * (hw + 0.8), 0.1, M.curbWhite, i => (i >> 1) % 2 === 1);
+  }
+  // low barriers just past the curbs: drawn as one smooth wall, and felt as a row of small blocks
+  const wallMat = themeWall || M.rock;
+  track.pts.forEach((p, i) => {
+    const q = track.pts[(i + 1) % TRACK_N];
+    for (const s of [-1, 1]) {
+      const o = s * (hw + 1.2), ax = p.x + p.nx * o, az = p.z + p.nz * o, bx = q.x + q.nx * o, bz = q.z + q.nz * o;
+      const w = put(new THREE.Mesh(boxGeo, wallMat)); w.scale.set(0.6, 1, Math.hypot(bx - ax, bz - az) + 0.25);
+      w.position.set((ax + bx) / 2, 0.5, (az + bz) / 2); w.rotation.y = Math.atan2(bx - ax, bz - az);
+      const cap = put(new THREE.Mesh(boxGeo, (i >> 1) % 2 ? M.curbWhite : M.curbRed)); cap.scale.set(0.66, 0.14, w.scale.z); cap.position.set(w.position.x, 1.05, w.position.z); cap.rotation.y = w.rotation.y;
+      boxes.push({ min: new V(ax - 0.55, 0, az - 0.55), max: new V(ax + 0.55, 1.1, az + 0.55) });
+    }
+  });
+  // checkered start line and an arch over it
+  const p0 = track.pts[0], yaw0 = Math.atan2(p0.tx, p0.tz), tile = TRACK_W / 8;
+  for (let a = 0; a < 8; a++) for (let b = 0; b < 2; b++) {
+    const o = -hw + tile * (a + 0.5), f = (b - 0.5) * tile;
+    const t = put(new THREE.Mesh(boxGeo, (a + b) % 2 ? M.checkA : M.checkB)); t.scale.set(tile, 0.02, tile);
+    t.position.set(p0.x + p0.nx * o + p0.tx * f, 0.1, p0.z + p0.nz * o + p0.tz * f); t.rotation.y = yaw0;
+  }
+  for (const s of [-1, 1]) { const x = p0.x + p0.nx * s * (hw + 2.2), z = p0.z + p0.nz * s * (hw + 2.2); addBox(x, 2.6, z, 0.6, 5.2, 0.6, M.archPost); }
+  const span = TRACK_W + 5;
+  for (let a = 0; a < 12; a++) for (let b = 0; b < 2; b++) {
+    const o = -span / 2 + span / 12 * (a + 0.5), t = put(new THREE.Mesh(boxGeo, (a + b) % 2 ? M.checkA : M.checkB));
+    t.scale.set(span / 12, 0.45, 0.3); t.position.set(p0.x + p0.nx * o, 5 + b * 0.45, p0.z + p0.nz * o); t.rotation.y = yaw0;
   }
 }
 
@@ -2571,13 +2721,18 @@ function buildMap(key) {
   boxes.length = trees.length = blobs.length = ledges.length = 0; water = null;
   for (const h of hogs) { stopHogVoice(h); for (const b of h.seats) if (b) { b.hog = null; b.seat = -1; } }
   hogs = []; teleports = []; if (typeof hideMyFrog === 'function') hideMyFrog();
-  HALF = mp.half || 30; groundAt = mp.ground || flatGround;
+  // Toadhog Race turns the map into a race track; the big hilly maps lend their look to a flat map's scenery
+  try { trackOn = mode === 'kart' && state !== 'menu'; } catch (e) { trackOn = false; } // (the very first build runs before mode exists)
+  track = null; themeGround = themeWall = null;
+  const base = trackOn && mp.ground ? MAPS[mapKey === 'gulch' ? 'canyon' : 'forest'] : mp;
+  HALF = base.half || 30; groundAt = base.ground || flatGround;
   camera.far = mp.far || 140; camera.updateProjectionMatrix();
   seed = 11;
   G = mp.gravity || 18; airDrag = mp.swim ? 1.3 : 0.15;
-  slowZones = mp.slow || [];
+  slowZones = trackOn ? [] : mp.slow || [];
   mapAnims = [];
-  mp.build();
+  base.build();
+  if (trackOn) buildTrack();
   mergeStatic();
   addParticles(mp.fx);
   scene.background.setHex(mp.sky); scene.fog.color.setHex(mp.sky); scene.fog.near = mp.fog[0]; scene.fog.far = mp.fog[1];
@@ -2663,7 +2818,7 @@ function blockedAt(x, z) {
 }
 function spawnAt(x, z, out) { // like findSpot, but on Sky Islands everyone starts on top of the middle island
   findSpot(x, z, out);
-  if (MAPS[mapKey].spawnHigh) out.y = 8.6;
+  if (MAPS[mapKey].spawnHigh && !trackOn) out.y = 8.6;
   return out;
 }
 function findSpot(x, z, out) {
@@ -3458,6 +3613,7 @@ const DIFF = [0.78, 1, 1.18];
 let best = 0;
 try { best = +localStorage.getItem('ribbit-best') || 0; } catch (e) {}
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
 const records = { mostTags: 0, totalTags: 0 };
 try { Object.assign(records, JSON.parse(localStorage.getItem('ribbit-records') || '{}')); } catch (e) {}
 function saveRecords() { try { localStorage.setItem('ribbit-records', JSON.stringify(records)); } catch (e) {} }
@@ -3483,7 +3639,9 @@ function startRound(firstId, seed) {
   setTimeout(() => { sendHere(); renderOnline(); }, 500);
   if (player.hog) exitHog();
   ejectAiHogs();
-  state = 'play'; chooseSong(); startMusic(); roundTime = 0; playerTaggedThisRound = false;
+  state = 'play';
+  if ((mode === 'kart') !== trackOn) buildMap(mapKey); // into or out of the race track version of the map
+  chooseSong(); startMusic(); roundTime = 0; playerTaggedThisRound = false;
   resetModeState(); if (mode !== 'king') kingEnd();
   questEvent('mode', 1, mode); questEvent('map', 1, mapKey);
   if (mode === 'ctf') { ctfStartRound(); return; }
@@ -3501,7 +3659,7 @@ function startRound(firstId, seed) {
   if (mode === 'king') { kingStart(); return; }
   const m2 = MODE2[mode];
   if (m2) m2.active = true;
-  if (m2 && !m2.tagBase) { m2.start(seed); return; }
+  if (m2 && !m2.tagBase) { m2.start(seed, firstId); return; }
   const ids = Array.isArray(firstId) ? firstId : firstId ? [firstId] : [];
   let firsts = ids.map(id => byId(id)).filter(Boolean);
   if (!firsts.length) firsts = shuffled(ais).slice(0, (mode === 'freeze' || mode === 'hide') && bodies.length >= 8 ? 2 : 1);
@@ -4484,6 +4642,7 @@ function applySnapshot(s, from) {
   if (s.n !== ais.length) setAiCount(s.n);
   mode = s.mo; diff = s.d; roundTime = s.rt; overT = s.ot;
   if (state !== 'menu') state = s.st === 'menu' ? 'play' : s.st;
+  if ((mode === 'kart' && state !== 'menu') !== trackOn) { buildMap(mapKey); spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], player.pos); }
   s.ai.forEach((p, i) => {
     const a = ais[i]; if (!a) return;
     a.netPos = a.netPos || new V(); a.netPos.set(p[0], p[1], p[2]); a.vel.set(p[3], p[4], p[5]); a.netT = performance.now();
@@ -4950,11 +5109,12 @@ $('modeFree').addEventListener('click', () => begin('free', 0, 'host'));
 $('modeKing').addEventListener('click', () => begin('king', 0, 'host'));
 document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode, 0, 'host')));
 $('optsBtn').addEventListener('click', () => { const open = $('opts').hidden; $('opts').hidden = !open; $('optsBtn').setAttribute('aria-expanded', String(open)); $('optsBtn').textContent = open ? 'Fewer options' : 'Other options'; });
-$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (16)'; });
+$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (17)'; });
 $('menuBtn').addEventListener('click', () => {
   if (player.hog) exitHog();
   ejectAiHogs();
   state = 'menu'; pointers.clear(); showBest();
+  if (trackOn) { buildMap(mapKey); placeIdle(); }
   $('menu').hidden = false; $('hud').hidden = true;
   bodies.forEach(b => setLava(b, false));
   $('talk').hidden = true; talkTarget = null; togglePlayers(false); toggleScores(false);
@@ -6060,7 +6220,7 @@ function concealed(b) {
 const CLASSICISH = ['classic', 'potato', 'bat', 'shrink', 'tongue', 'gravity'];
 const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge'];
 Object.assign(MODE_NAMES, { monsters: 'Monster Night', hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
-  mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines' });
+  mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', kart: 'Toadhog Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines' });
 function m2Send(d, target) { if (net && isHost()) net.ev.send({ k: 'm2', d }, target ? { target } : undefined); }
 function m2Ask(d) { if (net && !isHost()) net.ev.send({ k: 'm2', d }, { target: net.hostId }); }
 function alive() { return bodies.filter(b => !b.out); }
@@ -6550,6 +6710,104 @@ const MODE2 = {
     row(b) { return `${b.score || 0}/8 rings`; },
     snap() { return { s: this.seed }; }, apply(ms) { if (ms.s && (ms.s !== this.seed || !this.group || this.mapKey !== mapKey)) this.build(ms.s); },
     end() { if (this.group) scene.remove(this.group); this.group = null; },
+  },
+  // Toadhog Race: everyone gets a toadhog on the starting grid; the first through all 4 checkpoints 3 times wins.
+  // b.score counts checkpoints passed (it rides along in the snapshot); the host decides them.
+  kart: { order: [], go: 0, myLap: 0, boarded: false, paints: null,
+    makeHogs(n) {
+      for (const h of hogs) { stopHogVoice(h); for (const b of h.seats) if (b) { b.hog = null; b.seat = -1; } mapGroup.remove(h.g); const i = boxes.indexOf(h.box); if (i >= 0) boxes.splice(i, 1); }
+      hogs = []; if (!player.hog) hideMyFrog();
+      if (!track) return;
+      this.paints = this.paints || [0xe63946, 0x3a86ff, 0xffd23f, 0x52b788, 0x9b5de5, 0xff8fb5, 0xff9f1c, 0x2ec4b6, 0xf4f1de, 0x8a5a3a, 0x00bbf9, 0x2b2d42].map(lam);
+      for (let s = 0; s < n; s++) {
+        const p = track.pts[(TRACK_N - 2 - Math.round(s * 3.5)) % TRACK_N], o = (s % 2 ? 1 : -1) * 2.4; // a staggered grid, so nobody sits right behind you
+        const h = addHog(p.x + p.nx * o, p.z + p.nz * o, Math.atan2(-p.tx, -p.tz), this.paints[s % this.paints.length]);
+        h.home = [h.pos.x, h.pos.z, h.yaw]; shadowFlags(h.g);
+      }
+    },
+    board() { // hop into my own hog on the grid
+      const s = this.order.indexOf(myId), h = hogs[s];
+      if (!h || h.seats[0]) return;
+      if (player.hog) exitHog();
+      seatPos(h, 0, player.pos); hogTipped = true; enterHog(h); this.boarded = true;
+    },
+    start(seed, first) {
+      if (!track) buildMap(mapKey);
+      const humans = bodies.filter(b => b === player || b.isRemote).map(idOf).sort();
+      this.order = Array.isArray(first) && first.length ? first.slice(0, 12) : humans.concat(shuffled(ais).map(idOf)).slice(0, 12);
+      this.makeHogs(this.order.length);
+      for (const b of bodies) { b.score = 0; b.frozen = 4.5; b.kIdx = TRACK_N - 1; }
+      this.myLap = 0; this.boarded = false; this.board();
+      if (isHost()) this.order.forEach((id, s) => {
+        const a = ais.find(x => x.id === id); if (!a || !hogs[s]) return;
+        seatPos(hogs[s], 0, a.pos); aiSeat(a, hogs[s], 0);
+        a.lane = (Math.random() - 0.5) * 5; a.kartSkill = Math.random() * 0.06; a.stuckT = 0; a.backT = 0;
+      });
+      if (net && isHost()) net.ev.send({ k: 'round', first: this.order, seed: 1 });
+      const go = ++this.go;
+      flash('Toadhog Race!', usedKeys ? `${TRACK_LAPS} laps around ${MAPS[mapKey].label}. W to drive, A and D to steer.` : `${TRACK_LAPS} laps around ${MAPS[mapKey].label}. Drag up to drive, sideways to steer.`, 1.4, '#ffd23f');
+      [3, 2, 1, 0].forEach((n, i) => setTimeout(() => {
+        if (go !== this.go || mode !== 'kart' || state !== 'play') return;
+        flash(n ? String(n) : 'GO!', n ? 'Get ready…' : 'Floor it!', n ? 0.9 : 1.2, n ? 'var(--bone)' : 'var(--leaf)');
+        sfxTone(n ? 440 : 880, n ? 440 : 880, n ? 0.18 : 0.4, 'square', 0.09); if (!n) rumble(150, 0.5);
+      }, 1500 + i * 1000));
+    },
+    progress(b) { // checkpoints passed, plus how far into the next stretch: used to work out places
+      const s = b.score || 0, last = (s % 4) * TRACK_N / 4, i = b.kIdx === undefined ? TRACK_N - 1 : b.kIdx;
+      return s * TRACK_N / 4 + clamp(((i - last + TRACK_N * 1.5) % TRACK_N) - TRACK_N / 2, -TRACK_N / 4, TRACK_N / 4);
+    },
+    place(b) { const p = this.progress(b); return 1 + bodies.filter(o => o !== b && this.progress(o) > p).length; },
+    update(dt, t, host) {
+      if (!track) return;
+      if (hogs.length !== this.order.length) this.makeHogs(this.order.length);
+      for (const b of bodies) b.kIdx = trackIdx(b.pos);
+      if (!this.boarded && player.frozen <= 0) this.board();
+      const lap = Math.floor((player.score || 0) / 4);
+      if (lap > this.myLap && state === 'play') {
+        this.myLap = lap;
+        if (lap < TRACK_LAPS) { flash(lap === TRACK_LAPS - 1 ? 'Final lap!' : `Lap ${lap + 1}!`, `You're in ${ordinal(this.place(player))} place.`, 1.8, '#ffd23f'); sfxTone(660, 990, 0.25, 'triangle', 0.1); addFlies(1); }
+      }
+      if (!host || state !== 'play') return;
+      for (const b of bodies) { // walk to a free toadhog if you somehow ended up on foot
+        if (!b.hog && ais.includes(b) && b.frozen <= 0) { const h = hogs.find(x => !x.seats[0] && flat(x.pos, b.pos) < 3); if (h) aiSeat(b, h, 0); }
+        const s = b.score || 0, cp = ((s % 4) + 1) % 4 * TRACK_N / 4;
+        if ((b.kIdx - cp + TRACK_N) % TRACK_N >= 8) continue;
+        b.score = s + 1;
+        if (b.score >= TRACK_LAPS * 4) {
+          state = 'over'; overT = 8;
+          announce(b === player ? 'You win the Toadhog Race!' : `${b.name} wins the Toadhog Race!`, `${TRACK_LAPS} laps in ${fmt(roundTime)}. New race soon.`, '#ffd23f', 5, b);
+          if (b === player) addFlies(10);
+          return;
+        }
+      }
+    },
+    drive(h, ai, dt) { // [throttle, steer] for a computer frog racing around the track
+      if (!track) return [0, 0];
+      const i = trackIdx(h.pos), sp = Math.abs(h.speed), p = track.pts[(i + 3 + Math.round(sp * 0.3)) % TRACK_N], lane = ai.lane || 0;
+      const dx = p.x + p.nx * lane - h.pos.x, dz = p.z + p.nz * lane - h.pos.z;
+      const ang = Math.atan2(Math.sin(Math.atan2(-dx, -dz) - h.yaw), Math.cos(Math.atan2(-dx, -dz) - h.yaw));
+      let thr = 1, str = clamp(ang * 2.4, -1, 1);
+      const a = track.pts[i], b = track.pts[(i + 10) % TRACK_N], bend = Math.acos(clamp(a.tx * b.tx + a.tz * b.tz, -1, 1));
+      let cap = HOG.max * (0.8 + 0.06 * diff + (ai.kartSkill || 0)) * (bend > 0.8 ? 0.7 : 1);
+      if (!net) { const lead = this.progress(ai) - this.progress(player); if (lead > TRACK_N / 4) cap *= 0.85; else if (lead < -TRACK_N / 3) cap = HOG.max; } // keep it close
+      if (h.speed > cap) thr = 0;
+      if (Math.abs(ang) > 1.6) thr = Math.min(thr, 0.5);
+      if (ai.backT > 0) { ai.backT -= dt; thr = -1; str = ai.backSteer; }
+      else if (sp < 1.5 && !h.air && ai.frozen <= 0) { ai.stuckT = (ai.stuckT || 0) + dt; if (ai.stuckT > 1) { ai.stuckT = 0; ai.backT = 0.9; ai.backSteer = -(Math.sign(str) || 1); } }
+      else ai.stuckT = 0;
+      if (ai.frozen > 0) thr = 0;
+      return [thr, str];
+    },
+    goal(ai) { if (ai.hog) return null; const h = hogs.find(x => !x.seats[0]); return h ? h.pos : null; },
+    hud() {
+      const lap = Math.min(TRACK_LAPS, Math.floor((player.score || 0) / 4) + 1);
+      const lead = bodies.reduce((w, b) => this.progress(b) > this.progress(w) ? b : w, bodies[0]);
+      return { chip: `LAP ${lap}/${TRACK_LAPS} · ${ordinal(this.place(player)).toUpperCase()}`, bg: '#ffd23f', info: `${player.hog ? '' : (usedKeys ? 'Press G by a toadhog to drive · ' : 'Tap Drive to get in a toadhog · ')}Leader: ${lead === player ? 'You' : lead.name} · ${fmt(roundTime)}`, radar: 'hide' };
+    },
+    row(b) { return `Lap ${Math.min(TRACK_LAPS, Math.floor((b.score || 0) / 4) + 1)} · ${ordinal(this.place(b))}`; },
+    snap() { return { o: this.order }; },
+    apply(ms) { if (Array.isArray(ms.o) && ms.o.join() !== this.order.join()) { this.order = ms.o.slice(0, 12); this.makeHogs(this.order.length); this.boarded = !this.order.includes(myId); } },
+    end() { this.go++; },
   },
   lava: { ly: -0.6, mesh: null, grace: 6,
     start() {

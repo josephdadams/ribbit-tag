@@ -101,8 +101,10 @@ Tap **More modes** on the menu for even more:
 | **Bat Tag**: lights out, the lava frog glows | **Lily Pad Soccer**: push the ball onto their lily pad | **Floor Is Lava**: the lava rises, climb high | **Sardines**: find the hider, then hide with them |
 | **Shrink Tag**: each tag shrinks you, last big frog wins | **Pond Ball**: dodgeball, hit frogs sit out | **Bug Swarm**: everyone squashes bugs to save the lily pad | |
 | **Sticky Tongue Tag**: the lava frog tags from afar | | **Simon Says Frog**: only obey "Silver says" | |
-| **Keep Away**: hold the golden crown the longest | | | |
+| **Keep Away**: hold the golden crown the longest | | **Toadhog Race**: the map turns into a race track, first to 3 laps wins | |
 | **Gravity Swap**: gravity changes every 20 seconds | | | |
+
+In Toadhog Race every frog starts in a toadhog on the grid. Bump other hogs to knock them off their line: hit one from behind to shove it forward, or hit its side to slide it over and spin it. Drop out with `G` and you can climb back in.
 
 In Mud Splat and Pond Ball, throw with `F`, a quick tap on the screen, or `B` on a controller.
 
