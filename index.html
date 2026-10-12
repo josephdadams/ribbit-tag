@@ -105,6 +105,7 @@ h1 span { color: var(--lava); display: block; }
 .spacer { flex: 1; }
 #menuBtn { pointer-events: auto; border: 0; cursor: pointer; }
 #hogBtn { position: absolute; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: var(--leaf); color: var(--ink); font-size: 1.3rem; padding: 12px 22px; touch-action: manipulation; }
+#gadgetBtn { position: absolute; right: 16px; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.3rem; padding: 14px 22px; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 0 4px 0 #b8941a; }
 #itemBtn { position: absolute; left: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.4rem; padding: 14px 24px; touch-action: manipulation; box-shadow: 0 4px 0 #b8941a; }
 #radar { position: absolute; top: calc(58px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
 #radar .arrow { width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 18px solid currentColor; display: inline-block; }
@@ -322,6 +323,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   </div>
   <button id="hogBtn" class="chip" type="button" hidden>Drive</button>
   <button id="itemBtn" class="chip" type="button" hidden></button>
+  <button id="gadgetBtn" class="chip" type="button" hidden></button>
   <div id="bubbles"></div>
   <div id="scores" hidden>
     <div class="pl-head"><h2 id="scTitle">Scores</h2><span class="spacer"></span><button id="scClose" class="pill-btn" type="button">Close</button></div>
@@ -483,6 +485,13 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         </div>
       </div>
       <div class="row">
+        <span class="label">Gadgets</span>
+        <div class="seg" id="gadgetSeg">
+          <button type="button" data-g="1" aria-pressed="true" id="gdOn">On</button>
+          <button type="button" data-g="0" aria-pressed="false" id="gdOff">Off</button>
+        </div>
+      </div>
+      <div class="row">
         <span class="label">Frog voices</span>
         <div class="seg" id="voices">
           <button type="button" data-v="1" aria-pressed="true" id="vOn">On</button>
@@ -519,12 +528,13 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">&uarr;</span><span>Next to a tree or rock wall? Keep swiping down to <strong>climb</strong> it. The treehouse has steps.</span></li>
         <li><span class="ic">✋</span><span><strong>Hold your finger down</strong> while touching a wall, tree or ceiling to <strong>hang on</strong>. Swipe down to climb higher, let go to drop.</span></li>
         <li><span class="ic hot">!</span><span>Your hands go see-through when there is nothing close enough to grab. The arrow at the top points to the lava frog.</span></li>
+        <li><span class="ic">💦</span><span>Grab a <strong>gadget box</strong>: a <strong>Bubble Bazooka</strong>, a <strong>Firefly Jet Pack</strong> or <strong>Tongue Shooters</strong>. Use it with the yellow gadget button.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
         <li class="keys-li"><span class="ic">Pad</span><div><strong>Controller</strong>
-          <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RB</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
+          <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RB</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>LT</kbd></dt><dd>Use your gadget</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
           <p class="keys-sub">On menus</p><dl class="keys"><dt><kbd>D-pad</kbd></dt><dd>Move around</dd><dt><kbd>A</kbd></dt><dd>Pick</dd><dt><kbd>B</kbd></dt><dd>Go back</dd></dl></div></li>
         <li class="keys-li"><span class="ic">Key</span><div><strong>Keyboard</strong>
-          <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>C</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>L</kbd></dt><dd>Scores</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
+          <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>C</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>R</kbd></dt><dd>Use your gadget</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>L</kbd></dt><dd>Scores</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
           <p class="keys-sub">On the menu</p><dl class="keys"><dt><kbd>1</kbd></dt><dd>Infection</dd><dt><kbd>2</kbd></dt><dd>Classic</dd><dt><kbd>3</kbd></dt><dd>Capture the Lily Pad</dd><dt><kbd>4</kbd></dt><dd>Freeze Tag</dd><dt><kbd>5</kbd></dt><dd>Hot Potato</dd><dt><kbd>6</kbd></dt><dd>Fly Feast</dd><dt><kbd>7</kbd></dt><dd>Free Play</dd><dt><kbd>8</kbd></dt><dd>King of the Lily Pad</dd><dt><kbd>Q</kbd></dt><dd>Daily quests</dd><dt><kbd>O</kbd></dt><dd>Play online</dd><dt><kbd>R</kbd></dt><dd>Wardrobe</dd><dt><kbd>F</kbd></dt><dd>Meet the frogs</dd></dl></div></li>
       </ul>
     </div>
@@ -3502,6 +3512,7 @@ function buildMap(key) {
   addParticles(mp.fx);
   scene.background.setHex(mp.sky); scene.fog.color.setHex(mp.sky); scene.fog.near = mp.fog[0]; scene.fog.far = mp.fog[1];
   if (typeof spawnFlies === 'function' && flyGeo) spawnFlies();
+  if (typeof gadgetBuild === 'function' && gadgetBoxes) gadgetBuild();
   hemiLight.color.setHex(mp.hemi[0]); hemiLight.groundColor.setHex(mp.hemi[1]); hemiLight.intensity = mp.hemi[2]; sun.intensity = mp.sun;
   shadowFlags(mapGroup); paintSky(mp.sky);
 }
@@ -5397,7 +5408,7 @@ function snapshot() {
   for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0), r2(b.score || 0), r2(b.size || 1), b.hits || 0, b.tags || 0, b.tagged || 0];
   return { n: ais.length, m: mapKey, mo: mode, st: state, rt: r2(roundTime), ot: r2(overT), d: diff,
     ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null,
-    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, hg: hogs.length ? hogs.map(h => [h.pos.x, h.pos.y, h.pos.z, h.yaw, h.speed, h.steer].map(r2).concat([h.air ? 1 : 0])) : undefined, ah: hogs.length ? ais.map(a => a.hog ? [a.hog.idx, a.seat] : 0) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined, lb: LAB.mons.length ? labSnap() : undefined };
+    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, hg: hogs.length ? hogs.map(h => [h.pos.x, h.pos.y, h.pos.z, h.yaw, h.speed, h.steer].map(r2).concat([h.air ? 1 : 0])) : undefined, ah: hogs.length ? ais.map(a => a.hog ? [a.hog.idx, a.seat] : 0) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined, lb: LAB.mons.length ? labSnap() : undefined, gd: gadgetsOn ? 1 : 0, ga: ais.map(gadgetNet) };
 }
 let joinWait = false;
 function applySnapshot(s, from) {
@@ -5413,6 +5424,7 @@ function applySnapshot(s, from) {
   if (s.m !== mapKey) { buildMap(s.m); spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], player.pos); chooseSong(); }
   if (s.n !== ais.length) setAiCount(s.n);
   if (Array.isArray(s.lb)) labApply(s.lb);
+  hostGadgets = s.gd !== 0; if (Array.isArray(s.ga)) s.ga.forEach((q, i) => { if (ais[i]) ais[i].gNet = q; });
   mode = s.mo; diff = s.d; roundTime = s.rt; overT = s.ot;
   if (state !== 'menu') state = s.st === 'menu' ? 'play' : s.st;
   if ((mode === 'kart' && state !== 'menu') !== trackOn) { buildMap(mapKey); spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], player.pos); }
@@ -5506,7 +5518,7 @@ async function joinNet(code, lobby, role = 'auto') {
     const wasQuiet = performance.now() - r.netT > 2500;
     r.netPos.set(p[0], p[1], p[2]); r.netVel.set(p[3], p[4], p[5]); r.netT = performance.now();
     r.hostClaim = typeof p[6] === 'string' ? p[6].slice(0, 40) : null;
-    hogFromNet(r, p[7]);
+    hogFromNet(r, p[7]); r.gNet = p[8];
     if (wasQuiet) pickHost();
     if (r.pos.y < -40) r.pos.copy(r.netPos);
   };
@@ -5518,6 +5530,7 @@ async function joinNet(code, lobby, role = 'auto') {
     else if (e.k === 'msg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 140), 2.6, /^(#[0-9a-f]{3,6}|var\(--[a-z]+\))$/i.test(e.color || '') ? e.color : 'var(--bone)');
     else if (e.k === 'home' && peerId === net.hostId) { ctfRespawn(player, false); flash(e.msg ? String(e.msg).slice(0, 40) : 'Tagged!', 'Back to your base.', 2, TEAM_CSS[1 - (player.team || 0)]); }
     else if (e.k === 'm2' && e.d && MODE2[mode] && MODE2[mode].onEvent) MODE2[mode].onEvent(e.d, peerId);
+    else if (e.k === 'gx') gadgetEvent(e.d, peerId);
     else if (e.k === 'ctfmsg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 120), 2.6, TEAM_CSS[e.team] || 'var(--bone)');
     else if (e.k === 'tag' && peerId === net.hostId) { const a = byId(e.a), b = byId(e.b); if (a && b) doTag(a, b); }
     else if (e.k === 'tagreq' && isHost() && state === 'play') {
@@ -5548,7 +5561,7 @@ let tagReqCd = 0;
 function netTick() {
   if (!net) return;
   try {
-    net.pos.send([player.pos.x, player.pos.y, player.pos.z, player.vel.x, player.vel.y, player.vel.z].map(r2).concat([net.hostId, hogNetInfo()]));
+    net.pos.send([player.pos.x, player.pos.y, player.pos.z, player.vel.x, player.vel.y, player.vel.z].map(r2).concat([net.hostId, hogNetInfo(), gadgetNet(player)]));
     if (isHost() && !document.hidden) net.snap.send(snapshot());
     const now = performance.now();
     if (now - (net.lastHostCheck || 0) > 1000) { net.lastHostCheck = now; pickHost(); }
@@ -5692,6 +5705,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyL') { toggleScores(); return; }
   if (e.code === 'KeyF') { if (mode === 'kart' && state === 'play' && player.hog && player.seat === 0) kartUse(player.hog); else tryThrow(); return; }
   if (e.code === 'KeyG') { toggleHog(); return; }
+  if (e.code === 'KeyR') { if (!e.repeat) gadgetDown(); return; }
   if (e.code === 'Space' && player.hog && !e.repeat) honk();
   if (e.code === 'KeyI') { modeRules(); return; }
   if (e.code === 'KeyM') { setMusic(!musicOn); return; }
@@ -5701,7 +5715,7 @@ addEventListener('keydown', e => {
   keys[e.code] = true;
   if (!e.repeat) keyMove(); // a quick tap still pushes even if it's let go before the next frame
 });
-addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'KeyR') gadgetUp(); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 function keyPush(dy, speed, turn) {
   if (!armPush(dy, speed, turn)) return false;
@@ -6527,6 +6541,7 @@ function setOut(b, on) {
   if (b.acc) b.acc.visible = !on;
 }
 function resetModeState() {
+  if (typeof gadgetReset === 'function' && rockets) gadgetReset();
   for (const m of Object.values(MODE2)) if (m.active) { m.active = false; if (m.end) m.end(); }
   if (lantern) mapLighting();
   G = MAPS[mapKey].gravity || 18;
@@ -6953,9 +6968,10 @@ function pollGamepad(dt) {
     hogPad.t = player.hog ? -ly + (b(PAD.RT) ? 1 : 0) - (b(PAD.LT) ? 1 : 0) : 0; hogPad.s = player.hog ? -lx : 0;
     if (pressed(PAD.LB)) toggleHog();
     padGrip = b(PAD.RB) && !talkOpen;
+    if (!player.hog && player.gad && pressed(PAD.LT)) gadgetDown(); else if (gadgetHeld && !b(PAD.LT) && padPrev[PAD.LT]) gadgetUp();
     if (player.hog) { if (pressed(PAD.A)) honk(); }
     else if (keyCd <= 0 && player.frozen <= 0) {
-      const power = b(PAD.RT) || b(PAD.LT) ? 1.8 : 0.9, mag = Math.hypot(lx, ly);
+      const power = b(PAD.RT) || (b(PAD.LT) && !player.gad) ? 1.8 : 0.9, mag = Math.hypot(lx, ly);
       let did = false;
       if (pressed(PAD.A) || (b(PAD.A) && keyCd <= 0 && player.grounded)) did = keyJump();
       else if (mag > 0.3) {
@@ -7080,6 +7096,295 @@ function tryThrow(dirV) {
   if (isHost()) MODE2[mode].throwBy(player, arr); else m2Ask({ t: 'throw', d: arr });
   return true;
 }
+
+// ---------- Gadgets: grab a box to get a Bubble Bazooka, a Firefly Jet Pack or Tongue Shooters (R, LT, or the gadget button) ----------
+// Each device works its own frog (and the host its computer frogs): bubble blasts push the frogs you run,
+// tongue-tied frogs are stuck for a moment (the host decides, like frozen), and everyone draws everyone's gadgets.
+const GADGETS = { bubble: ['💦', 'Bubble Bazooka', 4], firefly: ['✨', 'Firefly Jet Pack', 6], tongue: ['👅', 'Tongue Shooters', 6] };
+const GAD_CODE = ['', 'bubble', 'firefly', 'tongue'];
+var gadgetsOn = true, hostGadgets = true, gadgetBoxes = [], rockets = [], gadFx = [], rocketSeq = 0, gadgetHeld = false, jetSndT = 0;
+try { gadgetsOn = localStorage.getItem('ribbit-gadgets') !== '0'; } catch (e) {}
+Object.assign(M, { gadGreen: lam(0x3fae4a), gadTongue: new THREE.MeshLambertMaterial({ color: 0xff70a6, emissive: 0x5a1030 }), gadJar: new THREE.MeshLambertMaterial({ color: 0xd8f6ff, transparent: true, opacity: 0.6 }), gadBug: new THREE.MeshBasicMaterial({ color: 0xe8ff6b }),
+  gadBubble: new THREE.MeshLambertMaterial({ color: 0x9fdcff, emissive: 0x2a5a7a, transparent: true, opacity: 0.55, depthWrite: false }), gadShine: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  gadFlame: new THREE.MeshBasicMaterial({ color: 0xe8ff6b, transparent: true, opacity: 0.8 }), gadCocoon: new THREE.MeshLambertMaterial({ color: 0xff70a6, emissive: 0x5a1030, transparent: true, opacity: 0.5, depthWrite: false }),
+  gadBoom: new THREE.MeshBasicMaterial({ color: 0x9fdcff, transparent: true, opacity: 0.9, depthWrite: false }), gadSmoke: new THREE.MeshLambertMaterial({ color: 0xcdeeff, transparent: true, opacity: 0.7, depthWrite: false }) });
+const gadBoxMats = {};
+function gadBoxMat(k) {
+  if (!gadBoxMats[k]) {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+    x.fillStyle = { bubble: '#4dabff', firefly: '#2a7a3a', tongue: '#ff70a6' }[k]; x.fillRect(0, 0, 64, 64);
+    x.strokeStyle = '#fff'; x.lineWidth = 5; x.strokeRect(3, 3, 58, 58);
+    x.font = '40px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(GADGETS[k][0], 32, 36);
+    gadBoxMats[k] = new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(c), emissive: 0x333333 });
+  }
+  return gadBoxMats[k];
+}
+function gadgetsActive() { return state !== 'menu' && mode !== 'kart' && !trackOn && (net && !isHost() ? hostGadgets : gadgetsOn); }
+function gadgetBuild() { // the same spots on every device, picked from the map's name
+  for (const b of gadgetBoxes) scene.remove(b.mesh);
+  gadgetBoxes = [];
+  let h = 7; for (const c of mapKey) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const r = seeded(h), n = clamp(Math.round(HALF * HALF / 150), 6, 14), kinds = Object.keys(GADGETS);
+  for (let i = 0; i < 200 && gadgetBoxes.length < n; i++) {
+    const x = (r() - 0.5) * (HALF * 2 - 8), z = (r() - 0.5) * (HALF * 2 - 8);
+    if (blockedAt(x, z) || (water && z > water.z) || slowZones.some(([x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) continue;
+    if (gadgetBoxes.some(b => Math.hypot(b.pos.x - x, b.pos.z - z) < 9)) continue;
+    const k = kinds[gadgetBoxes.length % kinds.length], pos = new V(x, standY(x, z) + 0.6, z);
+    const g = new THREE.Group(); part(g, boxGeo, gadBoxMat(k), 0.9, 0.9, 0.9, 0, 0, 0); g.position.copy(pos); scene.add(g);
+    gadgetBoxes.push({ k, pos, mesh: g, hideT: 0 });
+  }
+}
+function gadgetSend(d) { if (net) net.ev.send({ k: 'gx', d }); }
+function gadMine(b) { return b === player || (isHost() && ais.includes(b)); }
+function canGadget(b) { return !b.hog && !b.out && !b.iced && state !== 'menu'; }
+function gadgetGive(b, k) {
+  b.gad = { k, n: GADGETS[k][2], cd: 0.3, anchor: null, ropeL: 0, ropeT: 0, on: false, aiT: 0 };
+  if (b === player) { const [ic, nm] = GADGETS[k]; flash(`${ic} ${nm}!`, gadgetHow(k), 2.2, '#ffd23f'); sfxTone(900, 1500, 0.15, 'square', 0.07); rumble(80, 0.3); }
+}
+function gadgetHow(k) {
+  const btn = usedKeys ? 'Press R' : padSeen ? 'Pull LT' : 'Tap the gadget button';
+  const hold = usedKeys ? 'Hold R' : padSeen ? 'Hold LT' : 'Hold the gadget button';
+  return k === 'bubble' ? `${btn} to blow a big bubble where you look. Pop it near frogs to send them flying, or at your feet to bubble jump!` : k === 'firefly' ? `${hold} and the fireflies lift you up and forward.` : `${hold} to shoot a sticky tongue: swing from walls, or stick a frog in place.`;
+}
+function gadgetDrop(b) { if (b.gad) b.gad = null; if (b === player) gadgetHeld = false; }
+function gadgetReset() { for (const b of bodies) gadgetDrop(b); for (const rk of rockets.slice()) rocketRemove(rk); }
+// a ray through the world: the first frog it touches, or the first solid spot
+function gadSolid(p) {
+  if (Math.abs(p.x) > HALF || Math.abs(p.z) > HALF || insideBox(p)) return true;
+  for (const t of trees) if (p.y < t.h && p.y > t.y0 && Math.hypot(p.x - t.x, p.z - t.z) < t.r) return true;
+  for (const s of blobs) if (p.distanceTo(s.c) < s.r) return true;
+  return false;
+}
+const castP = new V();
+function gadCast(from, dir, maxD, skip) {
+  for (let d = 0.6; d < maxD; d += 0.35) {
+    castP.copy(from).addScaledVector(dir, d);
+    for (const b of bodies) if (b !== skip && !b.out && !b.hog && b.pos.distanceTo(castP) < 0.8) return { body: b };
+    if (gadSolid(castP)) return { point: castP.clone().addScaledVector(dir, -0.3) };
+  }
+  return null;
+}
+// using it
+function gadgetDown() {
+  if (!player.gad || !canGadget(player) || player.frozen > 0 || state === 'menu') return;
+  gadgetHeld = true;
+  const g = player.gad, d = camForward(); d.y += 0.05; d.normalize();
+  if (g.k === 'bubble') gadgetFire(player, d);
+  else if (g.k === 'tongue') gadgetWeb(player, camera.position.clone(), d);
+}
+function gadgetUp() {
+  gadgetHeld = false;
+  const g = player.gad; if (!g) return;
+  if (g.k === 'tongue' && g.anchor) { g.anchor = null; if (g.n <= 0) gadgetDrop(player); }
+}
+function gadgetFire(b, d) {
+  const g = b.gad; if (g.cd > 0 || g.n <= 0) return;
+  g.cd = 0.7; g.n--;
+  const p = b.pos.clone().add(new V(0, 0.4, 0)).addScaledVector(d, 0.9), v = d.clone().multiplyScalar(26), id = `${idOf(b)}:${++rocketSeq}`;
+  rocketAdd({ id, o: idOf(b), p: [p.x, p.y, p.z].map(r2), v: [v.x, v.y, v.z].map(r2) }, true);
+  if (b === player) { rumble(120, 0.5); handKick[1] = 0.2; }
+  if (g.n <= 0) gadgetDrop(b);
+}
+function gadgetWeb(b, from, d) {
+  const g = b.gad; if (g.cd > 0 || g.n <= 0) return;
+  g.cd = b === player ? 0.35 : 2.5; g.n--;
+  const hit = gadCast(from, d, 38, b);
+  gadSound(b.pos, 900, 250, 0.14, 'sine', 0.08); // thwip... slurp
+  if (hit && hit.body) { gadgetStuck(hit.body, b); gadgetSend({ t: 'stuck', id: idOf(hit.body), o: idOf(b) }); gadFxAdd('zip', from, hit.body.pos.clone()); }
+  else if (hit && b === player) { g.anchor = hit.point; g.ropeL = hit.point.distanceTo(b.pos); g.ropeT = 0; handKick[0] = handKick[1] = 0.18; }
+  else if (hit) gadFxAdd('zip', from, hit.point);
+  if (g.n <= 0 && !g.anchor) gadgetDrop(b);
+}
+function gadgetStuck(b, by) { // tongue-tied: stuck in place for a moment
+  b.webT = 1.8;
+  if (isHost() || b === player) b.frozen = Math.max(b.frozen, 1.6);
+  if (b === player) { flash('Tongue-tied!', `${by && by !== player ? by.name || 'Someone' : 'Someone'} stuck you in place!`, 1.4, '#ff70a6'); rumble(250, 0.6); }
+}
+// bubbles: everyone flies them; each device pushes the frogs it runs when they pop
+function rocketAdd(d, own) {
+  const num = v => Number.isFinite(+v) ? +v : 0;
+  if (rockets.length > 30 || rockets.some(r => r.id === d.id) || !Array.isArray(d.p) || !Array.isArray(d.v)) return;
+  const g = new THREE.Group(); scene.add(g);
+  part(g, ballGeo, M.gadBubble, 0.45, 0.45, 0.45, 0, 0, 0); part(g, ballGeo, M.gadShine, 0.08, 0.08, 0.08, -0.18, 0.2, -0.3);
+  const rk = { id: String(d.id).slice(0, 40), owner: byId(String(d.o)), pos: new V(...d.p.map(num)), vel: new V(...d.v.map(v => clamp(num(v), -40, 40))), age: 0, mesh: g, puffT: 0 };
+  g.position.copy(rk.pos); g.lookAt(rk.pos.clone().sub(rk.vel)); rockets.push(rk);
+  gadSound(rk.pos, 200, 700, 0.2, 'sine', 0.1); // bloop
+  if (own) gadgetSend(Object.assign({ t: 'rk' }, d));
+}
+function rocketRemove(rk) { scene.remove(rk.mesh); rockets.splice(rockets.indexOf(rk), 1); }
+function rocketsUpdate(dt) {
+  for (const rk of rockets.slice()) {
+    rk.age += dt; rk.pos.addScaledVector(rk.vel, dt); rk.mesh.position.copy(rk.pos);
+    if ((rk.puffT -= dt) <= 0) { rk.puffT = 0.08; gadFxAdd('puff', rk.pos.clone()); } // a trail of little bubbles
+    rk.mesh.scale.setScalar(1 + Math.sin(rk.age * 18) * 0.08);
+    let boom = rk.age > 3 || gadSolid(rk.pos);
+    if (!boom) for (const b of bodies) if (b !== rk.owner && !b.out && b.pos.distanceTo(rk.pos) < 0.9) { boom = true; break; }
+    if (boom) { rocketRemove(rk); rocketBoom(rk.pos, rk.owner); }
+  }
+}
+const boomDir = new V();
+function rocketBoom(c, owner) {
+  gadFxAdd('boom', c.clone());
+  gadSound(c, 1200, 150, 0.35, 'sine', 0.16); if (c.distanceTo(player.pos) < 25) sfxSlap(0.35); // POP and splash
+  for (const b of bodies) {
+    if (!gadMine(b) || b.hog || b.out) continue;
+    const d = b.pos.distanceTo(c); if (d > 5.5) continue;
+    const k = 1 - d / 5.5;
+    boomDir.subVectors(b.pos, c); boomDir.y = Math.max(boomDir.y, 0) + 0.6; boomDir.normalize();
+    b.vel.addScaledVector(boomDir, 6 + 14 * k); b.vel.y = Math.max(b.vel.y, 4 + 9 * k);
+    const hs = Math.hypot(b.vel.x, b.vel.z); if (hs > 22) { b.vel.x *= 22 / hs; b.vel.z *= 22 / hs; }
+    if (b === player) { rumble(300, 0.9); if (owner !== player) flash('POP!', `${owner && owner.name ? owner.name : 'Someone'} bubbled you!`, 1.2, '#9fdcff'); }
+    else b.hopT = Math.max(b.hopT, 0.9); // a computer frog flies before it hops again
+  }
+}
+// the fun bits: bubble trails, splashes and tongue zips
+function gadFxAdd(kind, p, to) {
+  if (gadFx.length > 80) return;
+  if (kind === 'zip') { const m = new THREE.Mesh(boxGeo, M.gadTongue); scene.add(m); gadRope(m, p, to); gadFx.push({ kind, mesh: m, t: 0, life: 0.2 }); return; }
+  const m = new THREE.Mesh(ballGeo, kind === 'boom' ? M.gadBoom.clone() : M.gadSmoke.clone()); m.position.copy(p); m.scale.setScalar(kind === 'boom' ? 0.5 : 0.15); scene.add(m);
+  gadFx.push({ kind, mesh: m, t: 0, life: kind === 'boom' ? 0.45 : 0.5 });
+}
+function gadFxUpdate(dt) {
+  for (const f of gadFx.slice()) {
+    f.t += dt; const k = f.t / f.life;
+    if (k >= 1) { scene.remove(f.mesh); if (f.kind !== 'zip') f.mesh.material.dispose(); gadFx.splice(gadFx.indexOf(f), 1); continue; }
+    if (f.kind === 'boom') { f.mesh.scale.setScalar(0.5 + k * 4.5); f.mesh.material.opacity = 0.9 * (1 - k); f.mesh.material.color.setHex(k < 0.3 ? 0xffffff : 0x9fdcff); }
+    else if (f.kind === 'puff') { f.mesh.scale.setScalar(0.15 + k * 0.35); f.mesh.material.opacity = 0.7 * (1 - k); f.mesh.position.y += dt * 0.6; }
+  }
+}
+function gadRope(m, a, b) { m.position.addVectors(a, b).multiplyScalar(0.5); m.lookAt(b); m.scale.set(0.05, 0.05, Math.max(0.01, a.distanceTo(b))); }
+function gadSound(p, f0, f1, dur, type, vol) { const d = p.distanceTo(player.pos); if (d < 40) sfxTone(f0, f1, dur, type, vol * (1 - d / 45)); }
+// what each frog is holding, for the network: 0, or [kind, jet pack on, tongue stuck at x, y, z]
+function gadgetNet(b) {
+  const g = b.gad; if (!g) return 0;
+  return [GAD_CODE.indexOf(g.k), g.on ? 1 : 0].concat(g.anchor ? [g.anchor.x, g.anchor.y, g.anchor.z].map(r2) : []);
+}
+function gadgetView(b) {
+  if (gadMine(b)) return b.gad ? { k: b.gad.k, on: b.gad.on, anchor: b.gad.anchor } : null;
+  const q = b.gNet; if (!Array.isArray(q) || !GAD_CODE[q[0] | 0]) return null;
+  const num = v => Number.isFinite(+v) ? +v : 0;
+  return { k: GAD_CODE[q[0] | 0], on: !!q[1], anchor: q.length >= 5 ? (b.gAnchor || (b.gAnchor = new V())).set(num(q[2]), num(q[3]), num(q[4])) : null };
+}
+function gadgetEvent(d, from) {
+  if (!d || typeof d !== 'object') return;
+  if (d.t === 'box') { const bx = gadgetBoxes[d.n | 0]; if (bx) { bx.hideT = 15; bx.mesh.visible = false; } }
+  else if (d.t === 'rk') { if (String(d.o) === from || (from === net.hostId && /^ai\d$/.test(String(d.o)))) rocketAdd(d, false); } // you can only fire your own (or the host's computer frogs')
+  else if (d.t === 'stuck') { const b = byId(String(d.id)), by = byId(String(d.o)); if (b) gadgetStuck(b, by); }
+}
+// the gadget on a frog's body: a bazooka on the shoulder, firefly jars on the back, tongue shooters on the wrists
+function gadgetLook(b, v) {
+  const k = v ? v.k : '';
+  if (b.gadK !== k) {
+    if (b.gadMesh) { b.gadMesh.parent.remove(b.gadMesh); b.gadMesh = null; }
+    for (const w of b.gadWrist || []) w.parent.remove(w); b.gadWrist = null; b.gadFlame = null;
+    b.gadK = k;
+    if (k === 'bubble') { const g = b.gadMesh = new THREE.Group(); part(g, GEO.cyl, M.gadGreen, 0.13, 0.8, 0.13, 0.45, 0.3, -0.05, Math.PI / 2); part(g, ballGeo, M.gadBubble, 0.16, 0.16, 0.16, 0.45, 0.3, -0.5); b.group.add(g); }
+    else if (k === 'firefly') {
+      const g = b.gadMesh = new THREE.Group();
+      for (const s of [-1, 1]) { part(g, GEO.cyl, M.gadJar, 0.14, 0.5, 0.14, s * 0.17, 0.05, 0.52); part(g, GEO.cyl, M.gadGreen, 0.15, 0.08, 0.15, s * 0.17, 0.33, 0.52); for (const y of [-0.08, 0.1]) part(g, ballGeo, M.gadBug, 0.04, 0.04, 0.04, s * 0.17 + 0.04 * Math.sin(y * 30), y, 0.52); }
+      const fl = new THREE.Group(); for (const s of [-1, 1]) part(fl, GEO.cone, M.gadFlame, 0.1, 0.45, 0.1, s * 0.16, -0.45, 0.52, Math.PI);
+      g.add(fl); b.gadFlame = fl; b.group.add(g);
+    } else if (k === 'tongue') b.gadWrist = b.arms.map(a => part(a, GEO.cyl, M.gadTongue, 0.09, 0.14, 0.09, 0, -0.68, 0));
+  }
+  if (b.gadFlame) { b.gadFlame.visible = !!v.on; b.gadFlame.scale.y = 0.8 + Math.random() * 0.5; }
+  // the sticky tongue, and the pink goo on a tongue-tied frog
+  if (v && v.anchor) { if (!b.gadRope) { b.gadRope = new THREE.Mesh(boxGeo, M.gadTongue); scene.add(b.gadRope); } b.gadRope.visible = true; gadRope(b.gadRope, b.pos.clone().add(new V(0, 0.3, 0)), v.anchor); }
+  else if (b.gadRope) b.gadRope.visible = false;
+  if (b.webT > 0) { if (!b.gadCocoon) { b.gadCocoon = part(b.group, ballGeo, M.gadCocoon, 0.75, 0.75, 0.75, 0, 0.1, 0); } b.gadCocoon.visible = true; }
+  else if (b.gadCocoon) b.gadCocoon.visible = false;
+}
+// what you see in first person: the bazooka in your right hand or tongue shooters on both wrists
+const handGad = new THREE.MeshLambertMaterial({ color: 0x1f5a2a, depthTest: false }), handBub = new THREE.MeshLambertMaterial({ color: 0x9fdcff, emissive: 0x2a5a7a, depthTest: false }), handWeb = new THREE.MeshLambertMaterial({ color: 0xff70a6, emissive: 0x5a1030, depthTest: false });
+let myGadK = '', myGadParts = [], myRope = null;
+function myGadgetLook() {
+  const g = player.gad, k = g && gadgetsActive() ? g.k : '';
+  if (k !== myGadK) {
+    myGadParts.forEach(m => m.parent.remove(m)); myGadParts = []; myGadK = k;
+    if (k === 'bubble') myGadParts.push(part(hands[1], GEO.cyl, handGad, 0.07, 0.3, 0.07, 0, 0.07, -0.12, Math.PI / 2), part(hands[1], ballGeo, handBub, 0.06, 0.06, 0.06, 0, 0.07, -0.29));
+    else if (k === 'tongue') for (const h of hands) myGadParts.push(part(h, GEO.cyl, handWeb, 0.075, 0.05, 0.075, 0, 0, 0.07, Math.PI / 2));
+    myGadParts.forEach(m => { m.renderOrder = 11; });
+  }
+  if (g && g.anchor) {
+    if (!myRope) { myRope = new THREE.Mesh(boxGeo, M.gadTongue); scene.add(myRope); }
+    myRope.visible = true; gadRope(myRope, camera.position.clone().add(new V(0, -0.35, 0)), g.anchor);
+  } else if (myRope) myRope.visible = false;
+}
+// every frame
+function gadgetUpdate(dt, t) {
+  const on = gadgetsActive(), host = isHost();
+  if (!on) { if (player.gad) gadgetDrop(player); if (host) for (const a of ais) if (a.gad) gadgetDrop(a); }
+  for (const bx of gadgetBoxes) {
+    if (!on) { bx.mesh.visible = false; continue; }
+    if (bx.hideT > 0) { bx.hideT -= dt; bx.mesh.visible = bx.hideT <= 0; if (bx.hideT > 0) continue; }
+    bx.mesh.visible = true; bx.mesh.rotation.y = t * 1.5; bx.mesh.position.y = bx.pos.y + Math.sin(t * 2.5 + bx.pos.x) * 0.15;
+    for (const b of bodies) { // grab it if your hands are free
+      if (!gadMine(b) || b.gad || !canGadget(b) || state !== 'play' || b.pos.distanceTo(bx.mesh.position) > 1.4) continue;
+      bx.hideT = 15; bx.mesh.visible = false; gadgetGive(b, bx.k); gadgetSend({ t: 'box', n: gadgetBoxes.indexOf(bx) }); break;
+    }
+  }
+  for (const b of bodies) {
+    b.webT = Math.max(0, (b.webT || 0) - dt);
+    const g = gadMine(b) && b.gad; if (!g) continue;
+    if (!canGadget(b)) { if (b.out) gadgetDrop(b); else { g.anchor = null; g.on = false; } continue; } // riding in a hog: it waits in your pocket
+    g.cd -= dt;
+    if (g.k === 'firefly') {
+      g.on = b === player ? gadgetHeld && b.frozen <= 0 : (g.aiT -= dt) > 0 && b.frozen <= 0;
+      if (g.on && g.n > 0) {
+        g.n -= dt;
+        const yaw = b === player ? b.yaw : Math.atan2(-b.vel.x, -b.vel.z), fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+        b.vel.y = Math.min(b.vel.y + 36 * dt, 8); b.vel.x += fx * 14 * dt; b.vel.z += fz * 14 * dt;
+        const hs = Math.hypot(b.vel.x, b.vel.z); if (hs > 13) { b.vel.x *= 13 / hs; b.vel.z *= 13 / hs; }
+        if ((t % 1) < dt * 3 && Math.random() < 0.5) gadFxAdd('puff', b.pos.clone().add(new V(0, -0.4, 0)));
+        if (b === player && (jetSndT -= dt) <= 0) { jetSndT = 0.09; sfxTone(1800 + Math.random() * 900, 1500, 0.05, 'sine', 0.03); } // buzzing wings
+        if (g.n <= 0) { if (b === player) flash('The fireflies are tired!', '', 1, 'var(--bone)'); gadgetDrop(b); continue; }
+      }
+    }
+    if (g.k === 'tongue' && g.anchor) { // swing on the tongue, reeling in
+      g.ropeT += dt;
+      const toA = g.anchor.clone().sub(b.pos), dist = toA.length(); toA.multiplyScalar(1 / Math.max(dist, 0.01));
+      g.ropeL = Math.max(1.5, Math.min(g.ropeL, dist) - 9 * dt);
+      if (dist > g.ropeL) { b.pos.addScaledVector(toA, dist - g.ropeL); const out = b.vel.dot(toA); if (out < 0) b.vel.addScaledVector(toA, -out); }
+      b.vel.addScaledVector(toA, 22 * dt);
+      if (g.ropeT > 4 || dist < 1.6 || b.frozen > 0) { g.anchor = null; if (g.n <= 0) gadgetDrop(b); }
+    }
+    if (b !== player && host && state === 'play') gadgetAi(b, g, dt);
+  }
+  rocketsUpdate(dt); gadFxUpdate(dt);
+  for (const b of bodies) if (b !== player && b.group) gadgetLook(b, on ? gadgetView(b) : null);
+  myGadgetLook();
+}
+// computer frogs: chasers bubble and tongue whoever they're after, runners do it to the lava frog
+function gadgetAi(ai, g, dt) {
+  if (ai.frozen > 0) return;
+  let foe = null;
+  if (ai.it) foe = nearestTarget(ai);
+  else { let bd = 14; for (const b of bodies) if (b.it && b !== ai && !b.out) { const d = b.pos.distanceTo(ai.pos); if (d < bd) { bd = d; foe = b; } } }
+  const d = foe ? foe.pos.distanceTo(ai.pos) : 99;
+  const aim = () => foe.pos.clone().addScaledVector(foe.vel, d / 26).sub(ai.pos).add(new V((Math.random() - 0.5) * 1.2, 0.2, (Math.random() - 0.5) * 1.2)).normalize();
+  if (g.k === 'bubble' && foe && d > 4 && d < 22 && Math.random() < dt * 0.7) gadgetFire(ai, aim());
+  else if (g.k === 'tongue' && foe && d > 2.5 && d < 16 && Math.random() < dt * 0.9) gadgetWeb(ai, ai.pos.clone().add(new V(0, 0.3, 0)), aim());
+  else if (g.k === 'firefly' && g.aiT <= 0 && (foe && (foe.pos.y - ai.pos.y > 2.5 || (!ai.it && d < 7)) || Math.random() < dt * 0.15)) g.aiT = 1 + Math.random();
+}
+// the gadget button
+function gadgetLabel() {
+  const g = player.gad, [ic, nm] = GADGETS[g.k];
+  const amt = g.k === 'firefly' ? ` ${Math.ceil(g.n / GADGETS.firefly[2] * 100)}%` : ` ×${g.n}`;
+  return `${ic} ${nm}${amt}${usedKeys ? ' (R)' : padSeen ? ' (LT)' : ''}`;
+}
+{
+  const gb = $('gadgetBtn');
+  gb.addEventListener('pointerdown', e => { e.preventDefault(); try { gb.setPointerCapture(e.pointerId); } catch (err) {} gadgetDown(); });
+  for (const ev of ['pointerup', 'pointercancel']) gb.addEventListener(ev, () => gadgetUp());
+  gb.addEventListener('contextmenu', e => e.preventDefault());
+}
+function setGadgets(on) {
+  gadgetsOn = on;
+  document.querySelectorAll('#gadgetSeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.g === +on)));
+  try { localStorage.setItem('ribbit-gadgets', on ? '1' : '0'); } catch (e) {}
+}
+document.querySelectorAll('#gadgetSeg button').forEach(b => b.addEventListener('click', () => setGadgets(b.dataset.g === '1')));
+setGadgets(gadgetsOn);
+gadgetBuild();
 
 // ---- shared lighting helpers (Bat Tag darkens the map) ----
 let lantern = null;
@@ -8587,6 +8892,7 @@ function update(dt, t) {
     hgb.hidden = !nh || (!player.hog && !canRide());
     const kh = mode === 'kart' && state !== 'menu' && player.hog && player.seat === 0 ? player.hog : null, ib = $('itemBtn');
     ib.hidden = !(kh && (kh.item || kh.rollT > 0)); if (!ib.hidden) ib.textContent = kartItemLabel(kh);
+    const gb = $('gadgetBtn'); gb.hidden = !(player.gad && gadgetsActive() && !player.hog); if (!gb.hidden) gb.textContent = gadgetLabel();
     if (nh) hgb.textContent = (player.hog ? 'Hop out' : nh.seats[0] === null ? 'Drive' : 'Hop in') + (usedKeys ? ' (G)' : '');
     $('playersBtn').textContent = net ? `Players ${remotes.size + 1}` : 'Players';
     if (!$('players').hidden) renderPlayers();
@@ -8708,6 +9014,7 @@ function frame(now) {
   }
   for (const a of ais) drawAI(a, t);
   for (const r of remotes.values()) drawAI(r, t);
+  gadgetUpdate(dt, t);
   updateParticles(dt, t);
   hogAudio();
   for (const f of mapAnims) f(dt, t);

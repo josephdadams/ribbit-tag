@@ -30,6 +30,7 @@ It runs on tablets (including Amazon Fire tablets), phones, and computers. There
 - **Hold your finger down** while touching a wall, tree or ceiling to **hang on**. Swipe down to climb higher, and let go to drop.
 - Your hands go see-through when there is nothing close enough to grab.
 - **Tap a frog** (or press **Talk**) to chat with it.
+- Grab a **gadget box** to get a gadget, then tap the yellow gadget button to use it (see Gadgets below).
 - The chip at the top always starts with the game mode's name. **Tap it** for a reminder of the rules and the map.
 
 ### Controller
@@ -44,6 +45,7 @@ Plug in or pair a gamepad (Xbox, PlayStation, Switch Pro, or most Bluetooth cont
 | `A` | Jump |
 | `RB` / `R1` (hold) | Grab a wall, tree or ceiling and hang on |
 | `RT` / `R2` (hold) | Big pushes |
+| `LT` / `L2` | Use your gadget (hold for the jet pack and tongues) |
 | `X` | Talk (then the D-pad sends quick replies, `RB` picks the next frog) |
 | `Y` | Player list |
 | `B` | Close a panel |
@@ -51,6 +53,16 @@ Plug in or pair a gamepad (Xbox, PlayStation, Switch Pro, or most Bluetooth cont
 | `Start` | Menu |
 
 On menus, the D-pad or left stick moves between buttons, `A` picks, and `B` goes back. Controllers that support rumble buzz when you get tagged, frozen, bumped, or bounce.
+
+### Gadgets
+
+Colored boxes float around every map (except in Toadhog Race, which has its own items). Touch one to pick up its gadget:
+
+- 💦 **Bubble Bazooka**: blows big bubbles where you look. They pop with a splash that sends frogs flying. Pop one at your feet to bubble jump.
+- ✨ **Firefly Jet Pack**: jars of fireflies on your back. Hold the button and they lift you up and forward until they get tired.
+- 👅 **Tongue Shooters**: Spider-Man style wrist shooters that fire sticky frog tongues. Hold the button to stick to a wall and swing toward it, or hit a frog to leave it tongue-tied for a moment.
+
+Computer frogs grab and use gadgets too. The host can turn **Gadgets** off in the menu settings.
 
 ### Look around
 
@@ -67,6 +79,7 @@ Turn on **Look around** in the menu settings and the tablet becomes your frog's 
 | `Space` | Jump (climbs higher next to a wall) |
 | `C` (hold) | Grab a wall, tree or ceiling and hang on |
 | `Shift` (hold) | Big pushes |
+| `R` | Use your gadget (hold for the jet pack and tongues) |
 | `T` or `Enter` | Talk |
 | `1`–`9` | Quick replies while talking |
 | `Tab` | Talk to the next frog |
