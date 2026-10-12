@@ -118,11 +118,24 @@ Tap **Scores** during a game (or press `L`) to see everyone in the game ranked b
 
 ## Maps
 
-Forest, Mega Map, Frog Gulch, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), and The Backrooms (a yellow maze under humming lights).
+Forest, Mega Map, Frog Gulch, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), The Backrooms (a yellow maze under humming lights), and The Laboratory (a secret lab with monsters loose).
 
 - **Mega Map**: one giant world. Forest in the middle, a city to the east, snowy peaks to the north, and caves underneath. Tunnels, a subway, a log bridge and a skybridge join it all up, and a ramp lets you drive down into the caves.
 - **The Stump** and several other maps have **jump walls**: two tall plank walls close together. Push off one, then the other, to climb fast.
 - **Frog Gulch**: a long grassy canyon with a base at each end (great for Capture the Lily Pad), rolling hills, a rock arch and teleporters up to the cliff perches.
+
+### The Laboratory
+
+A secret lab with four monsters on the loose, each in its own room:
+
+- **The Big Ape** in the Ape Enclosure: fast, but it can't climb, so get up high.
+- **The Goo Blob** in the Goo Lab: slow, but it climbs walls.
+- **The Statue Bot** in the Robot Workshop: it only moves when nobody is looking at it. Don't look away!
+- **The Zapper Drone** in the Server Room: it flies over the server racks with a searchlight.
+
+The monsters go about their business until they see you. Then the alarm lights flash and they chase you. Get out of sight and stay hidden, and after a few seconds they give up and go back to what they were doing (you get a fly for it). If one catches you, you go back to the green **Safe Room**, where monsters never go. They chase computer frogs too.
+
+The lab is full of hazards: **flash plates** that blind you for a few seconds (and dazzle nearby monsters), **laser fences** that switch on and off and zap you back, **air vents** that blast you up to the tops of the walls, slippery slime, sticky sludge, a conveyor belt, and a **broken teleporter** that sends you somewhere random. The monsters are part of the map, so they show up in every game mode.
 
 ### Toadhogs
 
