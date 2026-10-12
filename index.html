@@ -934,10 +934,12 @@ function hogWalls(h) {
 }
 function hogDrive(h, dt, thr, str) {
   h.steer += (str - h.steer) * Math.min(1, dt * 8);
+  h.boostT = Math.max(0, (h.boostT || 0) - dt);
   if (!h.air) {
+    const was = h.speed, top = HOG.max * (h.boostT > 0 ? 1.4 : 1);
     if (thr) h.speed += thr * HOG.accel * dt * (h.speed * thr < 0 ? 2 : 1);
     else h.speed *= Math.exp(-(h.seats[0] ? 1.2 : 2.5) * dt);
-    h.speed = clamp(h.speed, -HOG.rev, HOG.max);
+    h.speed = clamp(h.speed, -HOG.rev, Math.max(top, was - 10 * dt)); // after a boost, ease back down to top speed
     h.yaw += h.steer * HOG.turn * dt * clamp(h.speed / 6, -1, 1);
   }
   h.pos.x += -Math.sin(h.yaw) * h.speed * dt; h.pos.z += -Math.cos(h.yaw) * h.speed * dt;
@@ -1308,112 +1310,270 @@ function hogFromNet(r, q) {
   h.seats[s] = r; r.hog = h; r.seat = s;
   if (s === 0 && q.length >= 9) {
     const n = h.net || (h.net = {}), num = v => Number.isFinite(+v) ? +v : 0;
-    Object.assign(n, { x: num(q[2]), y: num(q[3]), z: num(q[4]), yaw: num(q[5]), speed: clamp(num(q[6]), -HOG.rev, HOG.max), steer: clamp(num(q[7]), -1, 1), air: !!q[8], t: performance.now() });
+    Object.assign(n, { x: num(q[2]), y: num(q[3]), z: num(q[4]), yaw: num(q[5]), speed: clamp(num(q[6]), -HOG.rev, HOG.max * 1.4), steer: clamp(num(q[7]), -1, 1), air: !!q[8], t: performance.now() });
   }
 }
 
 // ---------- Toadhog Race: the map you picked, made into a race track ----------
-// A wiggly loop is cut through the map's own scenery (everything in the way is cleared off), then paved with a road,
-// red and white curbs, low barriers in the map's wall colour and a checkered start line. Same shape on every device.
+// Every map has its own layout: a figure 8 with a bridge over the crossing, clovers full of hairpins, a wavy flower or a
+// big loop. Along the way there are hills to catch air off, tunnels, and hazards that fit the map: ice and oil that spin
+// you out, mud and chocolate that slow you down, lava that pops you up, boost pads, and blocks that slide across the road.
+// It's cut through the map's own scenery (built bigger than usual), and it comes out the same on every device.
 var trackOn = false, track = null;
-const TRACK_N = 96, TRACK_W = 10, TRACK_PAD = 1.6, TRACK_LAPS = 3;
-Object.assign(M, { curbRed: lam(0xe63946), curbWhite: lam(0xf4f4f0), checkA: lam(0x111111), checkB: lam(0xf8f8f8), archPost: lam(0x5c636b) });
-const roadMats = new Map();
-function trackShape() {
-  let h = 7; for (const c of mapKey) h = (h * 31 + c.charCodeAt(0)) % 1000003;
-  const r = seeded(h), a2 = r() * 6.28, a3 = r() * 6.28, k2 = 0.1 + r() * 0.08, k3 = 0.04 + r() * 0.06, R0 = HALF * 0.58;
-  let raw = [];
-  for (let i = 0; i < TRACK_N; i++) {
-    const th = i / TRACK_N * Math.PI * 2, rr = R0 * (1 + k2 * Math.sin(2 * th + a2) + k3 * Math.sin(3 * th + a3));
-    raw.push([Math.cos(th) * rr, Math.sin(th) * rr]);
+const TRACK_N = 256, TRACK_W = 10, TRACK_PAD = 1.6, TRACK_LAPS = 3, TRACK_HALF = 56, TRACK_SLOPE = 5, BRIDGE_H = 4.8, TUNNEL_H = 4.4;
+Object.assign(M, { curbRed: lam(0xe63946), curbWhite: lam(0xf4f4f0), checkA: lam(0x111111), checkB: lam(0xf8f8f8), archPost: lam(0x5c636b),
+  boostPad: fx(0xff9f1c), boostArrow: fx(0xfff1b8), hazTop: lam(0xffc61a) });
+const PUDDLES = { // look, and what it does to a hog: spin it out, slow it down, or (lava) pop it up and spin it
+  ice: [0xd8f4ff, 'spin', 'Slippery ice!'], oil: [0x1c1c22, 'spin', 'Oil slick!'], water: [0x3aa8d8, 'spin', 'Splash!'], slime: [0x7dff4a, 'spin', 'Slimed!', 0x2a8a10],
+  mud: [0x5e4026, 'slow', 'Stuck in the mud!'], choc: [0x4a2a18, 'slow', 'Sticky chocolate!'], lava: [0xff5a1f, 'lava', 'Hot hot hot!', 0xc83a00] };
+const TRACK_STYLES = { // shape, how hilly (0-3), tunnels, puddle kind, boost pads, sliding blocks
+  forest: ['eight', 1, 1, 'mud', 2, 1], mega: ['loop', 2, 2, 'ice', 2, 0], gulch: ['clover3', 2, 1, 'mud', 2, 2], caves: ['flower5', 1, 2, 'slime', 1, 1],
+  canyon: ['clover3', 2, 1, 'oil', 1, 2], beach: ['loop', 1, 0, 'water', 3, 1], snow: ['eight', 1, 1, 'ice', 1, 0], volcano: ['clover4', 2, 1, 'lava', 1, 1],
+  sky: ['eight', 2, 0, null, 4, 1], moon: ['flower5', 3, 1, null, 2, 0], candy: ['clover4', 1, 1, 'choc', 3, 1], spooky: ['eight', 1, 1, 'slime', 1, 2],
+  city: ['clover4', 0, 2, 'oil', 3, 1], pond: ['loop', 1, 0, 'mud', 2, 1], swamp: ['clover3', 1, 1, 'mud', 1, 1], garden: ['eight', 1, 1, 'water', 2, 2],
+  canopy: ['flower5', 2, 1, 'mud', 2, 0], cove: ['eight', 1, 1, 'water', 2, 2], reef: ['loop', 2, 1, 'slime', 2, 1], toys: ['eight', 1, 1, null, 4, 3],
+  icecastle: ['clover3', 1, 1, 'ice', 1, 1], backrooms: ['clover4', 0, 3, 'water', 1, 1], stump: ['flower5', 2, 1, 'mud', 2, 1], lab: ['flower5', 0, 2, 'slime', 2, 3],
+  manor: ['eight', 1, 1, 'slime', 1, 2], farm: ['clover3', 2, 0, 'mud', 2, 1], santa: ['clover4', 1, 1, 'ice', 2, 1], valentine: ['loop', 1, 1, 'choc', 3, 1],
+  rainbow: ['flower5', 3, 0, null, 3, 1], eggs: ['clover4', 1, 1, 'choc', 2, 1], fireworks: ['eight', 1, 1, 'water', 3, 1],
+};
+const roadMats = new Map(), puddleMats = {};
+function trackStyle(r) {
+  const s = TRACK_STYLES[mapKey] || [['loop', 'eight', 'clover3', 'clover4', 'flower5'][Math.floor(r() * 5)], 1, 1, ['mud', 'ice', 'oil', 'water'][Math.floor(r() * 4)], 2, 1];
+  return { shape: s[0], hills: s[1], tunnels: s[2], puddle: s[3], boosts: s[4], sweepers: s[5] };
+}
+function trackShape(st, r) {
+  const a = r() * 6.28, b = r() * 6.28, raw = [], K = 720;
+  for (let i = 0; i < K; i++) {
+    const t = i / K * Math.PI * 2;
+    if (st.shape === 'eight') { raw.push([Math.sin(t), Math.sin(2 * t) * 0.5]); continue; }
+    const [n, k] = { loop: [2, 0.14], clover3: [3, 0.3], clover4: [4, 0.22], flower5: [5, 0.13] }[st.shape] || [2, 0.14];
+    const rr = 1 + k * Math.sin(n * t + a) + 0.05 * Math.sin((n === 2 ? 3 : 2) * t + b);
+    raw.push([Math.cos(t) * rr, Math.sin(t) * rr]);
   }
-  const maxR = Math.max(...raw.map(([x, z]) => Math.hypot(x, z))), k = Math.min(1, (HALF - 9) / maxR);
-  const pts = raw.map(([x, z]) => ({ x: x * k, z: z * k }));
-  pts.forEach((p, i) => {
-    const a = pts[(i + TRACK_N - 1) % TRACK_N], b = pts[(i + 1) % TRACK_N], l = Math.hypot(b.x - a.x, b.z - a.z) || 1;
-    p.tx = (b.x - a.x) / l; p.tz = (b.z - a.z) / l;
-    const out = p.x * p.tz - p.z * p.tx > 0 ? 1 : -1; // normal pointing away from the middle of the loop
-    p.nx = p.tz * out; p.nz = -p.tx * out;
-  });
+  const ca = Math.cos(a), sa = Math.sin(a), rot = raw.map(([x, z]) => [x * ca - z * sa, x * sa + z * ca]); // turned a different way on every map
+  const big = Math.max(...rot.map(([x, z]) => Math.max(Math.abs(x), Math.abs(z)))), k = (HALF - 9) / big;
+  // even spacing along the loop, so barriers and checkpoints have no gaps
+  const cum = [0]; for (let i = 1; i <= K; i++) cum.push(cum[i - 1] + Math.hypot(rot[i % K][0] - rot[i - 1][0], rot[i % K][1] - rot[i - 1][1]) * k);
+  const L = cum[K], pts = []; let j = 0;
+  for (let i = 0; i < TRACK_N; i++) {
+    const want = i / TRACK_N * L; while (cum[j + 1] < want) j++;
+    const u = (want - cum[j]) / (cum[j + 1] - cum[j] || 1), A = rot[j], B = rot[(j + 1) % K];
+    pts.push({ x: (A[0] + (B[0] - A[0]) * u) * k, z: (A[1] + (B[1] - A[1]) * u) * k, y: 0 });
+  }
   return pts;
 }
-function trackNear(x0, x1, z0, z1, pad) { // does this footprint touch the track (or its barriers)?
-  const lim = (TRACK_W / 2 + pad) ** 2;
-  return track.pts.some(p => { const dx = Math.max(x0 - p.x, 0, p.x - x1), dz = Math.max(z0 - p.z, 0, p.z - z1); return dx * dx + dz * dz < lim; });
+function trackFrame(pts) { // tangents and sideways normals
+  pts.forEach((p, i) => {
+    const a = pts[(i + TRACK_N - 1) % TRACK_N], b = pts[(i + 1) % TRACK_N], l = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+    p.tx = (b.x - a.x) / l; p.tz = (b.z - a.z) / l; p.nx = p.tz; p.nz = -p.tx;
+  });
 }
-function trackIdx(pos) { // the nearest point along the track
+const cdist = (a, b) => { const d = Math.abs(a - b) % TRACK_N; return Math.min(d, TRACK_N - d); };
+function trackNear(x0, x1, z0, z1, ymin) { // does this footprint get in the way of the track (or its barriers, banks and tunnels)?
+  return track.pts.some(p => {
+    if (ymin > p.y + (p.tunnel ? TUNNEL_H + 1 : 4.5)) return false;
+    const dx = Math.max(x0 - p.x, 0, p.x - x1), dz = Math.max(z0 - p.z, 0, p.z - z1), lim = TRACK_W / 2 + p.pad;
+    return dx * dx + dz * dz < lim * lim;
+  });
+}
+function trackIdx(pos) { // the nearest point along the track (height counts too, so the bridge and the road under it differ)
   let bi = 0, bd = Infinity;
-  track.pts.forEach((p, i) => { const d = (p.x - pos.x) ** 2 + (p.z - pos.z) ** 2; if (d < bd) { bd = d; bi = i; } });
+  track.pts.forEach((p, i) => { const d = (p.x - pos.x) ** 2 + (p.z - pos.z) ** 2 + 4 * (pos.y - p.y - 0.8) ** 2; if (d < bd) { bd = d; bi = i; } });
   return bi;
 }
-function trackStrip(off0, off1, y, mat, keep) { // a flat ribbon along the loop between two sideways offsets
-  const pos = [], nor = [];
+function trackStrip(offA, yA, offB, yB, mat, keep) { // a ribbon along the loop between two (sideways offset, height) edges
+  const pos = [];
   track.pts.forEach((p, i) => {
-    if (keep && !keep(i)) return;
     const q = track.pts[(i + 1) % TRACK_N];
-    const c = [[p, off0], [p, off1], [q, off1], [q, off0]].map(([u, o]) => [u.x + u.nx * o, y, u.z + u.nz * o]);
-    for (const k of [0, 1, 2, 0, 2, 3]) { pos.push(...c[k]); nor.push(0, 1, 0); }
+    if (keep && !keep(p, q, i)) return;
+    const v = (u, o, y) => [u.x + u.nx * o, y(u), u.z + u.nz * o];
+    const c = [v(p, offA, yA), v(p, offB, yB), v(q, offB, yB), v(q, offA, yA)];
+    for (const k of [0, 1, 2, 0, 2, 3]) pos.push(...c[k]);
   });
-  const g = geo(new THREE.BufferGeometry());
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  if (!pos.length) return null;
+  const g = geo(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals();
   const m = put(new THREE.Mesh(g, mat)); m.material.side = THREE.DoubleSide; return m;
 }
+function trackGroundGrid() { // the hills: the road's height, sloping down beside it (the bridge is its own thing, made of blocks)
+  const n = HALF * 2 + 1, hgt = new Float32Array(n * n), hw = TRACK_W / 2, pts = track.pts;
+  for (let gx = 0; gx < n; gx++) for (let gz = 0; gz < n; gz++) {
+    const x = gx - HALF, z = gz - HALF; let bi = -1, bd = Infinity;
+    for (let i = 0; i < TRACK_N; i++) { const p = pts[i]; if (p.bridge) continue; const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < bd) { bd = d; bi = i; } }
+    if (bi < 0 || bd > (hw + 1.6 + TRACK_SLOPE + 2) ** 2) continue;
+    let best = Infinity, y = 0;
+    for (const j of [bi - 1, bi]) { // project onto the two pieces of road next to the nearest point
+      const a = pts[(j + TRACK_N) % TRACK_N], b = pts[(j + 1) % TRACK_N], ex = b.x - a.x, ez = b.z - a.z;
+      const u = clamp(((x - a.x) * ex + (z - a.z) * ez) / (ex * ex + ez * ez || 1), 0, 1), d = Math.hypot(x - a.x - ex * u, z - a.z - ez * u);
+      if (d < best) { best = d; y = a.y + (b.y - a.y) * u; }
+    }
+    hgt[gx * n + gz] = best <= hw + 1.6 ? y : y * Math.max(0, 1 - (best - hw - 1.6) / TRACK_SLOPE);
+  }
+  return (x, z) => {
+    const fx = x + HALF, fz = z + HALF; if (fx < 0 || fz < 0 || fx >= n - 1 || fz >= n - 1) return 0;
+    const ix = Math.floor(fx), iz = Math.floor(fz), u = fx - ix, w = fz - iz, h = (a, b) => hgt[(ix + a) * n + iz + b];
+    return (h(0, 0) * (1 - u) + h(1, 0) * u) * (1 - w) + (h(0, 1) * (1 - u) + h(1, 1) * u) * w;
+  };
+}
 function buildTrack() {
-  track = { pts: trackShape() };
-  // clear the way: anything low enough to drive into goes (overhead platforms, the ground and the outer walls stay)
+  let hs = 7; for (const c of mapKey) hs = (hs * 31 + c.charCodeAt(0)) % 1000003;
+  const r = seeded(hs), st = trackStyle(r), pts = trackShape(st, r), hw = TRACK_W / 2;
+  trackFrame(pts);
+  // where the loop crosses itself (the figure 8)
+  const crossAt = [];
+  const mid = i => Math.hypot(pts[i].x, pts[i].z); // the figure 8 crosses right in the middle of the map
+  if (st.shape === 'eight') for (let i = 0; i < TRACK_N; i++) {
+    if (mid(i) > 4) continue;
+    const g = crossAt.findIndex(c => cdist(c, i) < 20);
+    if (g < 0) crossAt.push(i); else if (mid(i) < mid(crossAt[g])) crossAt[g] = i;
+  }
+  // start on the straightest stretch (the grid sits behind the line), never right at the crossing
+  const bendIn = (A, i) => { const a = A[(i + TRACK_N - 3) % TRACK_N], b = A[(i + 3) % TRACK_N]; return Math.acos(clamp(a.tx * b.tx + a.tz * b.tz, -1, 1)); }, bend = i => bendIn(pts, i);
+  let s0 = 0, sb = Infinity;
+  for (let s = 0; s < TRACK_N; s += 2) {
+    if (crossAt.some(c => cdist(c, s) < 16 || cdist(c, (s + TRACK_N - 24) % TRACK_N) < 16)) continue;
+    let sum = 0; for (let k = -50; k <= 12; k += 2) sum += bend((s + k + TRACK_N) % TRACK_N);
+    if (sum < sb) { sb = sum; s0 = s; }
+  }
+  const P = pts.slice(s0).concat(pts.slice(0, s0)); for (let i = 0; i < crossAt.length; i++) crossAt[i] = (crossAt[i] - s0 + TRACK_N) % TRACK_N;
+  track = { pts: P, haz: [], sweep: [] };
+  const busy = new Uint8Array(TRACK_N), mark = (a, b, v = 1) => { for (let i = a; i <= b; i++) busy[(i + TRACK_N) % TRACK_N] |= v; };
+  const free = (a, b, v = 1) => { for (let i = a; i <= b; i++) if (busy[(i + TRACK_N) % TRACK_N] & v) return false; return true; };
+  mark(-52, 16, 3); // the start and the grid stay flat and clear
+  // the bridge: the crossing farther from the start goes up and over the other one
+  if (crossAt.length === 2) {
+    const up = cdist(crossAt[0], TRACK_N - 20) > cdist(crossAt[1], TRACK_N - 20) ? crossAt[0] : crossAt[1], down = up === crossAt[0] ? crossAt[1] : crossAt[0];
+    for (let d = -29; d <= 29; d++) {
+      const p = P[(up + d + TRACK_N) % TRACK_N], a = Math.abs(d);
+      p.y = a <= 7 ? BRIDGE_H : BRIDGE_H * (0.5 + 0.5 * Math.cos(Math.PI * (a - 7) / 22)); p.bridge = true;
+    }
+    mark(up - 32, up + 32, 3); mark(down - 14, down + 14, 1);
+  }
+  const span = (len, v) => { for (let tries = 0; tries < 60; tries++) { const a = Math.floor(r() * TRACK_N); if (free(a - 3, a + len + 3, v)) return a; } return -1; };
+  for (let t = 0; t < st.tunnels; t++) { // tunnels: flat, roofed, lit
+    const len = 22 + Math.floor(r() * 14), a = span(len, 1); if (a < 0) continue;
+    for (let i = a; i <= a + len; i++) P[i % TRACK_N].tunnel = true;
+    mark(a - 3, a + len + 3, 1); (track.tunnels = track.tunnels || []).push([a, a + len]);
+  }
+  if (st.hills) for (let t = 0; t < 2 + st.hills; t++) { // hills: humps to fly off
+    const len = 16 + Math.floor(r() * 12), a = span(len, 1), amp = 1 + 0.8 * st.hills * (0.7 + r() * 0.3); if (a < 0) continue;
+    for (let k = 0; k <= len; k++) { const p = P[(a + k) % TRACK_N]; p.y = Math.min(4, p.y + amp * (0.5 - 0.5 * Math.cos(2 * Math.PI * k / len))); }
+    mark(a, a + len, 4);
+  }
+  P.forEach(p => { p.pad = TRACK_PAD + (p.y > 0.15 && !p.bridge ? TRACK_SLOPE : 0) + (p.tunnel ? 3.5 : 0); });
+  // clear the way: anything that would be in the road, the banks or the tunnels goes; the ground and the outer walls stay
   const edge = HALF - 0.3, bb = new THREE.Box3(), mtx = new THREE.Matrix4(), zero = new THREE.Matrix4().makeScale(0, 0, 0), tp = new V();
   for (const c of [...mapGroup.children]) {
-    if (c.isInstancedMesh) { // grass tufts and such: hide just the ones on the road
-      for (let i = 0; i < c.count; i++) { c.getMatrixAt(i, mtx); tp.setFromMatrixPosition(mtx); if (trackNear(tp.x, tp.x, tp.z, tp.z, TRACK_PAD)) c.setMatrixAt(i, zero); }
+    if (c.isInstancedMesh) { // grass tufts and such: hide just the ones in the way
+      for (let i = 0; i < c.count; i++) { c.getMatrixAt(i, mtx); tp.setFromMatrixPosition(mtx); if (trackNear(tp.x, tp.x, tp.z, tp.z, tp.y)) c.setMatrixAt(i, zero); }
       c.instanceMatrix.needsUpdate = true; continue;
     }
     if (c.material === waterMat) { mapGroup.remove(c); continue; }
     c.updateMatrixWorld(true); bb.setFromObject(c);
-    if (bb.isEmpty() || bb.min.y > 4.5 || bb.min.x < -edge || bb.max.x > edge || bb.min.z < -edge || bb.max.z > edge) continue;
-    if (trackNear(bb.min.x, bb.max.x, bb.min.z, bb.max.z, TRACK_PAD)) mapGroup.remove(c);
+    if (bb.isEmpty() || bb.min.x < -edge || bb.max.x > edge || bb.min.z < -edge || bb.max.z > edge) continue;
+    if (trackNear(bb.min.x, bb.max.x, bb.min.z, bb.max.z, bb.min.y)) mapGroup.remove(c);
   }
-  const low = b => b.min.y < 4.5 && b.min.x > -edge && b.max.x < edge && b.min.z > -edge && b.max.z < edge;
-  const keepBox = b => !(low(b) && trackNear(b.min.x, b.max.x, b.min.z, b.max.z, TRACK_PAD));
+  const inside = b => b.min.x > -edge && b.max.x < edge && b.min.z > -edge && b.max.z < edge;
+  const keepBox = b => !(inside(b) && trackNear(b.min.x, b.max.x, b.min.z, b.max.z, b.min.y));
   for (const arr of [boxes, ledges]) { const k = arr.filter(keepBox); arr.length = 0; arr.push(...k); }
-  const keepT = trees.filter(t => !(t.y0 < 4.5 && trackNear(t.x - t.r, t.x + t.r, t.z - t.r, t.z + t.r, TRACK_PAD))); trees.length = 0; trees.push(...keepT);
-  const keepB = blobs.filter(b => !(b.c.y - b.r < 4.5 && trackNear(b.c.x - b.r, b.c.x + b.r, b.c.z - b.r, b.c.z + b.r, TRACK_PAD))); blobs.length = 0; blobs.push(...keepB);
-  teleports = teleports.filter(pair => !pair.some(p => trackNear(p.x, p.x, p.z, p.z, TRACK_PAD)));
+  const keepT = trees.filter(t => !trackNear(t.x - t.r, t.x + t.r, t.z - t.r, t.z + t.r, t.y0)); trees.length = 0; trees.push(...keepT);
+  const keepB = blobs.filter(b => !trackNear(b.c.x - b.r, b.c.x + b.r, b.c.z - b.r, b.c.z + b.r, b.c.y - b.r)); blobs.length = 0; blobs.push(...keepB);
+  teleports = teleports.filter(pair => !pair.some(p => trackNear(p.x, p.x, p.z, p.z, p.y)));
   for (const h of hogs) { stopHogVoice(h); mapGroup.remove(h.g); } // the map's own toadhogs make way for the racers'
   for (let i = boxes.length - 1; i >= 0; i--) if (boxes[i].hog) boxes.splice(i, 1);
   hogs = []; water = null;
+  if (P.some(p => p.y > 0.05 && !p.bridge)) groundAt = trackGroundGrid();
   // the road takes the ground's colour, mixed most of the way to asphalt
   const gc = new THREE.Color(themeGround && themeGround.color ? themeGround.color : 0x6a8a4a), road = gc.clone().lerp(new THREE.Color(0x3c3c44), 0.7).getHex();
   if (!roadMats.has(road)) roadMats.set(road, lam(road));
-  const hw = TRACK_W / 2;
-  trackStrip(-hw, hw, 0.08, roadMats.get(road));
-  for (const s of [-1, 1]) { // curbs, striped every two steps
-    trackStrip(s * hw, s * (hw + 0.8), 0.1, M.curbRed, i => (i >> 1) % 2 === 0);
-    trackStrip(s * hw, s * (hw + 0.8), 0.1, M.curbWhite, i => (i >> 1) % 2 === 1);
+  const Y = d => p => p.y + d, flatY = v => () => v, wallMat = themeWall || M.rock, bankMat = themeGround || M.grass;
+  trackStrip(-hw, Y(0.08), hw, Y(0.08), roadMats.get(road));
+  for (const s of [-1, 1]) {
+    trackStrip(s * hw, Y(0.1), s * (hw + 0.8), Y(0.1), M.curbRed, (p, q, i) => (i >> 1) % 2 === 0);
+    trackStrip(s * hw, Y(0.1), s * (hw + 0.8), Y(0.1), M.curbWhite, (p, q, i) => (i >> 1) % 2 === 1);
+    const banked = (p, q) => !p.bridge && !q.bridge && (p.y > 0.02 || q.y > 0.02);
+    trackStrip(s * (hw + 0.8), Y(0.05), s * (hw + 1.6), Y(0.05), bankMat, banked);
+    trackStrip(s * (hw + 1.6), Y(0.05), s * (hw + 1.6 + TRACK_SLOPE), flatY(0.03), bankMat, banked);
+    // the bridge's edge and underside
+    trackStrip(s * (hw + 0.8), Y(-0.4), s * (hw + 0.8), Y(0.1), M.archPost, p => p.bridge && p.y > 0.3);
   }
-  // low barriers just past the curbs: drawn as one smooth wall, and felt as a row of small blocks
-  const wallMat = themeWall || M.rock;
-  track.pts.forEach((p, i) => {
-    const q = track.pts[(i + 1) % TRACK_N];
+  trackStrip(-hw - 0.8, Y(-0.4), hw + 0.8, Y(-0.4), M.archPost, p => p.bridge && p.y > 0.3);
+  // barriers just past the curbs (tall walls in tunnels): drawn smooth, and felt as a row of small blocks
+  P.forEach((p, i) => {
+    const q = P[(i + 1) % TRACK_N], wh = p.tunnel ? TUNNEL_H : 1;
     for (const s of [-1, 1]) {
-      const o = s * (hw + 1.2), ax = p.x + p.nx * o, az = p.z + p.nz * o, bx = q.x + q.nx * o, bz = q.z + q.nz * o;
-      const w = put(new THREE.Mesh(boxGeo, wallMat)); w.scale.set(0.6, 1, Math.hypot(bx - ax, bz - az) + 0.25);
-      w.position.set((ax + bx) / 2, 0.5, (az + bz) / 2); w.rotation.y = Math.atan2(bx - ax, bz - az);
-      const cap = put(new THREE.Mesh(boxGeo, (i >> 1) % 2 ? M.curbWhite : M.curbRed)); cap.scale.set(0.66, 0.14, w.scale.z); cap.position.set(w.position.x, 1.05, w.position.z); cap.rotation.y = w.rotation.y;
-      boxes.push({ min: new V(ax - 0.55, 0, az - 0.55), max: new V(ax + 0.55, 1.1, az + 0.55) });
+      const o = s * (hw + 1.2), ax = p.x + p.nx * o, az = p.z + p.nz * o, bx = q.x + q.nx * o, bz = q.z + q.nz * o, yy = (p.y + q.y) / 2;
+      const w = put(new THREE.Mesh(boxGeo, wallMat)); w.scale.set(0.6, wh, Math.hypot(bx - ax, bz - az) + 0.25);
+      w.position.set((ax + bx) / 2, yy + wh / 2, (az + bz) / 2); w.rotation.y = Math.atan2(bx - ax, bz - az);
+      if (!p.tunnel) { const cap = put(new THREE.Mesh(boxGeo, (i >> 1) % 2 ? M.curbWhite : M.curbRed)); cap.scale.set(0.66, 0.14, w.scale.z); cap.position.set(w.position.x, yy + 1.05, w.position.z); cap.rotation.y = w.rotation.y; }
+      boxes.push({ min: new V(ax - 0.7, p.bridge ? p.y - 0.4 : -0.2, az - 0.7), max: new V(ax + 0.7, p.y + (p.tunnel ? TUNNEL_H : 1.1), az + 0.7) });
+    }
+    if (p.bridge && p.y > 0.1) { // the bridge deck, felt as three blocks across
+      const hx = 0.75 * Math.abs(p.tx) + 1.75 * Math.abs(p.nx), hz = 0.75 * Math.abs(p.tz) + 1.75 * Math.abs(p.nz);
+      for (const o of [-3.4, 0, 3.4]) { const cx = p.x + p.nx * o, cz = p.z + p.nz * o; boxes.push({ min: new V(cx - hx, p.y - 0.4, cz - hz), max: new V(cx + hx, p.y, cz + hz), floor: true }); }
+      if (i % 8 === 0 && p.y > 1.2) for (const s of [-1, 1]) { // pillars, but not on the road below
+        const x = p.x + p.nx * s * (hw + 1.8), z = p.z + p.nz * s * (hw + 1.8);
+        if (!P.some(u => !u.bridge && Math.hypot(u.x - x, u.z - z) < hw + 2)) addBox(x, (p.y - 0.4) / 2, z, 0.8, p.y - 0.4, 0.8, M.archPost);
+      }
     }
   });
+  // tunnels: a roof with lamps, a mound of the map's rock over it, and a frame at each end
+  for (const [a, b] of track.tunnels || []) {
+    const inT = (p, q, i) => { const k = ((i - a) % TRACK_N + TRACK_N) % TRACK_N; return k < b - a; };
+    trackStrip(-hw - 1.5, flatY(TUNNEL_H), hw + 1.5, flatY(TUNNEL_H), wallMat, inT);
+    for (const s of [-1, 1]) trackStrip(s * (hw + 1.5), flatY(TUNNEL_H + 0.3), s * (hw + 8), flatY(0.02), wallMat, inT);
+    for (let i = a; i < b; i += 5) { const p = P[i % TRACK_N], l = put(new THREE.Mesh(boxGeo, M.tunnelLamp)); l.scale.set(1.4, 0.1, 0.5); l.position.set(p.x, TUNNEL_H - 0.08, p.z); l.rotation.y = Math.atan2(p.tx, p.tz); }
+    for (const e of [a, b]) {
+      const p = P[e % TRACK_N], f = put(new THREE.Mesh(boxGeo, M.hazTop)); f.scale.set(TRACK_W + 3.6, 0.7, 0.6); f.position.set(p.x, TUNNEL_H + 0.1, p.z); f.rotation.y = Math.atan2(p.tx, p.tz);
+    }
+  }
   // checkered start line and an arch over it
-  const p0 = track.pts[0], yaw0 = Math.atan2(p0.tx, p0.tz), tile = TRACK_W / 8;
+  const p0 = P[0], yaw0 = Math.atan2(p0.tx, p0.tz), tile = TRACK_W / 8;
   for (let a = 0; a < 8; a++) for (let b = 0; b < 2; b++) {
     const o = -hw + tile * (a + 0.5), f = (b - 0.5) * tile;
     const t = put(new THREE.Mesh(boxGeo, (a + b) % 2 ? M.checkA : M.checkB)); t.scale.set(tile, 0.02, tile);
     t.position.set(p0.x + p0.nx * o + p0.tx * f, 0.1, p0.z + p0.nz * o + p0.tz * f); t.rotation.y = yaw0;
   }
   for (const s of [-1, 1]) { const x = p0.x + p0.nx * s * (hw + 2.2), z = p0.z + p0.nz * s * (hw + 2.2); addBox(x, 2.6, z, 0.6, 5.2, 0.6, M.archPost); }
-  const span = TRACK_W + 5;
+  const span2 = TRACK_W + 5;
   for (let a = 0; a < 12; a++) for (let b = 0; b < 2; b++) {
-    const o = -span / 2 + span / 12 * (a + 0.5), t = put(new THREE.Mesh(boxGeo, (a + b) % 2 ? M.checkA : M.checkB));
-    t.scale.set(span / 12, 0.45, 0.3); t.position.set(p0.x + p0.nx * o, 5 + b * 0.45, p0.z + p0.nz * o); t.rotation.y = yaw0;
+    const o = -span2 / 2 + span2 / 12 * (a + 0.5), t = put(new THREE.Mesh(boxGeo, (a + b) % 2 ? M.checkA : M.checkB));
+    t.scale.set(span2 / 12, 0.45, 0.3); t.position.set(p0.x + p0.nx * o, 5 + b * 0.45, p0.z + p0.nz * o); t.rotation.y = yaw0;
+  }
+  // hazards, never on the start, the grid or the bridge
+  const level = i => Math.abs(P[(i + 3) % TRACK_N].y - P[(i + TRACK_N - 3) % TRACK_N].y) < 0.15;
+  const spot = (v, ok) => { for (let tries = 0; tries < 80; tries++) { const i = Math.floor(r() * TRACK_N); if (!(busy[i] & 2) && !P[i].bridge && level(i) && (!ok || ok(i)) && !track.haz.some(z => cdist(z.i, i) < 10)) return i; } return -1; };
+  if (st.puddle) {
+    const [col, kind, msg, glow] = PUDDLES[st.puddle];
+    const mat = puddleMats[st.puddle] || (puddleMats[st.puddle] = new THREE.MeshLambertMaterial({ color: col, emissive: glow || 0 }));
+    for (let n = 0; n < 4; n++) {
+      const i = spot(); if (i < 0) continue;
+      const p = P[i], o = (r() < 0.5 ? -1 : 1) * (1 + r() * 2.5), rad = 1.8 + r() * 0.8, x = p.x + p.nx * o, z = p.z + p.nz * o;
+      const m = put(new THREE.Mesh(geo(new THREE.CircleGeometry(1, 14)), mat)); m.rotation.x = -Math.PI / 2; m.scale.set(rad * 1.3, rad, 1);
+      m.rotation.z = -Math.atan2(p.tx, p.tz) + Math.PI / 2; m.position.set(x, p.y + 0.12, z);
+      track.haz.push({ i, x, z, y: p.y, r: rad, kind, msg });
+    }
+  }
+  for (let n = 0; n < st.boosts; n++) { // boost pads, on the straighter bits
+    const i = spot(0, i => bendIn(P, i) < 0.12); if (i < 0) continue;
+    const p = P[i], o = [-2.5, 0, 2.5][Math.floor(r() * 3)], x = p.x + p.nx * o, z = p.z + p.nz * o, yaw = Math.atan2(p.tx, p.tz);
+    const pad = put(new THREE.Mesh(boxGeo, M.boostPad)); pad.scale.set(3, 0.04, 4); pad.position.set(x, p.y + 0.11, z); pad.rotation.y = yaw;
+    for (const f of [-1, 0.4]) for (const s of [-1, 1]) { // two chevrons pointing the way to go
+      const c = put(new THREE.Mesh(boxGeo, M.boostArrow)); c.scale.set(0.3, 0.05, 1.5); c.rotation.y = yaw + s * 0.7;
+      c.position.set(x + p.tx * f + p.nx * s * 0.45, p.y + 0.14, z + p.tz * f + p.nz * s * 0.45);
+    }
+    track.haz.push({ i, x, z, y: p.y, r: 2, kind: 'boost' });
+  }
+  for (let n = 0; n < st.sweepers; n++) { // blocks that slide back and forth across the road
+    const i = spot(0, i => P[i].y < 0.1); if (i < 0) continue;
+    const p = P[i], g = new THREE.Group(); g.userData.dyn = true; put(g);
+    part(g, boxGeo, wallMat, 2.4, 1.6, 2.4, 0, 0.8, 0); part(g, boxGeo, M.hazTop, 2.5, 0.3, 2.5, 0, 1.7, 0);
+    const box = { min: new V(), max: new V() }; boxes.push(box);
+    const sw = { p, g, box, w: 1.4 + r() * 0.8, ph: r() * 6.28, amp: hw - 1.6 };
+    mapAnims.push(() => {
+      const o = Math.sin(roundTime * sw.w + sw.ph) * sw.amp, x = p.x + p.nx * o, z = p.z + p.nz * o;
+      g.position.set(x, p.y, z); g.rotation.y = Math.atan2(p.tx, p.tz); box.min.set(x - 1.2, p.y, z - 1.2); box.max.set(x + 1.2, p.y + 1.85, z + 1.2);
+    });
+    track.haz.push({ i, x: p.x, z: p.z, y: p.y, r: 0, kind: 'sweep' });
   }
 }
 
@@ -3223,7 +3383,7 @@ function buildMap(key) {
   try { trackOn = mode === 'kart' && state !== 'menu'; } catch (e) { trackOn = false; } // (the very first build runs before mode exists)
   track = null; themeGround = themeWall = null;
   const base = trackOn && mp.ground ? MAPS[mapKey === 'gulch' ? 'canyon' : 'forest'] : mp;
-  HALF = base.half || 30; groundAt = base.ground || flatGround;
+  HALF = trackOn ? TRACK_HALF : base.half || 30; groundAt = base.ground || flatGround;
   camera.far = mp.far || 140; camera.updateProjectionMatrix();
   seed = 11;
   G = mp.gravity || 18; airDrag = mp.swim ? 1.3 : 0.15;
@@ -5176,7 +5336,7 @@ function applySnapshot(s, from) {
     const d = h.seats[0];
     if (d && !d.isRemote && d !== player) { // a computer frog is driving it on the host
       const n = h.net || (h.net = {});
-      Object.assign(n, { x: h.park.x, y: h.park.y, z: h.park.z, yaw: h.parkYaw, speed: clamp(+q[4] || 0, -HOG.rev, HOG.max), steer: clamp(+q[5] || 0, -1, 1), air: !!q[6], t: performance.now() });
+      Object.assign(n, { x: h.park.x, y: h.park.y, z: h.park.z, yaw: h.parkYaw, speed: clamp(+q[4] || 0, -HOG.rev, HOG.max * 1.4), steer: clamp(+q[5] || 0, -1, 1), air: !!q[6], t: performance.now() });
     }
   });
   for (const [id, row] of Object.entries(s.it)) { const b = byId(id); if (b) { b.kingScore = row[6] || 0; b.score = row[7] || 0; b.size = row[8] || 1; b.hits = row[9] || 0; b.tags = row[10] || 0; b.tagged = row[11] || 0; } }
@@ -7269,6 +7429,24 @@ const MODE2 = {
       if (hogs.length !== this.order.length) this.makeHogs(this.order.length);
       for (const b of bodies) b.kIdx = trackIdx(b.pos);
       if (!this.boarded && player.frozen <= 0) this.board();
+      for (const h of hogs) { // hazards: each device handles the hogs it drives
+        h.slipT = Math.max(0, (h.slipT || 0) - dt); h.msgT = Math.max(0, (h.msgT || 0) - dt);
+        if (!hogMine(h) || h.air) continue;
+        const me = h.seats.includes(player);
+        for (const z of track.haz) {
+          if (!z.r || (h.pos.x - z.x) ** 2 + (h.pos.z - z.z) ** 2 > z.r * z.r || Math.abs(h.pos.y - z.y) > 1.2) continue;
+          if (z.kind === 'boost') {
+            if (h.boostT < 1) { h.boostT = 1.5; h.speed = Math.max(h.speed, HOG.max * 1.35); if (me) { flash('Boost!', '', 0.8, '#ffb02e'); sfxTone(300, 1200, 0.35, 'sawtooth', 0.08); rumble(150, 0.5); } }
+          } else if (z.kind === 'slow') {
+            h.speed *= Math.exp(-2.4 * dt);
+            if (me && !h.msgT) { flash(z.msg, '', 1, '#c8965a'); sfxTone(160, 90, 0.3, 'triangle', 0.08); } h.msgT = 2;
+          } else if (!h.slipT && Math.abs(h.speed) > 5) { // spin out (lava pops you up too)
+            h.slipT = 1.5; h.yawV = (Math.random() < 0.5 ? -1 : 1) * (3 + Math.abs(h.speed) * 0.1);
+            if (z.kind === 'lava') { h.vy = 6; h.air = true; h.speed *= 0.6; }
+            if (me) { flash(z.msg, '', 1.1, z.kind === 'lava' ? 'var(--lava)' : '#bfe9ff'); sfxTone(900, 300, 0.4, 'sine', 0.08); rumble(250, 0.6); }
+          }
+        }
+      }
       const lap = Math.floor((player.score || 0) / 4);
       if (lap > this.myLap && state === 'play') {
         this.myLap = lap;
@@ -7297,7 +7475,7 @@ const MODE2 = {
       const a = track.pts[i], b = track.pts[(i + 10) % TRACK_N], bend = Math.acos(clamp(a.tx * b.tx + a.tz * b.tz, -1, 1));
       let cap = HOG.max * (0.8 + 0.06 * diff + (ai.kartSkill || 0)) * (bend > 0.8 ? 0.7 : 1);
       if (!net) { const lead = this.progress(ai) - this.progress(player); if (lead > TRACK_N / 4) cap *= 0.85; else if (lead < -TRACK_N / 3) cap = HOG.max; } // keep it close
-      if (h.speed > cap) thr = 0;
+      if (h.speed > cap && !(h.boostT > 0)) thr = 0;
       if (Math.abs(ang) > 1.6) thr = Math.min(thr, 0.5);
       if (ai.backT > 0) { ai.backT -= dt; thr = -1; str = ai.backSteer; }
       else if (sp < 1.5 && !h.air && ai.frozen <= 0) { ai.stuckT = (ai.stuckT || 0) + dt; if (ai.stuckT > 1) { ai.stuckT = 0; ai.backT = 0.9; ai.backSteer = -(Math.sign(str) || 1); } }
