@@ -124,6 +124,8 @@ Forest, Mega Map, Frog Gulch, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano
 
 ### The Laboratory
 
+![The Big Ape catching up with two frogs in the Ape Enclosure](docs/screenshots/laboratory.png)
+
 A secret lab with four monsters on the loose, each in its own room:
 
 - **The Big Ape** in the Ape Enclosure: fast, but it can't climb, so get up high.
