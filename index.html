@@ -228,6 +228,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .mode.mini b { font-size: 1.05rem; }
 .mode.mini.spooky { background: #3a2433; color: #ffd6a8; }
 .mode.mini small { font-size: .74rem; opacity: .85; display: block; }
+#labDark { position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; opacity: 0; background: #000; }
 #blind { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 3; display: grid; place-content: center; text-align: center; gap: 6px; background: #05070a; color: var(--bone); pointer-events: none; }
 #blind b { font-family: var(--display); font-weight: 400; font-size: clamp(2rem, 8vw, 3.4rem); }
 #blind small { font-weight: 800; opacity: .7; }
@@ -303,6 +304,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <body>
 
 <canvas id="game"></canvas>
+<div id="labDark"></div>
 
 <div id="hud" hidden>
   <div id="vignette"></div>
@@ -815,6 +817,17 @@ Object.assign(M, { // the Backrooms
   brWall: lam(0xd8c46c), brStripe: lam(0xc2ad57), brCarpet: lam(0x9a884a), brDamp: lam(0x86763c), brCeil: lam(0xe6ddb4),
   brLight: fx(0xfffbe2), brTrim: lam(0xa8944e), brExit: fx(0x3ddc6a), brBox: lam(0xb08a55),
 });
+Object.assign(M, { // the Laboratory
+  labFloor: lam(0xc4ced2), labGrout: lam(0x9aa6ab), labWall: lam(0xe2eaec), labStripe: lam(0x3fb8c9), labCeil: lam(0xd3dcdf), labLight: fx(0xf2fbff),
+  labMetal: lam(0x8e989e), labDark: lam(0x3a4248), labHazard: lam(0xffc61a), labCrate: lam(0x7a8a5a), labBanana: lam(0xffe14d), labHay: lam(0xd8b860), labRope: lam(0x8a6a3e),
+  labGlass: new THREE.MeshLambertMaterial({ color: 0xbfefff, transparent: true, opacity: 0.28, depthWrite: false }),
+  labTubeFluid: new THREE.MeshLambertMaterial({ color: 0x7fe8c8, emissive: 0x1a5a4a, transparent: true, opacity: 0.35, depthWrite: false }),
+  labGoo: fx(0x7dff4a), labSludge: new THREE.MeshLambertMaterial({ color: 0x5fd03a, emissive: 0x1f5a10 }),
+  labSlime: new THREE.MeshLambertMaterial({ color: 0x9dff6a, emissive: 0x2a6a1a, transparent: true, opacity: 0.75 }),
+  labSteam: new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }),
+  labSafe: fx(0x52d273), labSafeWall: lam(0xcfe8d2), labSafeFloor: lam(0x9fd8a8), labBench: lam(0xf4f8f8), labPipe: lam(0x6f8a94),
+  labShelf: lam(0x5c6b72), labBelt: lam(0x2a2e33), labRack: lam(0x2c3338), labLedA: fx(0x52d273), labLedB: fx(0x5fd4ff), labLedC: fx(0xffc61a),
+});
 
 Object.assign(M, { // the Mega Map, Frog Gulch and the Toadhog
   tunnelLamp: fx(0xffe9a8), train: lam(0x3a86ff), trainStripe: lam(0xffd23f), tile: lam(0xcfc8b8),
@@ -1276,6 +1289,485 @@ function updateTeleports() {
       break zap;
     }
   }
+}
+
+// ---------- The Laboratory: four monsters that chase whoever they can see, and a lab full of hazards ----------
+// The host runs the monsters. Each one goes about its business in its own room until it spots a frog, chases it while
+// it can still see it, searches where it saw it last, and if you stay hidden long enough it walks back the way it came.
+const LAB_KINDS = {
+  ape: { Name: 'The Big Ape', walk: 2.3, run: 6.0, see: 16, fov: 1.2, jump: 7, eye: 0xffd23f },
+  blob: { Name: 'The Goo Blob', walk: 1.6, run: 4.4, see: 12, fov: 1.9, climb: true, eye: 0x111111 },
+  bot: { Name: 'The Statue Bot', walk: 2.4, run: 7.5, see: 15, fov: 1.0, statue: true, eye: 0x5fd4ff }, // only moves when nobody is looking at it
+  drone: { Name: 'The Zapper Drone', walk: 3, run: 4.9, see: 18, fov: 0.8, fly: true, eye: 0xfff1b8 },
+};
+const LAB = { mons: [], traps: [], lasers: [], vents: [], belt: null, tele: null, teleSpots: [], beacon: null, tadpole: null, blindT: 0, alarmT: 0, wasPlay: false };
+const LAB_GIVE_UP = 7; // seconds out of sight before a monster gives up
+const labEye = new V(), labTo = new V();
+const hyp = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const labSafe = p => mapKey === 'lab' && Math.abs(p.x) < 5 && p.z > 20.3; // monsters never come into the Safe Room
+function labClearAll() {
+  LAB.mons = []; LAB.traps = []; LAB.lasers = []; LAB.vents = []; LAB.belt = LAB.tele = LAB.beacon = LAB.tadpole = null; LAB.teleSpots = []; LAB.blindT = 0; LAB.wasPlay = false;
+  const el = document.getElementById('labDark'); if (el) el.style.opacity = 0;
+}
+// is there a clear line between two points? (a ray against every box)
+let lcT0 = 0, lcT1 = 1;
+function lcSlab(o, d, lo, hi) {
+  if (Math.abs(d) < 1e-9) return o >= lo && o <= hi;
+  let u = (lo - o) / d, w = (hi - o) / d; if (u > w) { const s = u; u = w; w = s; }
+  if (u > lcT0) lcT0 = u; if (w < lcT1) lcT1 = w;
+  return lcT0 <= lcT1;
+}
+function labClear(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+  for (const bx of boxes) { lcT0 = 0; lcT1 = 1; if (lcSlab(a.x, dx, bx.min.x, bx.max.x) && lcSlab(a.y, dy, bx.min.y, bx.max.y) && lcSlab(a.z, dz, bx.min.z, bx.max.z)) return false; }
+  return true;
+}
+function labWatching(b, m) { // is this player looking right at the monster?
+  if (b.pos.distanceTo(m.pos) > 30) return false;
+  let rel = Math.atan2(-(m.pos.x - b.pos.x), -(m.pos.z - b.pos.z)) - (b.yaw || 0); rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+  if (Math.abs(rel) > 0.6) return false;
+  labEye.copy(m.pos); labEye.y += 0.5;
+  return labClear(b.pos, labEye);
+}
+function labMesh(kind) {
+  const g = new THREE.Group(); mapGroup.add(g);
+  const eyeMat = new THREE.MeshLambertMaterial({ color: LAB_KINDS[kind].eye, emissive: LAB_KINDS[kind].eye, emissiveIntensity: 0.7 });
+  const o = { g, eyeMat };
+  if (kind === 'ape') { // a big grey-brown ape in a lab collar
+    const fur = cmat(0x4a3f3a), skin = cmat(0x9a8170);
+    part(g, ballGeo, fur, 0.75, 0.75, 0.6, 0, 0.45, 0);
+    part(g, ballGeo, skin, 0.45, 0.45, 0.2, 0, 0.45, -0.45);
+    o.head = new THREE.Group(); o.head.position.set(0, 1.25, -0.2); g.add(o.head);
+    part(o.head, ballGeo, fur, 0.42, 0.4, 0.4, 0, 0, 0);
+    part(o.head, ballGeo, skin, 0.3, 0.22, 0.2, 0, -0.08, -0.32);
+    part(o.head, boxGeo, fur, 0.5, 0.1, 0.15, 0, 0.14, -0.3); // grumpy brow
+    for (const sx of [-1, 1]) part(o.head, ballGeo, eyeMat, 0.06, 0.05, 0.04, sx * 0.13, 0.06, -0.38);
+    part(g, GEO.ring, cmat(0x3fb8c9), 0.4, 0.4, 0.6, 0, 0.98, -0.1, Math.PI / 2);
+    o.arms = [-1, 1].map(sx => { const a = new THREE.Group(); a.position.set(sx * 0.72, 0.85, -0.05); g.add(a); part(a, boxGeo, fur, 0.3, 1.2, 0.3, 0, -0.55, 0); part(a, ballGeo, skin, 0.2, 0.15, 0.22, 0, -1.2, 0); return a; });
+    for (const sx of [-1, 1]) part(g, boxGeo, fur, 0.32, 0.5, 0.35, sx * 0.32, -0.3, 0);
+    g.scale.setScalar(1.25);
+  } else if (kind === 'blob') { // a wobbly blob of green goo with eyes on stalks
+    o.body = part(g, ballGeo, new THREE.MeshLambertMaterial({ color: 0x7dff4a, emissive: 0x2a7a10, transparent: true, opacity: 0.8 }), 0.85, 0.7, 0.85, 0, 0.1, 0);
+    o.stalks = [-0.35, 0, 0.35].map((x, i) => {
+      const s = new THREE.Group(); s.position.set(x, 0.6, -0.2); g.add(s);
+      part(s, GEO.cyl, cmat(0x5fd03a), 0.05, 0.5, 0.05, 0, 0.25, 0);
+      part(s, ballGeo, M.eye, 0.15, 0.15, 0.15, 0, 0.55, 0); part(s, ballGeo, eyeMat, 0.07, 0.07, 0.04, 0, 0.56, -0.13);
+      s.rotation.z = (i - 1) * 0.35; return s;
+    });
+  } else if (kind === 'bot') { // a tall robot on a spring neck that freezes when you look at it
+    const metal = cmat(0x9aa3a8), dark = cmat(0x3a4248);
+    for (const sx of [-1, 1]) part(g, boxGeo, dark, 0.2, 0.7, 0.25, sx * 0.22, -0.15, 0);
+    part(g, boxGeo, metal, 0.8, 1.1, 0.55, 0, 0.75, 0);
+    part(g, boxGeo, cmat(0xffc61a), 0.82, 0.12, 0.57, 0, 0.5, 0);
+    o.spring = new THREE.Group(); o.spring.position.set(0, 1.3, 0); g.add(o.spring);
+    for (let k = 0; k < 4; k++) part(o.spring, GEO.ring, dark, 0.16, 0.16, 0.5, 0, k * 0.12, 0, Math.PI / 2);
+    o.head = new THREE.Group(); o.head.position.set(0, 1.85, 0); g.add(o.head);
+    part(o.head, boxGeo, metal, 0.6, 0.5, 0.5, 0, 0, 0);
+    part(o.head, ballGeo, eyeMat, 0.14, 0.14, 0.06, 0, 0.02, -0.26);
+    o.arms = [-1, 1].map(sx => { const a = new THREE.Group(); a.position.set(sx * 0.5, 1.2, 0); g.add(a); part(a, boxGeo, dark, 0.14, 0.8, 0.14, 0, -0.4, 0); part(a, boxGeo, metal, 0.22, 0.18, 0.22, 0, -0.85, 0); return a; });
+  } else { // a hovering security drone with a searchlight
+    const shell = cmat(0x2c3338);
+    part(g, ballGeo, shell, 0.55, 0.28, 0.55, 0, 0, 0);
+    part(g, ballGeo, cmat(0xffc61a), 0.57, 0.08, 0.57, 0, 0, 0);
+    part(g, ballGeo, eyeMat, 0.16, 0.16, 0.1, 0, -0.04, -0.5);
+    o.rotors = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => {
+      part(g, boxGeo, shell, 0.08, 0.06, 0.6, sx * 0.45, 0.1, sz * 0.45, 0, sx * sz * Math.PI / 4);
+      const r = new THREE.Group(); r.position.set(sx * 0.7, 0.18, sz * 0.7); g.add(r);
+      part(r, boxGeo, cmat(0xb8bcc4), 0.6, 0.02, 0.08, 0, 0, 0); return r;
+    });
+    o.beamMat = new THREE.MeshLambertMaterial({ color: 0xfff1b8, emissive: 0xfff1b8, emissiveIntensity: 0.5, transparent: true, opacity: 0.16, depthWrite: false });
+    const beam = part(g, GEO.cone, o.beamMat, 1.4, 5, 1.4, 0, -1.1, -2.3, Math.PI / 2 - 0.45); beam.castShadow = false;
+  }
+  return o;
+}
+function labMon(kind, home, homeY) {
+  const K = LAB_KINDS[kind], h = home.map(([x, z]) => findSpot(x, z, new V()));
+  if (homeY) h.forEach(p => { p.y = homeY; });
+  const m = { kind, K, home: h, homeY, pos: h[0].clone(), vel: new V(), yaw: 0, wp: 1, st: 0, tgt: null, tid: 0, pst: 0, ptid: 0, last: new V(), lostT: 0, crumbs: [],
+    waitT: 0, seeT: Math.random() * 0.2, stuckT: 0, stuckP: h[0].clone(), dodgeT: 0, dodge: 1, upT: 0, gloatT: 0, blindT: 0, watched: false,
+    frozen: 0, hang: 0, isPlayer: false, grounded: false, wall: false, prev: h[0].clone(), spd: 0, growlT: 2 + Math.random() * 4 };
+  return Object.assign(m, labMesh(kind));
+}
+function labReset() { // a new round: every monster goes back to work
+  for (const m of LAB.mons) { m.pos.copy(m.home[0]); m.vel.set(0, 0, 0); m.wp = 1; m.st = m.pst = 0; m.tgt = null; m.tid = m.ptid = 0; m.crumbs = []; m.waitT = 0; m.blindT = 0; }
+  LAB.blindT = 0;
+}
+// states: 0 at work, 1 chasing, 2 searching where it last saw you, 3 walking back, 4 got someone
+function labThink(m, dt, play) {
+  const K = m.K;
+  if (m.st === 4) { m.vel.x = m.vel.z = 0; if (!K.fly) physics(m, dt); if ((m.gloatT -= dt) <= 0) m.st = 3; return; }
+  m.blindT = Math.max(0, m.blindT - dt);
+  if ((m.seeT -= dt) <= 0) {
+    m.seeT = 0.2;
+    labEye.copy(m.pos); labEye.y += 0.5;
+    let best = null, bs = 1e9;
+    if (play && m.blindT <= 0) for (const b of bodies) {
+      if (b.out || b.hog || b.labCd > 0 || labSafe(b.pos)) continue;
+      const chasing = (m.st === 1 || m.st === 2) && m.tgt === b, d = b.pos.distanceTo(m.pos);
+      if (d > K.see * (chasing ? 1.5 : 1)) continue;
+      if (!K.fly && !K.climb && b.pos.y - m.pos.y > 2.6) continue; // up high where it can't reach
+      if (!chasing && d > 2.5) { let rel = Math.atan2(-(b.pos.x - m.pos.x), -(b.pos.z - m.pos.z)) - m.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel)); if (Math.abs(rel) > K.fov) continue; }
+      if (!labClear(labEye, b.pos)) continue;
+      const s = d - (chasing ? 5 : 0);
+      if (s < bs) { bs = s; best = b; }
+    }
+    if (best) { m.st = 1; m.tgt = best; m.tid = idOf(best); m.last.copy(best.pos); m.lostT = 0; }
+    else if (m.st === 1) m.st = 2;
+    if (K.statue) m.watched = play && bodies.some(b => (b === player || b.isRemote) && !b.out && labWatching(b, m));
+  }
+  if (m.st === 2 && (m.lostT += dt) > LAB_GIVE_UP) m.st = 3;
+  if (m.st === 1 || m.st === 2) { // leave a trail of crumbs so it can find its way back
+    const c = m.crumbs[m.crumbs.length - 1];
+    if (!c || c.distanceTo(m.pos) > 1.5) { m.crumbs.push(m.pos.clone()); if (m.crumbs.length > 400) m.crumbs.shift(); }
+  }
+  let goal = m.pos, speed = 0, gy = m.homeY || 0;
+  if (m.st === 1) { goal = m.tgt.pos; speed = K.run * DIFF[diff]; gy = m.tgt.pos.y + 0.2; }
+  else if (m.st === 2) {
+    goal = m.last; speed = K.walk * 1.5; gy = m.last.y + 0.3;
+    if (hyp(m.pos, m.last) < 1) { goal = m.pos; m.yaw += dt * 2.2; } // looking around
+  } else if (m.st === 3) {
+    const c = m.crumbs[m.crumbs.length - 1];
+    if (!c) { m.st = 0; m.tgt = null; m.tid = 0; }
+    else { goal = c; gy = c.y; speed = K.walk * 1.3; if (hyp(m.pos, c) < 0.9) m.crumbs.pop(); }
+  }
+  if (m.st === 0) {
+    goal = m.home[m.wp]; speed = K.walk;
+    if (m.waitT > 0) { m.waitT -= dt; goal = m.pos; m.yaw += Math.sin(m.waitT * 1.7) * dt * 1.4; } // busy, and glancing around
+    else if (hyp(m.pos, goal) < 1) { m.waitT = 1.5 + Math.random() * 3; m.wp = (m.wp + 1) % m.home.length; goal = m.pos; }
+  }
+  if (K.statue && m.watched) speed = 0;
+  labMove(m, goal, speed, gy, dt);
+}
+function labMove(m, goal, speed, gy, dt) {
+  let dx = goal.x - m.pos.x, dz = goal.z - m.pos.z;
+  const d = Math.hypot(dx, dz), go = d > 0.5 && speed > 0;
+  if (m.dodgeT > 0) { m.dodgeT -= dt; const ox = dx; dx = dx * 0.4 - dz * m.dodge; dz = dz * 0.4 + ox * m.dodge; } // sidestep around something
+  const n = Math.hypot(dx, dz) || 1;
+  m.vel.x = go ? dx / n * speed : 0; m.vel.z = go ? dz / n * speed : 0;
+  if (go) { let r = Math.atan2(-dx, -dz) - m.yaw; r = Math.atan2(Math.sin(r), Math.cos(r)); m.yaw += r * Math.min(1, dt * 8); }
+  if (m.K.fly) {
+    if (m.upT > 0) { m.upT -= dt; gy = 7.4; } // up over the walls
+    m.vel.y = clamp((clamp(gy, 1.2, 8.2) - m.pos.y) * 2.5, -4, 4);
+    m.pos.addScaledVector(m.vel, dt); m.grounded = m.wall = false; collide(m);
+  } else {
+    if (go && m.wall) { if (m.K.climb) m.vel.y = 4.2; else if (m.grounded && m.K.jump) m.vel.y = m.K.jump; }
+    physics(m, dt);
+  }
+  if (!go) { m.stuckT = 0; m.stuckP.copy(m.pos); return; }
+  if ((m.stuckT += dt) > 1.4) {
+    if (m.pos.distanceTo(m.stuckP) < 0.8) { // stuck on something
+      if (m.K.fly) m.upT = 2.5;
+      if (m.st === 0) m.wp = (m.wp + 1) % m.home.length;
+      else if (m.st === 3) { if (m.crumbs.length) m.crumbs.pop(); }
+      else { m.dodgeT = 0.9; m.dodge = Math.random() < 0.5 ? -1 : 1; }
+    }
+    m.stuckT = 0; m.stuckP.copy(m.pos);
+  }
+}
+function labCaught(b, m) {
+  const sp = MAPS.lab.spawn;
+  spawnAt(sp[0] + (Math.random() - 0.5) * 5, sp[1] + (Math.random() - 0.5) * 3, b.pos); b.vel.set(0, 0, 0); b.labCd = 3; b.frozen = Math.max(b.frozen, 1.2);
+  if (b === player) { player.yaw = 0; flash('Caught!', `${m.K.Name} got you! Back to the Safe Room.`, 2.4, '#ff6b6b'); rumble(320, 0.8); sfxTone(220, 60, 0.6, 'sawtooth', 0.14); }
+  else say(b, pick(["Aaah! It got me!", "Eek! Back to the Safe Room!", "That monster is fast!"]));
+}
+function labGot(m, b) { m.st = 4; m.gloatT = 2.5; m.tgt = b; m.tid = idOf(b); }
+function labDraw(m, dt, t) {
+  const g = m.g;
+  m.spd += ((dt > 0 ? m.prev.distanceTo(m.pos) / dt : 0) - m.spd) * Math.min(1, dt * 8); m.prev.copy(m.pos);
+  g.position.copy(m.pos); g.rotation.y = m.yaw;
+  const hunting = m.st === 1 || m.st === 2, moving = m.spd > 0.4;
+  m.eyeMat.emissive.setHex(hunting || m.st === 4 ? 0xff2a2a : m.K.eye); m.eyeMat.color.setHex(hunting || m.st === 4 ? 0xff2a2a : m.K.eye);
+  if (m.kind === 'ape') {
+    g.position.y += 0.12;
+    m.arms.forEach((a, i) => {
+      a.rotation.x = m.st === 4 ? -2.6 + Math.sin(t * 14 + i * Math.PI) * 0.3 // arms up: got one!
+        : moving ? Math.sin(t * (hunting ? 12 : 6) + i * Math.PI) * 0.7 - (hunting ? 0.4 : 0)
+        : m.st === 0 && m.waitT > 0 && Math.sin(t * 1.3) > 0.3 ? -1.4 + Math.sin(t * 16 + i * Math.PI) * 0.35 : 0; // pounding its chest
+    });
+    m.head.rotation.y = Math.sin(t * 0.8) * (moving ? 0.1 : 0.4);
+  } else if (m.kind === 'blob') {
+    const w = hunting ? 9 : 4;
+    m.body.scale.set(0.85 + Math.sin(t * w) * 0.06, 0.7 - Math.sin(t * w) * 0.06, 0.85 + Math.cos(t * w) * 0.05);
+    m.stalks.forEach((s, i) => { s.rotation.x = Math.sin(t * 2 + i) * 0.3; s.rotation.z = (i - 1) * 0.35 + Math.sin(t * 1.7 + i * 2) * 0.15; });
+  } else if (m.kind === 'bot') {
+    if (!m.watched) {
+      m.head.position.y = 1.85 + (moving ? Math.abs(Math.sin(t * 10)) * 0.18 : 0);
+      m.head.rotation.y = moving ? 0 : Math.sin(t * 0.9) * 0.6;
+      m.arms.forEach((a, i) => { a.rotation.x = moving ? Math.sin(t * 10 + i * Math.PI) * 0.6 - (hunting ? 0.9 : 0) : 0; });
+    }
+    if (m.watched) m.eyeMat.emissiveIntensity = 0.15; else m.eyeMat.emissiveIntensity = 0.7;
+  } else {
+    g.position.y += Math.sin(t * 2.4 + m.home[0].x) * 0.12;
+    m.rotors.forEach((r, i) => { r.rotation.y = t * 30 + i; });
+    m.beamMat.color.setHex(hunting ? 0xff4d4d : 0xfff1b8); m.beamMat.emissive.setHex(hunting ? 0xff2a2a : 0xfff1b8);
+    g.rotation.x = clamp(-m.spd * 0.04, -0.25, 0);
+  }
+  // a growl now and then when it's close
+  if ((m.growlT -= dt) <= 0) {
+    m.growlT = 3 + Math.random() * 4;
+    const d = m.pos.distanceTo(player.pos);
+    if (state === 'play' && d < 12 && !labSafe(player.pos)) {
+      const v = 0.07 * (1 - d / 12);
+      if (m.kind === 'ape') { sfxTone(160, 120, 0.25, 'triangle', v); setTimeout(() => sfxTone(170, 120, 0.25, 'triangle', v), 300); } // hoo hoo
+      else if (m.kind === 'blob') sfxTone(90, 140, 0.5, 'sine', v * 1.5);
+      else if (m.kind === 'bot') { if (!m.watched) sfxTone(900, 880, 0.08, 'square', v * 0.6); }
+      else sfxTone(240, 260, 0.6, 'sawtooth', v * 0.5);
+    }
+  }
+}
+function labHazards(dt, t, host, play) {
+  const list = play ? (host ? [player, ...ais] : [player]) : [];
+  for (const b of list) { b.labZap = Math.max(0, (b.labZap || 0) - dt); b.labTele = Math.max(0, (b.labTele || 0) - dt); }
+  // flash plates: step on one and FLASH, you can't see for a few seconds (monsters close by get dazzled too)
+  for (const tr of LAB.traps) {
+    tr.cd = Math.max(0, tr.cd - dt);
+    tr.mat.emissiveIntensity = tr.cd > 0 ? 0.05 : 0.5 + Math.sin(t * 5 + tr.x) * 0.3;
+    if (tr.cd > 0) continue;
+    const b = list.find(b => !b.hog && Math.abs(b.pos.x - tr.x) < 0.9 && Math.abs(b.pos.z - tr.z) < 0.9 && b.pos.y < R + 0.5);
+    if (!b) continue;
+    tr.cd = 6;
+    if (b === player) { LAB.blindT = 4.6; flash('FLASH!', "Your eyes! You can't see for a few seconds.", 2.4, '#fff36b'); sfxTone(2200, 500, 0.35, 'square', 0.1); rumble(150, 0.5); }
+    else { b.frozen = Math.max(b.frozen, 2); say(b, pick(["My eyes!", "So bright! I can't see!", "Who turned on the sun?"])); }
+    if (host) for (const m of LAB.mons) if (m.pos.distanceTo(b.pos) < 7) { m.blindT = 3.5; if (m.st === 1) m.st = 2; }
+  }
+  // laser fences: on for 3 seconds, blink as a warning, then off
+  for (const L of LAB.lasers) {
+    const p = (t + L.ph) % 6, on = p < 3;
+    L.g.visible = on || (p > 5.1 && Math.sin(t * 30) > 0);
+    L.mat.opacity = on ? 0.85 : 0.35;
+    if (!on) continue;
+    for (const b of list) {
+      if (b.labZap > 0 || b.hog || b.pos.y > 4.6) continue;
+      const along = L.alongX ? Math.abs(b.pos.x - L.x) < L.len : Math.abs(b.pos.z - L.z) < L.len;
+      const off = L.alongX ? b.pos.z - L.z : b.pos.x - L.x;
+      if (!along || Math.abs(off) > 0.15 + R) continue;
+      const s = Math.sign(off) || 1;
+      if (L.alongX) b.vel.z = s * 9; else b.vel.x = s * 9;
+      b.vel.y = Math.max(b.vel.y, 4); b.labZap = 1; b.frozen = Math.max(b.frozen, 0.8);
+      if (b === player) { flash('Zap!', 'Laser fence! Wait for it to turn off.', 1.3, '#ff4d4d'); sfxTone(1600, 200, 0.25, 'sawtooth', 0.1); rumble(140, 0.6); }
+    }
+  }
+  // air vents: a big puff every few seconds that throws you up to the tops of the walls
+  for (const v of LAB.vents) {
+    const p = (t + v.ph) % 4.5, on = p < 1.3;
+    v.steam.visible = on; if (on) { v.steam.scale.set(1 + Math.sin(t * 20) * 0.05, 0.5 + Math.min(1, p * 3) * 0.5, 1); }
+    if (on && !v.was && player.pos.distanceTo(v.p) < 9 && state === 'play') sfxTone(700, 300, 0.7, 'sawtooth', 0.025);
+    v.was = on;
+    if (on) for (const b of list) if (!b.hog && Math.hypot(b.pos.x - v.p.x, b.pos.z - v.p.z) < 1.1 && b.pos.y < 7) { b.vel.y = Math.max(b.vel.y, 15); b.hang = 0; if (b === player) rumble(60, 0.3); }
+  }
+  // the conveyor belt carries you along
+  const B = LAB.belt;
+  if (B) {
+    B.stripes.forEach((s, i) => { s.position.x = B.x0 + 0.5 + ((i * B.gap + t * 3) % (B.x1 - B.x0 - 1)); });
+    for (const b of list) if (!b.hog && b.pos.x > B.x0 && b.pos.x < B.x1 && Math.abs(b.pos.z - B.z) < 1 + R * 0.5 && Math.abs(b.pos.y - (B.y + R)) < 0.25) b.pos.x = Math.min(B.x1 + 0.6, b.pos.x + 3 * dt);
+  }
+  // the broken teleporter: it never sends you to the same place twice
+  const T = LAB.tele;
+  if (T) {
+    T.beam.visible = Math.sin(t * 9) + Math.sin(t * 23) > -0.8; T.beam.rotation.y = t * 2;
+    for (const b of list) {
+      if (b.hog || b.labTele > 0 || Math.hypot(b.pos.x - T.p.x, b.pos.z - T.p.z) > 1 || b.pos.y > R + 0.8) continue;
+      const [x, z] = pick(LAB.teleSpots); findSpot(x, z, b.pos); b.vel.set(0, 1, 0); b.labTele = 2.5;
+      if (b === player) { flash('Whoops!', 'The broken teleporter sent you somewhere random!', 1.8, '#7fe8ff'); sfxTone(300, 1400, 0.3, 'sine', 0.1); setTimeout(() => sfxTone(1400, 200, 0.2, 'square', 0.05), 200); rumble(100, 0.4); }
+    }
+  }
+  M.labLedA.emissiveIntensity = Math.sin(t * 7) > 0 ? 0.8 : 0.1; M.labLedB.emissiveIntensity = Math.sin(t * 4.3 + 1) > 0 ? 0.8 : 0.1;
+  if (LAB.tadpole) { LAB.tadpole.position.y = 2.4 + Math.sin(t * 0.9) * 0.4; LAB.tadpole.rotation.y = Math.sin(t * 0.4) * 0.8; LAB.tadpole.userData.tail.rotation.y = Math.sin(t * 5) * 0.5; }
+}
+function labFrame(dt, t) {
+  const host = isHost(), play = state === 'play';
+  if (play && !LAB.wasPlay && host) labReset();
+  LAB.wasPlay = play;
+  for (const b of bodies) if (b.labCd > 0) b.labCd -= dt;
+  for (const m of LAB.mons) {
+    if (host) {
+      labThink(m, dt, play);
+      if (play && m.st !== 4) for (const b of bodies) { // the host catches computer frogs; each player catches themselves below
+        if (b === player || b.out || b.hog || b.labCd > 0 || labSafe(b.pos) || b.pos.distanceTo(m.pos) > 1.3) continue;
+        if (!b.isRemote) labCaught(b, m);
+        labGot(m, b); break;
+      }
+    } else if (m.netPos) {
+      m.pos.lerp(m.netPos, Math.min(1, dt * 10));
+      let r = m.netYaw - m.yaw; r = Math.atan2(Math.sin(r), Math.cos(r)); m.yaw += r * Math.min(1, dt * 10);
+    }
+    labDraw(m, dt, t);
+  }
+  let chased = null, anyChase = false;
+  if (play) {
+    if (!player.out && !player.hog && !(player.labCd > 0) && !labSafe(player.pos))
+      for (const m of LAB.mons) if (m.st !== 4 && m.pos.distanceTo(player.pos) < 1.3) { labCaught(player, m); if (host) labGot(m, player); break; }
+    for (const m of LAB.mons) {
+      const mine = m.tid === myId, wasMine = m.ptid === myId && (m.pst === 1 || m.pst === 2);
+      if (m.st === 1) anyChase = true;
+      if (mine && (m.st === 1 || m.st === 2)) chased = m;
+      if (mine && m.st === 1 && !wasMine) { flash(`${m.K.Name} sees you!`, 'Run and hide! Stay out of sight and it will give up.', 2, '#ff6b6b'); sfxTone(520, 260, 0.2, 'square', 0.1); setTimeout(() => sfxTone(520, 260, 0.3, 'square', 0.1), 220); rumble(200, 0.6); }
+      if (wasMine && m.st === 3) { flash('You hid!', `${m.K.Name} gave up and went back to what it was doing.`, 2, 'var(--leaf)'); sfxTone(600, 1000, 0.25, 'sine', 0.08); addFlies(1); }
+    }
+  }
+  for (const m of LAB.mons) { m.pst = m.st; m.ptid = m.tid; }
+  // red alarm lights while anything is chasing, and a heartbeat while it's you
+  if (LAB.beacon) LAB.beacon.emissiveIntensity = anyChase ? (Math.sin(t * 10) > 0 ? 1 : 0.1) : 0.1;
+  if (chased && chased.st === 1 && (LAB.alarmT -= dt) <= 0) { LAB.alarmT = 0.55; sfxTone(70, 50, 0.15, 'sine', 0.18); setTimeout(() => sfxTone(65, 45, 0.12, 'sine', 0.14), 160); }
+  labHazards(dt, t, host, play);
+  // blinded by a flash plate: white, then dark, then your eyes come back
+  if (!play) LAB.blindT = 0;
+  LAB.blindT = Math.max(0, LAB.blindT - dt);
+  const el = $('labDark'), bt = LAB.blindT;
+  el.style.background = bt > 4.25 ? '#fffbe6' : '#000';
+  el.style.opacity = bt > 4.25 ? 1 : Math.min(0.97, bt / 0.9);
+}
+function labSnap() { return LAB.mons.map(m => [r2(m.pos.x), r2(m.pos.y), r2(m.pos.z), r2(m.yaw), m.st, m.tid || 0, m.watched ? 1 : 0]); }
+function labApply(list) {
+  list.forEach((q, i) => {
+    const m = LAB.mons[i]; if (!m || !Array.isArray(q)) return;
+    (m.netPos || (m.netPos = new V())).set(+q[0] || 0, +q[1] || 0, +q[2] || 0); m.netYaw = +q[3] || 0;
+    m.st = clamp(q[4] | 0, 0, 4); m.tid = q[5] || 0; m.watched = !!q[6];
+  });
+}
+function labThreat(ai) { // the monster chasing this computer frog, if one is close
+  for (const m of LAB.mons) if (m.st === 1 && m.tgt === ai && m.pos.distanceTo(ai.pos) < 14) return m;
+  return null;
+}
+function labBuild() {
+  addGround(M.labFloor); addWalls(M.labWall);
+  const CEIL = 9, WALL = 6;
+  addBox(0, CEIL + 0.5, 0, HALF * 2 + 2, 1, HALF * 2 + 2, M.labCeil); // the ceiling: grab it and swing along
+  for (let k = -HALF + 3; k < HALF; k += 3) { // floor tiles
+    const gx = put(new THREE.Mesh(boxGeo, M.labGrout)); gx.scale.set(0.05, 0.02, HALF * 2); gx.position.set(k, 0.01, 0);
+    const gz = put(new THREE.Mesh(boxGeo, M.labGrout)); gz.scale.set(HALF * 2, 0.02, 0.05); gz.position.set(0, 0.01, k);
+  }
+  const wall = (x0, z0, x1, z1, h = WALL, m = M.labWall) => {
+    const w = Math.max(0.6, Math.abs(x1 - x0)), d = Math.max(0.6, Math.abs(z1 - z0)), x = (x0 + x1) / 2, z = (z0 + z1) / 2;
+    addBox(x, h / 2, z, w, h, d, m, true);
+    const st = put(new THREE.Mesh(boxGeo, M.labStripe)); st.scale.set(w + 0.02, 0.3, d + 0.02); st.position.set(x, 1.2, z);
+    const tp = put(new THREE.Mesh(boxGeo, M.labMetal)); tp.scale.set(w + 0.04, 0.12, d + 0.04); tp.position.set(x, h - 0.06, z);
+  };
+  // corridors make a big plus; a room in each corner, each with doorways onto the corridors
+  wall(-3, -30, -3, -16); wall(-3, -12, -3, -3); wall(-30, -3, -19, -3); wall(-15, -3, -3, -3); // Ape Enclosure
+  wall(3, -30, 3, -20); wall(3, -16, 3, -3); wall(3, -3, 14, -3); wall(18, -3, 30, -3); // Goo Lab
+  wall(-30, 3, -22, 3); wall(-18, 3, -3, 3); wall(-3, 3, -3, 9); wall(-3, 13, -3, 20); // Robot Workshop
+  wall(3, 3, 10, 3); wall(14, 3, 30, 3); wall(3, 3, 3, 13); wall(3, 17, 3, 20); // Server Room
+  // the Safe Room at the south end: monsters never come in here
+  wall(-5, 20, -5, 30, CEIL, M.labSafeWall); wall(5, 20, 5, 30, CEIL, M.labSafeWall); wall(-5, 20, -1.6, 20, CEIL, M.labSafeWall); wall(1.6, 20, 5, 20, CEIL, M.labSafeWall);
+  addBox(0, (4 + CEIL) / 2, 20, 3.2, CEIL - 4, 0.6, M.labSafeWall);
+  const sign = put(new THREE.Mesh(boxGeo, M.labSafe)); sign.scale.set(3.4, 0.5, 0.7); sign.position.set(0, 4.3, 20);
+  plane(-4.7, 4.7, 20.3, 29.7, 0.02, M.labSafeFloor);
+  for (const sx of [-1, 1]) addBox(sx * 3.9, 0.45, 26, 1, 0.9, 4, M.labMetal, true); // benches
+  const sl = put(new THREE.Mesh(boxGeo, M.labSafe)); sl.scale.set(6, 0.08, 1); sl.position.set(0, CEIL - 0.04, 25);
+  // ceiling lights
+  for (const [x, z] of [[0, -24], [0, -14], [0, -6], [0, 8], [0, 15], [-24, 0], [-12, 0], [12, 0], [24, 0], [-16, -16], [-24, -24], [-9, -25], [16, -16], [24, -24], [10, -8], [-16, 10], [-24, 22], [-10, 24], [16, 11], [16, 23], [26, 11], [26, 23], [8, 24]]) {
+    const l = put(new THREE.Mesh(boxGeo, M.labLight)); l.scale.set(1.2, 0.08, 2.4); l.position.set(x, CEIL - 0.04, z);
+  }
+  // red alarm lights in the corridors; they flash while a monster is chasing someone
+  LAB.beacon = new THREE.MeshLambertMaterial({ color: 0xff3a3a, emissive: 0xff2020, emissiveIntensity: 0.1 });
+  for (const [x, z, nx, nz] of [[-3.3, -8, -1, 0], [3.3, -24, 1, 0], [3.3, 8, 1, 0], [-3.3, 16, -1, 0], [-9, -3.3, 0, -1], [22, -3.3, 0, -1], [-26, 3.3, 0, 1], [7, 3.3, 0, 1]]) {
+    const b = put(new THREE.Mesh(ballGeo, LAB.beacon)); b.scale.set(0.3, 0.3, 0.3); b.position.set(x - nx * 0.05, 5.2, z - nz * 0.05); b.userData.dyn = true;
+  }
+
+  // ===== the Ape Enclosure (north-west): climbing frame, tire swing, banana crates
+  addBox(-23, 3.4, -23, 5, 0.4, 5, M.labMetal, true);
+  for (const [dx, dz] of [[-2.2, -2.2], [2.2, -2.2], [-2.2, 2.2], [2.2, 2.2]]) addPillar(-23 + dx, -23 + dz, 0.15, 3.3, M.labDark, 0.15);
+  steps([[-19.4, 1.2, -20.5], [-19.4, 2.3, -22.8]], M.labCrate, 1.4);
+  addBox(-27.5, 6.4, -23, 2.5, 0.4, 5, M.labMetal, true); // a high ledge off the climbing frame
+  const rope = put(new THREE.Mesh(boxGeo, M.labRope)); rope.scale.set(0.08, 4.5, 0.08); rope.position.set(-14, CEIL - 2.25, -22);
+  const tire = put(new THREE.Mesh(geo(new THREE.TorusGeometry(0.8, 0.25, 6, 14)), M.labDark)); tire.position.set(-14, CEIL - 4.6, -22);
+  for (const [x, z, n] of [[-7, -26, 2], [-9, -27, 1], [-6.5, -23.5, 1]]) for (let i = 0; i < n; i++) addBox(x, 0.6 + i * 1.2, z, 1.4, 1.2, 1.4, M.labCrate, true);
+  for (let i = 0; i < 10; i++) { const bn = put(new THREE.Mesh(boxGeo, M.labBanana)); bn.scale.set(0.5, 0.12, 0.14); bn.position.set(-11 + srnd() * 2.5, 0.08 + srnd() * 0.1, -28 + srnd() * 2); bn.rotation.set(0, srnd() * 3, 0.3); }
+  for (let i = 0; i < 6; i++) { const h = put(new THREE.Mesh(ballGeo, M.labHay)); h.scale.set(1.2, 0.35, 1); h.position.set(-27 + srnd() * 3, 0.2, -10 + srnd() * 3); }
+  addJumpWalls(-27, -14, false, 7);
+
+  // ===== the Goo Lab (north-east): vats of goo, a specimen tube, sludge spills and slippery slime
+  for (const [x, z, r, h] of [[22, -22, 1.8, 3], [27, -13, 1.4, 2.4], [16, -25, 1.3, 2.2]]) {
+    addBox(x, h / 2, z, r * 1.7, h, r * 1.7, M.labMetal, true, true);
+    const vat = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(r, r, h, 12))), M.labGlass)); vat.position.set(x, h / 2, z);
+    const goo = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(r * 0.95, r * 0.95, h * 0.75, 12))), M.labGoo)); goo.position.set(x, h * 0.375, z);
+    const rim = put(new THREE.Mesh(geo(new THREE.TorusGeometry(r, 0.12, 6, 16)), M.labMetal)); rim.rotation.x = Math.PI / 2; rim.position.set(x, h, z);
+  }
+  { // the specimen tube with a giant tadpole floating in it
+    const x = 8, z = -26;
+    addBox(x, 2.75, z, 2.4, 5.5, 2.4, M.labGlass, true, true);
+    const tube = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(1.3, 1.3, 5, 14))), M.labGlass)); tube.position.set(x, 2.75, z);
+    for (const y of [0.15, 5.4]) { const cap = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(1.45, 1.45, 0.4, 14))), M.labDark)); cap.position.set(x, y, z); }
+    const fluid = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(1.2, 1.2, 4.8, 14))), M.labTubeFluid)); fluid.position.set(x, 2.75, z);
+    const tp = new THREE.Group(); tp.position.set(x, 2.4, z); mapGroup.add(tp);
+    part(tp, ballGeo, cmat(0x3a4a3a), 0.55, 0.45, 0.6, 0, 0, 0);
+    for (const sx of [-1, 1]) part(tp, ballGeo, M.eye, 0.12, 0.12, 0.12, sx * 0.3, 0.2, -0.4);
+    const tail = new THREE.Group(); tail.position.set(0, 0, 0.5); tp.add(tail); part(tail, boxGeo, cmat(0x3a4a3a), 0.08, 0.35, 0.9, 0, 0, 0.4);
+    tp.userData.tail = tail; LAB.tadpole = tp;
+  }
+  for (const [x, z, w, d] of [[14, -27, 6, 4], [24, -9.5, 5, 3]]) plane(x - w / 2, x + w / 2, z - d / 2, z + d / 2, 0.03, M.labSludge); // matches MAPS.lab.slow
+  for (const [x, z, w, d] of [[11, -12, 3, 2.4], [0, -16, 3.6, 2.6], [20, -17, 2.4, 3]]) { const s = addBox(x, 0.025, z, w, 0.05, d, M.labSlime); s.ice = true; }
+  for (const x of [12, 20]) { // lab benches you can hide under
+    addBox(x, 1.35, -6.5, 5, 0.2, 1.6, M.labBench, true);
+    for (const [dx, dz] of [[-2.3, -0.6], [2.3, -0.6], [-2.3, 0.6], [2.3, 0.6]]) { const lg = put(new THREE.Mesh(boxGeo, M.labDark)); lg.scale.set(0.1, 1.25, 0.1); lg.position.set(x + dx, 0.62, -6.5 + dz); }
+    for (let i = 0; i < 3; i++) { const f = put(new THREE.Mesh(ballGeo, i % 2 ? M.labGoo : M.labGlass)); f.scale.set(0.18, 0.25, 0.18); f.position.set(x - 1.5 + i * 1.4, 1.7, -6.5); }
+  }
+  for (const z of [-28, -19]) { const pipe = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(0.3, 0.3, 26, 8))), M.labPipe)); pipe.rotation.z = Math.PI / 2; pipe.position.set(16.5, 7.8, z); }
+
+  // ===== the Robot Workshop (south-west): tall shelves, a conveyor belt and the Statue Bot's charger
+  for (const x of [-25, -20]) {
+    addBox(x, 2, 11, 1.2, 4, 7, M.labShelf, true);
+    for (let i = 0; i < 6; i++) { const c = put(new THREE.Mesh(boxGeo, i % 2 ? M.labCrate : M.labMetal)); c.scale.set(1.3, 0.6, 0.9); c.position.set(x, 4.3, 8.4 + i * 1.05); }
+  }
+  const BELT = { x0: -28, x1: -9, z: 24.5, y: 0.6, gap: 2.1 };
+  addBox((BELT.x0 + BELT.x1) / 2, BELT.y / 2, BELT.z, BELT.x1 - BELT.x0, BELT.y, 2, M.labBelt, true);
+  BELT.stripes = [];
+  for (let i = 0; i < 9; i++) { const s = put(new THREE.Mesh(boxGeo, M.labHazard)); s.scale.set(0.25, 0.03, 1.9); s.position.set(BELT.x0 + 1 + i * BELT.gap, BELT.y + 0.02, BELT.z); s.userData.dyn = true; BELT.stripes.push(s); }
+  LAB.belt = BELT;
+  for (let i = 0; i < 3; i++) addBox(-10 + i * 0.2, 0.5 + i * 1, 28.5, 1.5, 1, 1.5, M.labCrate, true);
+  const charger = put(new THREE.Mesh(boxGeo, M.labHazard)); charger.scale.set(2.4, 0.05, 2.4); charger.position.set(-12, 0.03, 8);
+  addBox(-14, 1.2, 6, 0.6, 2.4, 0.6, M.labDark, true);
+  for (const [x, z] of [[-26, 18], [-16, 18]]) { addBox(x, 0.9, z, 2.4, 0.2, 1.2, M.labBench, true); for (const dx of [-1, 1]) { const lg = put(new THREE.Mesh(boxGeo, M.labDark)); lg.scale.set(0.1, 0.8, 1); lg.position.set(x + dx, 0.4, z); } }
+
+  // ===== the Server Room (south-east): rows of blinking server racks to hide behind
+  for (const z of [11, 23]) for (const x of [10, 14, 18, 22, 26]) {
+    addBox(x, 1.6, z, 1.2, 3.2, 8, M.labRack, true);
+    for (let i = 0; i < 6; i++) for (const sx of [-1, 1]) {
+      const mat = i % 3 === 0 ? M.labLedA : i % 3 === 1 ? M.labLedB : M.labLedC;
+      const l = put(new THREE.Mesh(boxGeo, mat)); l.scale.set(0.04, 0.08, 0.3); l.position.set(x + sx * 0.62, 0.6 + (i % 3) * 0.9, z - 3 + i * 1.2);
+    }
+  }
+  addBox(8, 0.3, 27, 2.2, 0.6, 2.2, M.labDark, true); // the drone's dock
+
+  // ===== hazards
+  for (const [x, z] of [[-17, 0], [0, -22], [-10, -20], [25, -8], [16, 17], [24, 5], [-15, 21]]) {
+    const plate = put(new THREE.Mesh(boxGeo, M.labHazard)); plate.scale.set(1.6, 0.05, 1.6); plate.position.set(x, 0.03, z);
+    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xfff6c8, emissiveIntensity: 0.5 });
+    const bulb = put(new THREE.Mesh(ballGeo, mat)); bulb.scale.set(0.3, 0.12, 0.3); bulb.position.set(x, 0.08, z); bulb.userData.dyn = true;
+    LAB.traps.push({ x, z, mat, cd: 0 });
+  }
+  const laser = (x, z, alongX, len, ph) => {
+    const mat = new THREE.MeshLambertMaterial({ color: 0xff2a2a, emissive: 0xff0000, transparent: true, opacity: 0.85, depthWrite: false });
+    const g = new THREE.Group(); mapGroup.add(g);
+    for (const y of [0.4, 1.1, 1.8, 2.6, 3.4, 4.2]) { const b = new THREE.Mesh(boxGeo, mat); b.scale.set(alongX ? len * 2 : 0.06, 0.06, alongX ? 0.06 : len * 2); b.position.set(x, y, z); g.add(b); }
+    for (const s of [-1, 1]) { const post = put(new THREE.Mesh(boxGeo, M.labDark)); post.scale.set(alongX ? 0.3 : 0.4, 4.6, alongX ? 0.4 : 0.3); post.position.set(x + (alongX ? s * len : 0), 2.3, z + (alongX ? 0 : s * len)); }
+    LAB.lasers.push({ x, z, alongX, len, ph, mat, g });
+  };
+  laser(12, 0, false, 3, 0); laser(0, 14, true, 3, 2); laser(-3, 11, false, 2, 4); laser(0, -9, true, 3, 1);
+  for (const [x, z, ph] of [[-12, -12, 0], [26, 0, 1.5], [-27, 7, 3], [27, -26, 2.2], [9, 17, 0.7]]) {
+    const grate = put(new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(1.1, 1.1, 0.06, 12))), M.labDark)); grate.position.set(x, 0.03, z);
+    for (const d of [-0.5, 0, 0.5]) { const bar = put(new THREE.Mesh(boxGeo, M.labMetal)); bar.scale.set(2, 0.04, 0.1); bar.position.set(x, 0.07, z + d); }
+    const steam = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.9, 1.1, 6, 12, 1, true)), M.labSteam); steam.position.set(x, 3, z); steam.visible = false; mapGroup.add(steam);
+    LAB.vents.push({ p: new V(x, 0, z), ph, steam, was: false });
+  }
+  { // the broken teleporter at the west end of the corridor
+    const p = new V(-27, 0, 0);
+    const ring = put(new THREE.Mesh(geo(new THREE.TorusGeometry(1, 0.1, 6, 24)), M.teleRing)); ring.rotation.x = Math.PI / 2; ring.position.set(p.x, 0.1, p.z);
+    const disc = put(new THREE.Mesh(geo(new THREE.CircleGeometry(0.95, 20)), M.teleGlow)); disc.rotation.x = -Math.PI / 2; disc.position.set(p.x, 0.05, p.z);
+    const beam = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.9, 0.9, 2.4, 16, 1, true)), M.teleGlow); beam.position.set(p.x, 1.2, p.z); mapGroup.add(beam);
+    const warn = put(new THREE.Mesh(boxGeo, M.labHazard)); warn.scale.set(0.15, 2.6, 2.6); warn.position.set(-29.9, 1.6, 0);
+    LAB.tele = { p, beam };
+    LAB.teleSpots = [[-24, -14], [24, -28], [-27, 12], [28.5, 23], [-14, 28], [16, -14], [-8, 14], [20, 8]];
+  }
+  // the four monsters, each in its own room
+  LAB.mons = [
+    labMon('ape', [[-9, -9], [-17, -9], [-17, -17], [-9, -17], [-13, -24]]),
+    labMon('blob', [[9, -12], [17, -12], [17, -18], [10, -19]]),
+    labMon('bot', [[-12, 8], [-12, 17], [-7, 17], [-7, 8]]),
+    labMon('drone', [[7, 6], [28, 6], [28, 17], [7, 17], [7, 28], [28, 28]], 4.2),
+  ];
+  mapAnims.push(labFrame);
 }
 
 // ---------- the Mega Map: forest in the middle, city to the east, snowy peaks to the north, caves underneath ----------
@@ -2256,6 +2748,12 @@ const MAPS = {
       });
     },
   },
+  lab: {
+    label: 'The Laboratory', sky: 0x1b2730, fog: [10, 48], hemi: [0xe8f8ff, 0x3a4a52, 1.0], sun: 0.25,
+    spawn: [0, 25], ring: [0, 24.5, 2.6], indoor: true, slow: [[11, 17, -29, -25], [21.5, 26.5, -11, -8]], // sludge spills in the Goo Lab
+    idle: ["Shh! Something's in here with us.", "Did you hear that ape?", "Don't step on the flash plates!", "The Safe Room is the green one!", "Ew, I stepped in goo!", "Don't look away from the robot!", "That tadpole in the tube just blinked at me."],
+    build() { labBuild(); },
+  },
   stump: {
     label: 'The Stump', sky: 0xf0b98a, fog: [18, 70], hemi: [0xffe8cc, 0x3d5a24, 0.9], sun: 0.65, fx: 'fireflies',
     spawn: [0, 16], ring: [0, 0, 15],
@@ -2570,7 +3068,7 @@ function buildMap(key) {
   ownGeos.forEach(g => g.dispose()); ownGeos = [];
   boxes.length = trees.length = blobs.length = ledges.length = 0; water = null;
   for (const h of hogs) { stopHogVoice(h); for (const b of h.seats) if (b) { b.hog = null; b.seat = -1; } }
-  hogs = []; teleports = []; if (typeof hideMyFrog === 'function') hideMyFrog();
+  hogs = []; teleports = []; labClearAll(); if (typeof hideMyFrog === 'function') hideMyFrog();
   HALF = mp.half || 30; groundAt = mp.ground || flatGround;
   camera.far = mp.far || 140; camera.updateProjectionMatrix();
   seed = 11;
@@ -3330,6 +3828,7 @@ const SONGS = {
   toys:    { bpm: 126, root: 67, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 3, 4, 0], seed: 151 },
   icecastle: { bpm: 92, root: 64, scale: 'minor', lead: 'bell',   drums: 'soft',  prog: [0, 5, 3, 6], seed: 163, pad: true, echo: true },
   stump:   { bpm: 100, root: 62, scale: 'major', lead: 'flute',   drums: 'light', prog: [0, 3, 4, 0], seed: 199, pad: true },
+  lab:     { bpm: 78,  root: 57, scale: 'minor', lead: 'bell',    drums: 'soft',  prog: [0, 5, 3, 6], seed: 229, pad: true, echo: true },
   backrooms: { bpm: 72, root: 58, scale: 'lydian', lead: 'bell',  drums: 'soft',  prog: [0, 1, 0, 5], seed: 167, pad: true, echo: true },
   mega:    { bpm: 108, root: 62, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 4, 5, 3], seed: 211, echo: true },
   gulch:   { bpm: 84,  root: 57, scale: 'minor', lead: 'flute',   drums: 'heavy', prog: [0, 5, 3, 4], seed: 223, pad: true, echo: true },
@@ -3643,6 +4142,12 @@ function aiThink(ai, dt) {
       if (Math.abs(ai.pos.z) > HALF - 6) dir.z -= Math.sign(ai.pos.z) * 0.8;
       speed = 6.1 * sp; jumpV = ai.nearWall ? 8 : 4 + Math.random() * 2.5;
     }
+  }
+  const lm = state === 'play' && !ai.out && labThreat(ai);
+  if (lm) { // a lab monster is after us: run!
+    dir.set(ai.pos.x - lm.pos.x, 0, ai.pos.z - lm.pos.z).normalize();
+    dir.x += (Math.random() - 0.5) * 0.8; dir.z += (Math.random() - 0.5) * 0.8;
+    speed = 6.3 * sp; jumpV = ai.nearWall ? 8 : 4.5; quick = false;
   }
   aiHogThink(ai, 0.3);
   if (ai.hog) return;
@@ -3991,7 +4496,7 @@ for (const a of ALL_AIS) {
 // what frogs call each map when they talk about where they are
 const PLACE = { forest: 'forest', caves: 'cave', canyon: 'canyon', beach: 'beach', snow: 'mountain', volcano: 'volcano', sky: 'sky', moon: 'moon',
   candy: 'candy land', spooky: 'spooky woods', city: 'city', pond: 'pond', swamp: 'swamp', garden: 'garden', canopy: 'rainforest', cove: 'cove',
-  reef: 'reef', toys: 'toy room', icecastle: 'castle', stump: 'stump', backrooms: 'maze', mega: 'mega map', gulch: 'gulch', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
+  reef: 'reef', toys: 'toy room', icecastle: 'castle', stump: 'stump', backrooms: 'maze', lab: 'lab', mega: 'mega map', gulch: 'gulch', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
   rainbow: 'meadow', eggs: 'meadow', fireworks: 'lake' };
 function fill(text, ai, extra) {
   extra = extra || {};
@@ -4467,7 +4972,7 @@ function snapshot() {
   for (const b of bodies) it[b === player ? myId : b.id] = [b.it ? 1 : 0, r2(Math.min(b.frozen, 99)), r2(b.immune), b.iced ? 1 : 0, b.out ? 1 : 0, b.feastScore || 0, r2(b.kingScore || 0), r2(b.score || 0), r2(b.size || 1), b.hits || 0, b.tags || 0, b.tagged || 0];
   return { n: ais.length, m: mapKey, mo: mode, st: state, rt: r2(roundTime), ot: r2(overT), d: diff,
     ai: ais.map(a => [a.pos.x, a.pos.y, a.pos.z, a.vel.x, a.vel.y, a.vel.z].map(r2)), it, c: mode === 'ctf' ? ctfSnapshot() : null,
-    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, hg: hogs.length ? hogs.map(h => [h.pos.x, h.pos.y, h.pos.z, h.yaw, h.speed, h.steer].map(r2).concat([h.air ? 1 : 0])) : undefined, ah: hogs.length ? ais.map(a => a.hog ? [a.hog.idx, a.seat] : 0) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined };
+    pf: mode === 'potato' ? r2(potato.fuse) : undefined, ms: MODE2[mode] && MODE2[mode].snap ? MODE2[mode].snap() : undefined, kp: mode === 'king' ? [r2(kingPad.pos.x), r2(kingPad.pos.y), r2(kingPad.pos.z)] : undefined, hg: hogs.length ? hogs.map(h => [h.pos.x, h.pos.y, h.pos.z, h.yaw, h.speed, h.steer].map(r2).concat([h.air ? 1 : 0])) : undefined, ah: hogs.length ? ais.map(a => a.hog ? [a.hog.idx, a.seat] : 0) : undefined, fe: mode === 'feast' ? [feast.seed, feast.flies.map(f => f.active ? 1 : 0).join('')] : undefined, lb: LAB.mons.length ? labSnap() : undefined };
 }
 let joinWait = false;
 function applySnapshot(s, from) {
@@ -4482,6 +4987,7 @@ function applySnapshot(s, from) {
   }
   if (s.m !== mapKey) { buildMap(s.m); spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], player.pos); chooseSong(); }
   if (s.n !== ais.length) setAiCount(s.n);
+  if (Array.isArray(s.lb)) labApply(s.lb);
   mode = s.mo; diff = s.d; roundTime = s.rt; overT = s.ot;
   if (state !== 'menu') state = s.st === 'menu' ? 'play' : s.st;
   s.ai.forEach((p, i) => {
@@ -4821,6 +5327,7 @@ const MAP_INFO = {
   mega: 'One giant world! Forest in the middle, a city to the east, snowy peaks to the north and caves underneath, joined by tunnels, a subway, bridges and a skybridge. Toadhogs to drive!',
   gulch: 'A long grassy canyon with a base at each end. Drive the Toadhogs, take the teleporters up to the cliff perches, and squeeze through the rock arch.',
   stump: 'A giant hollow tree stump to hang out in. Climb the mushroom shelves inside, run along the rim and hop down the roots.',
+  lab: 'A secret lab with four monsters loose! They chase you if they see you, so hide until they give up. Watch out for flash plates, laser fences, goo and the broken teleporter. Monsters never go in the green Safe Room.',
   backrooms: 'Endless yellow rooms, soggy carpet and humming lights. Climb the walls and swing from the ceiling!',
   manor: 'A haunted mansion with two floors, flickering candles, floating ghosts and a hedge maze. Boo!',
   farm: 'A red barn with a hayloft, a tractor, a corn maze, a scarecrow and a pumpkin patch.',
