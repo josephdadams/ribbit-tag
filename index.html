@@ -214,8 +214,10 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .fr-hello span { flex: 1; min-width: 0; }
 .fr-hello .pill-btn { background: var(--ink); }
 .fr-add { margin-top: 10px; display: grid; gap: 8px; }
-.fr-mine { font-size: .9rem; }
-.fr-mine b { font-family: var(--display); font-weight: 400; font-size: 1.35rem; letter-spacing: .08em; color: var(--leaf); margin-left: 4px; }
+.me { margin: 0 0 4px; }
+.me .row { margin-top: 0; }
+.fr-mine { margin: 8px 0 0; font-size: .9rem; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.fr-mine b { font-family: var(--display); font-weight: 400; font-size: 1.35rem; letter-spacing: .08em; color: var(--leaf); }
 .fr-add .row { margin-top: 0; }
 .more-btn { width: 100%; margin-top: 10px; font: inherit; font-weight: 800; border: 2px dashed var(--leaf); background: transparent; color: var(--bone); border-radius: 14px; padding: 9px 14px; cursor: pointer; }
 .more-btn[aria-expanded="true"] { border-style: solid; }
@@ -360,6 +362,13 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       <h1>Ribbit <span>Tag</span></h1>
       <p class="online"><span class="dot"></span><b id="onlineNow">Checking who is online…</b> <span id="onlineWhere"></span></p>
       <p class="tagline">Sticky frog hands, no hopping allowed. Push off the ground, fling through the jungle, and stay away from the lava frog.</p>
+      <div class="me">
+        <div class="row">
+          <label class="label" for="nameIn">Your name</label>
+          <input class="name-in" id="nameIn" type="text" maxlength="16" placeholder="So frogs know you">
+        </div>
+        <p class="fr-mine">Your friend code:<b id="frMine"></b><button class="pill-btn" id="frCopy" type="button">Copy</button></p>
+      </div>
       <div class="row">
         <label class="label" for="roomIn">Room code</label>
         <input class="name-in" id="roomIn" type="text" maxlength="12" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Empty = solo" autocapitalize="characters">
@@ -373,7 +382,6 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <p class="fr-hello" id="frHello" role="status" hidden><span id="frHelloTxt"></span><button class="pill-btn" id="frHelloOk" type="button">OK</button></p>
         <ul class="fr-list" id="frList"></ul>
         <div class="fr-add" id="frAdd" hidden>
-          <p class="fr-mine">Your friend code:<b id="frMine"></b></p>
           <div class="row">
             <label class="label" for="frIn">Friend's code</label>
             <input class="name-in" id="frIn" type="text" maxlength="9" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="characters" placeholder="KP7-QX2">
@@ -437,6 +445,8 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       <button class="wardrobe-btn quests-btn" id="questsBtn" type="button"><span>Daily quests</span><span class="wb-count" id="questCount">0/3</span></button>
       <button class="wardrobe-btn" id="wardrobeBtn" type="button"><span>Wardrobe</span><span class="wb-count"><svg class="ban" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="7.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(-25 7.5 9)"/><ellipse cx="16.5" cy="9" rx="5" ry="3" fill="#e8f4ff" stroke="#6a7a8a" stroke-width="1" transform="rotate(25 16.5 9)"/><ellipse cx="12" cy="14" rx="3.6" ry="5.4" fill="#1b1b22"/><circle cx="10.6" cy="9.6" r="1.3" fill="#d62828"/><circle cx="13.4" cy="9.6" r="1.3" fill="#d62828"/></svg><span id="menuFlies">0</span></span></button>
       <button class="wardrobe-btn" id="frogsBtn" type="button"><span>Meet the frogs</span><span class="wb-count">9</span></button>
+      <button class="more-btn" id="optsBtn" type="button" aria-expanded="false" aria-controls="opts">Other options</button>
+      <div id="opts" hidden>
       <div class="row">
         <span class="label">Frog speed</span>
         <div class="seg" id="diff">
@@ -452,10 +462,6 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
           <button type="button" data-n="6" aria-pressed="true" id="c6">6</button>
           <button type="button" data-n="9" aria-pressed="false" id="c9">9</button>
         </div>
-      </div>
-      <div class="row">
-        <label class="label" for="nameIn">Your name</label>
-        <input class="name-in" id="nameIn" type="text" maxlength="16" placeholder="So frogs know you">
       </div>
       <div class="row">
         <span class="label">Music</span>
@@ -495,6 +501,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         </div>
       </div>
       <p class="note" id="gfxNote" hidden>Reload the page to switch smooth edges on or off.</p>
+      </div>
       <div class="best" id="best"></div>
       <p class="note" id="donate" hidden>Like Ribbit Tag? It's free, with no ads. Grown-ups can <a id="donateLink" target="_blank" rel="noopener">chip in on Ko-fi</a> to help us keep making it.</p>
     </div>
@@ -4934,6 +4941,7 @@ $('modeFeast').addEventListener('click', () => begin('feast', 0, 'host'));
 $('modeFree').addEventListener('click', () => begin('free', 0, 'host'));
 $('modeKing').addEventListener('click', () => begin('king', 0, 'host'));
 document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode, 0, 'host')));
+$('optsBtn').addEventListener('click', () => { const open = $('opts').hidden; $('opts').hidden = !open; $('optsBtn').setAttribute('aria-expanded', String(open)); $('optsBtn').textContent = open ? 'Fewer options' : 'Other options'; });
 $('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (16)'; });
 $('menuBtn').addEventListener('click', () => {
   if (player.hog) exitHog();
@@ -7292,6 +7300,17 @@ async function addFriend() {
   renderOnline();
 }
 $('frMine').textContent = showCode(myFriendCode);
+$('frCopy').addEventListener('click', async () => {
+  const b = $('frCopy'), code = showCode(myFriendCode);
+  try { await navigator.clipboard.writeText(code); b.textContent = 'Copied!'; }
+  catch { // clipboard blocked: select the code and try the old copy command, or leave it selected to copy by hand
+    const r = document.createRange(); r.selectNodeContents($('frMine')); getSelection().removeAllRanges(); getSelection().addRange(r);
+    let ok = false; try { ok = document.execCommand('copy'); } catch {}
+    if (ok) getSelection().removeAllRanges();
+    b.textContent = ok ? 'Copied!' : 'Press and hold to copy';
+  }
+  clearTimeout(b.t); b.t = setTimeout(() => { b.textContent = 'Copy'; }, 2000);
+});
 $('frAddBtn').addEventListener('click', () => {
   const open = $('frAdd').hidden; $('frAdd').hidden = !open;
   $('frAddBtn').setAttribute('aria-expanded', String(open)); $('frAddBtn').textContent = open ? 'Done' : 'Add a friend';
