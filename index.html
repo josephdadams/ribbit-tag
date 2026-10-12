@@ -877,10 +877,18 @@ function hogGround(h, x, z) { // the highest thing under the hog that's low enou
   }
   return y;
 }
-function hogSlide(h, nx, nz) { // lose the speed going into a wall, keep the part that slides along it
-  const fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw), vx = fx * h.speed, vz = fz * h.speed, vn = vx * nx + vz * nz;
+function hogSlide(h, nx, nz) { // scrape along a wall (turning to follow it), or bounce off if it's head-on
+  const fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw), vn = (fx * nx + fz * nz) * h.speed;
   if (vn >= 0) return 0;
-  h.speed = (vx - nx * vn * 1.25) * fx + (vz - nz * vn * 1.25) * fz;
+  const dir = Math.sign(h.speed), dx = fx * dir, dz = fz * dir, into = -(dx * nx + dz * nz); // 1 = straight at it
+  if (into < 0.8) { // glancing: swing the hog to run along the wall and keep most of the speed
+    const tx = dx + nx * into, tz = dz + nz * into, tl = Math.hypot(tx, tz) || 1;
+    h.yaw = lerpAngle(h.yaw, Math.atan2(-tx / tl * dir, -tz / tl * dir), 0.5);
+    h.speed *= 1 - 0.35 * into * into;
+  } else { // head-on: boing back with a little hop
+    h.speed = -h.speed * 0.35;
+    if (-vn > 8 && !h.air) { h.vy = Math.min(5, -vn * 0.3); h.air = true; }
+  }
   return -vn;
 }
 function hogWalls(h) {
