@@ -70,7 +70,7 @@ Turn on **Look around** in the menu settings and the tablet becomes your frog's 
 
 ### Hand camera
 
-Turn on **Hand camera** in the menu settings and the front camera watches your real hands. Prop the tablet up so it can see both of them. Each hand works like a thumb on that side of the screen:
+Turn on **Hand camera** in the menu settings and the camera watches your real hands. Pick **Front** or **Back** under **Which camera**, then point that camera so it can see both hands. Each hand works like a thumb on that side of the screen:
 
 - **Push your hand down** to shove off and launch forward. Faster pushes make bigger leaps.
 - **Move your hand sideways** to turn.

@@ -530,6 +530,13 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
           <button type="button" data-c="0" aria-pressed="true">Off</button>
         </div>
       </div>
+      <div class="row">
+        <span class="label">Which camera</span>
+        <div class="seg" id="camFaceSeg">
+          <button type="button" data-f="user" aria-pressed="true">Front</button>
+          <button type="button" data-f="environment" aria-pressed="false">Back</button>
+        </div>
+      </div>
       <p class="note" id="camNote" hidden></p>
       <div class="row">
         <span class="label">Graphics</span>
@@ -5267,27 +5274,62 @@ function tiltUpdate(dt, steer) {
 }
 
 // ---------- Hand camera ----------
-// The front camera watches your real hands (MediaPipe, running on the tablet; no video leaves it).
+// A camera (front or back) watches your real hands (MediaPipe, running on the tablet; no video leaves it).
 // Each hand acts like a thumb on that side of the screen: move it down to push, sideways to turn, make a fist to hang on.
 const CAM_LIB = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const CAM_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-let camOn = false, camGrip = false, camStream = null, camVideo = null, camMarker = null, camLoading = null, camLastT = -1, camNextT = 0, camGap = 70;
+const CAM_OPTS = { runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 };
+let camOn = false, camFacing = 'user', camGrip = false, camStream = null, camVideo = null, camMarker = null, camLoading = null, camLastT = -1, camNextT = 0, camGap = 70;
+let camWorker = null, camBusy = 0, camRes = null;
 const camSides = [null, null]; // per side: { p: its entry in pointers, x, y, seen, fist }
-try { camOn = localStorage.getItem('ribbit-cam') === '1'; } catch (e) {}
+try { camOn = localStorage.getItem('ribbit-cam') === '1'; camFacing = localStorage.getItem('ribbit-camfacing') === 'environment' ? 'environment' : 'user'; } catch (e) {}
+// The tracker runs in a background worker so looking for hands never freezes the game.
+// (jsDelivr serves the plain-script build with a type workers refuse to load directly, so fetch it and run it.)
+const CAM_WORKER = `let m;
+onmessage = async e => {
+  const d = e.data;
+  if (d.init) {
+    try {
+      const mod = { exports: {} };
+      new Function('exports', 'module', await (await fetch(d.lib + '/vision_bundle.cjs')).text())(mod.exports, mod);
+      const v = mod.exports, files = await v.FilesetResolver.forVisionTasks(d.lib + '/wasm');
+      const make = delegate => v.HandLandmarker.createFromOptions(files, Object.assign({ baseOptions: { modelAssetPath: d.model, delegate } }, d.opts));
+      try { m = await make('GPU'); } catch (err) { m = await make('CPU'); }
+      postMessage({ ready: true });
+    } catch (err) { postMessage({ fail: String(err) }); }
+    return;
+  }
+  let lm = [];
+  try { lm = m.detectForVideo(d.bmp, d.t).landmarks; } catch (err) {}
+  d.bmp.close();
+  postMessage({ lm });
+};`;
+function camLoadWorker() {
+  return new Promise((ok, no) => {
+    let w;
+    try { w = new Worker(URL.createObjectURL(new Blob([CAM_WORKER], { type: 'text/javascript' }))); } catch (e) { no(e); return; }
+    w.onerror = e => { w.terminate(); no(e); };
+    w.onmessage = e => {
+      if (e.data.fail) { w.terminate(); no(e.data.fail); return; }
+      w.onmessage = e => { camBusy = 0; camRes = e.data.lm; };
+      ok(w);
+    };
+    w.postMessage({ init: true, lib: CAM_LIB, model: CAM_MODEL, opts: CAM_OPTS });
+  });
+}
 const camHandCount = () => (camSides[0] ? 1 : 0) + (camSides[1] ? 1 : 0);
 function camSay(text) { const n = $('camNote'); n.hidden = !text; n.textContent = text || ''; }
 async function camLoadMarker() {
   const v = await import(CAM_LIB + '/vision_bundle.mjs');
   const files = await v.FilesetResolver.forVisionTasks(CAM_LIB + '/wasm');
-  const make = delegate => v.HandLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: CAM_MODEL, delegate }, runningMode: 'VIDEO', numHands: 2,
-    minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+  const make = delegate => v.HandLandmarker.createFromOptions(files, Object.assign({ baseOptions: { modelAssetPath: CAM_MODEL, delegate } }, CAM_OPTS));
   try { return await make('GPU'); } catch (e) { return make('CPU'); } // older tablets can't do it on the graphics chip
 }
 async function camStart() {
   camSay('Starting the camera...');
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nocam');
-    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } }, audio: false });
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 320 }, height: { ideal: 240 } }, audio: false });
   } catch (e) {
     setCam(false);
     camSay(e && e.name === 'NotAllowedError' ? 'The tablet said no to the camera. Try tapping On again and pick Allow.' : "Couldn't find a camera to use.");
@@ -5298,15 +5340,28 @@ async function camStart() {
   camVideo.srcObject = camStream;
   try { await camVideo.play(); } catch (e) {}
   camSay('Loading the hand tracker...');
-  try { camMarker = camMarker || await (camLoading = camLoading || camLoadMarker()); }
-  catch (e) { camLoading = null; setCam(false); camSay("The hand tracker didn't load. Check the internet and try again."); return; }
+  // background worker first; tablets that can't run it there look for hands between frames instead
+  try {
+    if (!camWorker && !camMarker) {
+      camLoading = camLoading || camLoadWorker().then(w => { camWorker = w; }, () => camLoadMarker().then(m => { camMarker = m; }));
+      await camLoading;
+    }
+  } catch (e) { camLoading = null; setCam(false); camSay("The hand tracker didn't load. Check the internet and try again."); return; }
   if (!camOn) return;
   $('hint').textContent = 'Push your hands down to go · move them sideways to turn · make a fist to grab';
-  camSay('Hold the tablet so the camera sees both hands. Push your hands down to go, move them sideways to turn, and make a fist to hang on.');
+  camSay((camFacing === 'user' ? 'Hold the tablet so the camera sees both hands.' : 'Point the back camera at your hands.') + ' Push your hands down to go, move them sideways to turn, and make a fist to hang on.');
 }
+function setCamFacing(f) {
+  camFacing = f;
+  document.querySelectorAll('#camFaceSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === f)));
+  try { localStorage.setItem('ribbit-camfacing', f); } catch (e) {}
+  if (camOn) setCam(true);
+}
+document.querySelectorAll('#camFaceSeg button').forEach(b => b.addEventListener('click', () => setCamFacing(b.dataset.f)));
+document.querySelectorAll('#camFaceSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === camFacing)));
 function camStop() {
   if (camStream) camStream.getTracks().forEach(tr => tr.stop());
-  camStream = null; camGrip = false; camLastT = -1;
+  camStream = null; camGrip = false; camLastT = -1; camRes = null;
   if (camVideo) camVideo.srcObject = null;
   for (let s = 0; s < 2; s++) camDrop(s);
   $('camView').hidden = true;
@@ -5332,22 +5387,34 @@ function camFist(l) {
 }
 function camUpdate() {
   const view = $('camView');
-  if (!camOn || !camMarker || !camVideo || camVideo.readyState < 2) { view.hidden = true; return; }
+  if (!camOn || !(camWorker || camMarker) || !camVideo || camVideo.readyState < 2 || !camStream) { view.hidden = true; return; }
   const now = performance.now();
   // the hud preview shows up in a game so you can see what the camera sees
   view.hidden = state === 'menu';
-  if (now < camNextT || camVideo.currentTime === camLastT) return;
-  camLastT = camVideo.currentTime;
-  let res;
-  try { res = camMarker.detectForVideo(camVideo, now); } catch (e) { return; }
-  // slow tablets: look less often so the game stays smooth
-  const cost = performance.now() - now;
-  camGap = clamp(camGap * 0.8 + cost * 2.5 * 0.2, 50, 160); camNextT = now + camGap;
-  // the camera sees you mirrored, so flip it: your right hand shows on the right
+  let lms;
+  if (camWorker) {
+    // hand the newest camera frame to the worker whenever it's free, and use its answer when one comes back
+    if (camBusy && now - camBusy > 2000) camBusy = 0; // a lost frame: don't wait forever
+    if (!camBusy && camVideo.currentTime !== camLastT) {
+      camLastT = camVideo.currentTime; camBusy = now;
+      createImageBitmap(camVideo).then(bmp => camWorker.postMessage({ bmp, t: now }, [bmp]), () => { camBusy = 0; });
+    }
+    if (!camRes) return;
+    lms = camRes; camRes = null;
+  } else {
+    if (now < camNextT || camVideo.currentTime === camLastT) return;
+    camLastT = camVideo.currentTime;
+    try { lms = camMarker.detectForVideo(camVideo, now).landmarks || []; } catch (e) { return; }
+    // slow tablets: look less often so the game stays smooth
+    const cost = performance.now() - now;
+    camGap = clamp(camGap * 0.8 + cost * 2.5 * 0.2, 50, 160); camNextT = now + camGap;
+  }
+  // the front camera sees you mirrored, so flip it: your right hand shows on the right
+  const mirror = camFacing === 'user', mx = x => mirror ? 1 - x : x;
   const found = [null, null];
-  for (const l of res.landmarks || []) {
+  for (const l of lms) {
     let x = 0, y = 0;
-    for (const i of [0, 5, 9, 13, 17]) { x += 1 - l[i].x; y += l[i].y; }
+    for (const i of [0, 5, 9, 13, 17]) { x += mx(l[i].x); y += l[i].y; }
     x /= 5; y /= 5;
     let side = x < 0.5 ? 0 : 1;
     if (found[side]) side = 1 - side; // two hands crossed over: give the other side one
@@ -5379,14 +5446,14 @@ function camUpdate() {
     handMove(c.p, x, y);
   }
   camGrip = grip && state !== 'menu';
-  if (!view.hidden) camDraw(view, res);
+  if (!view.hidden) camDraw(view, lms, mx);
 }
-function camDraw(view, res) {
+function camDraw(view, lms, mx) {
   const g = view.getContext('2d'), w = view.width, h = view.height;
-  g.save(); g.translate(w, 0); g.scale(-1, 1); g.drawImage(camVideo, 0, 0, w, h); g.restore();
-  for (const l of res.landmarks || []) {
+  g.save(); if (camFacing === 'user') { g.translate(w, 0); g.scale(-1, 1); } g.drawImage(camVideo, 0, 0, w, h); g.restore();
+  for (const l of lms) {
     g.fillStyle = camFist(l) ? '#ffd23f' : '#7ddc5a';
-    for (const pt of l) { g.beginPath(); g.arc((1 - pt.x) * w, pt.y * h, 2.2, 0, 7); g.fill(); }
+    for (const pt of l) { g.beginPath(); g.arc(mx(pt.x) * w, pt.y * h, 2.2, 0, 7); g.fill(); }
   }
   g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(w / 2 - 0.5, 0, 1, h);
 }
