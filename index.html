@@ -107,7 +107,7 @@ h1 span { color: var(--lava); display: block; }
 #hogBtn { position: absolute; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: var(--leaf); color: var(--ink); font-size: 1.3rem; padding: 12px 22px; touch-action: manipulation; }
 #gadgetBtn { position: absolute; right: 16px; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.3rem; padding: 14px 22px; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 0 4px 0 #b8941a; }
 #itemBtn { position: absolute; left: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.4rem; padding: 14px 24px; touch-action: manipulation; box-shadow: 0 4px 0 #b8941a; }
-#camView { position: absolute; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: 120px; height: 90px; border-radius: 12px; border: 2px solid rgba(10,26,16,.72); opacity: .85; }
+#camView { position: absolute; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(240px, 38vw); height: auto; aspect-ratio: 4 / 3; border-radius: 14px; border: 2px solid rgba(10,26,16,.72); opacity: .85; }
 #radar { position: absolute; top: calc(58px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
 #radar .arrow { width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 18px solid currentColor; display: inline-block; }
 #radar.chase { color: var(--lava); }
@@ -338,7 +338,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   <button id="hogBtn" class="chip" type="button" hidden>Drive</button>
   <button id="itemBtn" class="chip" type="button" hidden></button>
   <button id="gadgetBtn" class="chip" type="button" hidden></button>
-  <canvas id="camView" width="160" height="120" hidden></canvas>
+  <canvas id="camView" width="320" height="240" hidden></canvas>
   <div id="bubbles"></div>
   <div id="scores" hidden>
     <div class="pl-head"><h2 id="scTitle">Scores</h2><span class="spacer"></span><button id="scClose" class="pill-btn" type="button">Close</button></div>
@@ -5453,9 +5453,9 @@ function camDraw(view, lms, mx) {
   g.save(); if (camFacing === 'user') { g.translate(w, 0); g.scale(-1, 1); } g.drawImage(camVideo, 0, 0, w, h); g.restore();
   for (const l of lms) {
     g.fillStyle = camFist(l) ? '#ffd23f' : '#7ddc5a';
-    for (const pt of l) { g.beginPath(); g.arc(mx(pt.x) * w, pt.y * h, 2.2, 0, 7); g.fill(); }
+    for (const pt of l) { g.beginPath(); g.arc(mx(pt.x) * w, pt.y * h, 3.5, 0, 7); g.fill(); }
   }
-  g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(w / 2 - 0.5, 0, 1, h);
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(w / 2 - 1, 0, 2, h);
 }
 const bv = new V();
 function updateTalk(dt) {
