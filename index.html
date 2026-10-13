@@ -115,6 +115,19 @@ h1 span { color: var(--lava); display: block; }
 #flash { position: absolute; left: 0; right: 0; top: 34%; text-align: center; padding: 0 16px; font-family: var(--display); font-size: clamp(2rem, 7vw, 3.6rem);
   line-height: 1; text-shadow: 0 4px 0 rgba(0,0,0,.35); opacity: 0; transform: scale(.8); transition: opacity .2s, transform .2s; }
 #flash.show { opacity: 1; transform: scale(1); }
+#podium { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100% - 32px)); max-height: calc(100% - 120px); overflow-y: auto;
+  background: rgba(10,26,16,.88); border: 3px solid #ffd23f; border-radius: 20px; padding: 16px; text-align: center; }
+#podium h2 { font-family: var(--display); font-weight: 400; font-size: clamp(1.5rem, 5vw, 2.2rem); line-height: 1.05; margin: 0; color: #ffd23f; }
+#podium > small { display: block; font-weight: 800; margin-top: 4px; opacity: .85; }
+.pod-steps { display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 8px; margin-top: 14px; }
+.pod-step { display: grid; gap: 4px; justify-items: center; font-weight: 800; min-width: 0; }
+.pod-step b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; }
+.pod-step i { display: grid; place-items: center; width: 100%; border-radius: 12px 12px 4px 4px; font-style: normal; font-family: var(--display); font-size: 1.6rem; color: var(--ink); }
+.pod-step.p1 i { height: 96px; background: #ffd23f; } .pod-step.p2 i { height: 70px; background: #d6dde2; } .pod-step.p3 i { height: 52px; background: #d8955a; }
+.pod-step.me b { color: #ffd23f; }
+.pod-rest { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; text-align: left; }
+.pod-rest li { display: flex; gap: 10px; background: var(--canopy); border-radius: 10px; padding: 6px 12px; font-weight: 800; }
+.pod-rest li span { width: 2.6em; opacity: .75; } .pod-rest li.me { box-shadow: inset 0 0 0 2px #ffd23f; }
 #flash small { display: block; font-family: var(--body); font-weight: 800; font-size: 1.05rem; margin-top: 10px; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
 #vignette { position: absolute; top: 0; right: 0; bottom: 0; left: 0; box-shadow: inset 0 0 0 0 rgba(255,106,43,0); transition: box-shadow .3s; }
 #hud.lava #vignette { box-shadow: inset 0 0 120px 36px rgba(255,106,43,.55); }
@@ -349,6 +362,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   </div>
   <div id="radar" hidden><i class="arrow"></i><span id="radarTxt"></span></div>
   <div id="flash"></div>
+  <div id="podium" hidden></div>
   <div id="hint">Put both thumbs down and swipe down to push off</div>
   <div id="talk" hidden>
     <div class="talk-head"><span>Talking to</span><span class="who" id="talkWho">Red</span><span class="spacer"></span>
@@ -1581,18 +1595,20 @@ function buildTrack() {
     track.haz.push({ i, x, z, y: p.y, r: 2, kind: 'boost' });
   }
   track.items = [];
-  for (let n = 0, rows = 0; n < 30 && rows < 3; n++) { // rows of ? boxes across the road, well apart
+  for (let n = 0, rows = 0; n < 30 && rows < 3; n++) { // rows of swamp bubbles across the road, well apart
     const i = spot(); if (i < 0 || track.items.some(b => cdist(b.i, i) < 45)) continue;
     rows++; const p = P[i];
     for (const o of [-3.6, -1.2, 1.2, 3.6]) {
-      const g = new THREE.Group(); put(g); part(g, boxGeo, itemBoxMat(), 1.1, 1.1, 1.1, 0, 0, 0);
+      const g = new THREE.Group(); put(g); part(g, ballGeo, M.bubble, 0.75, 0.75, 0.75, 0, 0, 0); part(g, ballGeo, M.bubbleShine, 0.16, 0.1, 0.16, -0.32, 0.4, 0.3);
+      const fly = part(g, ballGeo, M.goldFly, 0.17, 0.17, 0.17, 0, 0, 0); g.userData.fly = fly;
       const b = { i, x: p.x + p.nx * o, z: p.z + p.nz * o, y: p.y, g, hideT: 0, ph: o };
       g.position.set(b.x, p.y + 1.3, b.z); track.items.push(b);
     }
   }
   mapAnims.push((dt, t) => { for (const b of track ? track.items : []) {
     b.hideT = Math.max(0, b.hideT - dt); b.g.visible = b.hideT <= 0;
-    b.g.rotation.set(0.4, t * 1.5 + b.ph, 0.4); b.g.position.y = b.y + 1.3 + Math.sin(t * 2 + b.ph) * 0.15;
+    const w = 1 + Math.sin(t * 3 + b.ph) * 0.05; b.g.scale.set(w, 2 - w, w); b.g.position.y = b.y + 1.3 + Math.sin(t * 2 + b.ph) * 0.2; // a wobbly bubble
+    b.g.userData.fly.position.set(Math.sin(t * 5 + b.ph) * 0.3, Math.sin(t * 7 + b.ph) * 0.2, Math.cos(t * 4 + b.ph) * 0.3); // with a firefly buzzing inside
   } });
   for (let n = 0; n < st.sweepers; n++) { // blocks that slide back and forth across the road
     const i = spot(0, i => P[i].y < 0.1); if (i < 0) continue;
@@ -1608,23 +1624,14 @@ function buildTrack() {
   }
 }
 
-// ---- Toadhog Race items: drive through a ? box to get one, F / B / the item button to use it ----
+// ---- Toadhog Race items: drive through a swamp bubble to get one, F / B / the item button to use it ----
 // Each device works out hits on the hogs it drives (like bumps), and tells everyone else what it threw or dropped.
-const KART_ITEMS = { turbo: ['🔥', 'Turbo'], shell: ['🐢', 'Turtle Shell'], peel: ['🍌', 'Banana Peel'], star: ['⭐', 'Golden Fly'] };
-const kartObjs = []; let kartSeq = 0, itemBoxTex = null;
-Object.assign(M, { shellGreen: lam(0x3fae4a), shellRim: lam(0xf4f1de), peelYellow: lam(0xffe14d), peelTip: lam(0x5a3a1a), goldFly: fx(0xffd23f) });
-function itemBoxMat() {
-  if (!itemBoxTex) {
-    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 64, 64);
-    ['#ff5a5f', '#ffb02e', '#ffe14d', '#52d273', '#4dabff', '#9b5de5'].forEach((col, i) => g.addColorStop(i / 5, col));
-    x.fillStyle = g; x.fillRect(0, 0, 64, 64); x.strokeStyle = '#fff'; x.lineWidth = 5; x.strokeRect(3, 3, 58, 58);
-    x.fillStyle = '#fff'; x.font = 'bold 44px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('?', 32, 35);
-    itemBoxTex = new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(c), emissive: 0x444444, transparent: true, opacity: 0.88 });
-  }
-  return itemBoxTex;
-}
+const KART_ITEMS = { turbo: ['🔥', 'Turbo'], mud: ['🟤', 'Mud Ball'], eggs: ['🟢', 'Frog Eggs'], star: ['✨', 'Golden Fly'] };
+const kartObjs = []; let kartSeq = 0;
+Object.assign(M, { mud: lam(0x7a5230), mudDark: lam(0x4a3019), egg: new THREE.MeshLambertMaterial({ color: 0xb8f5a0, emissive: 0x3a7a30, transparent: true, opacity: 0.8 }), eggDot: lam(0x14140f),
+  bubble: new THREE.MeshLambertMaterial({ color: 0x9ff0d0, emissive: 0x2a6a50, transparent: true, opacity: 0.45, depthWrite: false }), bubbleShine: new THREE.MeshBasicMaterial({ color: 0xffffff }), goldFly: fx(0xffd23f) });
 function kartSend(d) { if (net) net.ev.send({ k: 'm2', d }); }
-function kartSpin(h, msg) { // spun out by a shell, a peel or a Golden Fly
+function kartSpin(h, msg) { // spun out by a mud ball, frog eggs or a Golden Fly
   if (h.starT > 0 || h.slipT > 0.5) return;
   h.slipT = 1.6; h.yawV = (Math.random() < 0.5 ? -1 : 1) * 6; h.speed *= 0.35; h.kx = h.kz = 0;
   if (!h.air) { h.vy = 3; h.air = true; }
@@ -1632,26 +1639,31 @@ function kartSpin(h, msg) { // spun out by a shell, a peel or a Golden Fly
 }
 function kartObjMesh(kind) {
   const g = new THREE.Group(); scene.add(g);
-  if (kind === 'shell') { part(g, ballGeo, M.shellGreen, 0.55, 0.32, 0.55, 0, 0.3, 0); part(g, ballGeo, M.shellRim, 0.6, 0.12, 0.6, 0, 0.18, 0); }
-  else { for (let k = 0; k < 3; k++) part(g, boxGeo, M.peelYellow, 0.22, 0.08, 0.7, Math.sin(k * 2.1) * 0.25, 0.08, Math.cos(k * 2.1) * 0.25, 0, k * 2.1, 0); part(g, ballGeo, M.peelYellow, 0.22, 0.3, 0.22, 0, 0.25, 0); part(g, boxGeo, M.peelTip, 0.08, 0.15, 0.08, 0, 0.55, 0); }
+  if (kind === 'mud') { // a lumpy ball of swamp mud
+    part(g, ballGeo, M.mud, 0.5, 0.45, 0.5, 0, 0.45, 0);
+    for (let k = 0; k < 5; k++) part(g, ballGeo, M.mudDark, 0.18, 0.15, 0.18, Math.sin(k * 1.3) * 0.42, 0.45 + Math.cos(k * 2.7) * 0.3, Math.cos(k * 1.3) * 0.42);
+  } else for (let k = 0; k < 9; k++) { // a slippery clump of frog eggs: see-through jelly with a black dot in each
+    const a = k * 2.4, r = k ? 0.3 + (k % 3) * 0.2 : 0, x = Math.sin(a) * r, z = Math.cos(a) * r, y = 0.26 + (k % 2) * 0.14;
+    part(g, ballGeo, M.egg, 0.27, 0.25, 0.27, x, y, z); part(g, ballGeo, M.eggDot, 0.1, 0.1, 0.1, x, y + 0.12, z);
+  }
   return g;
 }
 function kartAddObj(d, own) {
   const num = v => Number.isFinite(+v) ? +v : 0;
   if (kartObjs.length > 40 || kartObjs.some(o => o.id === d.id)) return;
-  const kind = d.t === 'shell' ? 'shell' : 'peel';
-  const o = { id: String(d.id).slice(0, 40), kind, pos: new V(num(d.x), num(d.y), num(d.z)), vx: clamp(num(d.vx), -45, 45), vz: clamp(num(d.vz), -45, 45), owner: d.o | 0, life: kind === 'shell' ? 7 : 40, age: 0, hits: 0, g: kartObjMesh(kind) };
+  const kind = d.t === 'mud' ? 'mud' : 'eggs';
+  const o = { id: String(d.id).slice(0, 40), kind, pos: new V(num(d.x), num(d.y), num(d.z)), vx: clamp(num(d.vx), -45, 45), vz: clamp(num(d.vz), -45, 45), owner: d.o | 0, life: kind === 'mud' ? 7 : 40, age: 0, hits: 0, g: kartObjMesh(kind) };
   o.g.position.copy(o.pos); kartObjs.push(o);
   if (own) kartSend(Object.assign({}, d));
 }
 function kartDropObj(o, tell) { scene.remove(o.g); kartObjs.splice(kartObjs.indexOf(o), 1); if (tell) kartSend({ t: 'ix', id: o.id }); }
 function kartClearObjs() { while (kartObjs.length) kartDropObj(kartObjs[0], false); }
-const shellFeel = { pos: new V(), box: null };
+const mudFeel = { pos: new V(), box: null };
 function kartObjsUpdate(dt) {
   for (const o of kartObjs.slice()) {
     o.age += dt; o.life -= dt;
     if (o.life <= 0) { kartDropObj(o, false); continue; }
-    if (o.kind === 'shell') { // races along the road, bouncing off walls
+    if (o.kind === 'mud') { // rolls along the road, bouncing off walls
       const nx = o.pos.x + o.vx * dt, nz = o.pos.z + o.vz * dt;
       let hit = null;
       for (const b of boxes) if (!b.hog && b.min.y < o.pos.y + 0.8 && b.max.y > o.pos.y + 0.25 && nx > b.min.x - 0.4 && nx < b.max.x + 0.4 && nz > b.min.z - 0.4 && nz < b.max.z + 0.4) { hit = b; break; }
@@ -1660,21 +1672,21 @@ function kartObjsUpdate(dt) {
         if (px < pz) o.vx = -o.vx; else o.vz = -o.vz;
         if (++o.hits > 6) { kartDropObj(o, false); continue; }
       } else { o.pos.x = nx; o.pos.z = nz; }
-      shellFeel.pos.y = o.pos.y; o.pos.y = hogGround(shellFeel, o.pos.x, o.pos.z);
-      o.g.rotation.y += dt * 12;
+      mudFeel.pos.y = o.pos.y; o.pos.y = hogGround(mudFeel, o.pos.x, o.pos.z);
+      o.g.rotation.y = Math.atan2(o.vx, o.vz); o.g.rotation.x += dt * 14; // tumbling
     }
     o.g.position.copy(o.pos);
     for (const h of hogs) { // did it get one of the hogs I drive?
-      if (!hogMine(h) || (h.idx === o.owner && o.age < (o.kind === 'shell' ? 0.6 : 1.2))) continue;
-      if ((h.pos.x - o.pos.x) ** 2 + (h.pos.z - o.pos.z) ** 2 > (o.kind === 'shell' ? 2.6 : 1.8) || Math.abs(h.pos.y - o.pos.y) > 1.5) continue;
-      if (!(h.starT > 0)) kartSpin(h, o.kind === 'shell' ? 'Shell hit!' : 'Banana peel!');
+      if (!hogMine(h) || (h.idx === o.owner && o.age < (o.kind === 'mud' ? 0.6 : 1.2))) continue;
+      if ((h.pos.x - o.pos.x) ** 2 + (h.pos.z - o.pos.z) ** 2 > (o.kind === 'mud' ? 2.6 : 1.8) || Math.abs(h.pos.y - o.pos.y) > 1.5) continue;
+      if (!(h.starT > 0)) kartSpin(h, o.kind === 'mud' ? 'Splat! Mud ball!' : 'Slipped on frog eggs!');
       kartDropObj(o, true); break;
     }
   }
 }
-function kartPick(h) { // what comes out of the box: the further back you are, the better it is for catching up
+function kartPick(h) { // what comes out of the bubble: the further back you are, the better it is for catching up
   const d = h.seats[0], n = bodies.length, place = d && MODE2.kart.active ? MODE2.kart.place(d) : 1, back = n > 1 ? (place - 1) / (n - 1) : 0;
-  const w = back < 0.2 ? { peel: 5, shell: 4, turbo: 1, star: 0 } : back < 0.65 ? { peel: 3, shell: 4, turbo: 3, star: 1 } : { peel: 1, shell: 3, turbo: 4, star: 3 };
+  const w = back < 0.2 ? { eggs: 5, mud: 4, turbo: 1, star: 0 } : back < 0.65 ? { eggs: 3, mud: 4, turbo: 3, star: 1 } : { eggs: 1, mud: 3, turbo: 4, star: 3 };
   let r = Math.random() * Object.values(w).reduce((a, b) => a + b, 0);
   for (const [k, v] of Object.entries(w)) { r -= v; if (r < 0) return k; }
   return 'turbo';
@@ -1685,8 +1697,8 @@ function kartUse(h) {
   const fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw), me = h.seats.includes(player), id = `${myId}:${++kartSeq}`;
   if (it === 'turbo') { h.boostT = 1.8; h.speed = Math.max(h.speed, HOG.max * 1.4); if (me) { flash('Turbo!', '', 0.8, '#ffb02e'); sfxTone(250, 1300, 0.45, 'sawtooth', 0.09); rumble(200, 0.6); } }
   else if (it === 'star') { h.starT = 6; kartSend({ t: 'star', i: h.idx }); if (me) { flash('Golden Fly!', 'Nothing can stop you. Bump them!', 1.4, '#ffd23f'); sfxTone(500, 1500, 0.6, 'triangle', 0.1); } }
-  else if (it === 'shell') { const sp = Math.max(30, h.speed + 16); kartAddObj({ t: 'shell', id, x: r2(h.pos.x + fx * 2.6), y: r2(h.pos.y), z: r2(h.pos.z + fz * 2.6), vx: r2(fx * sp), vz: r2(fz * sp), o: h.idx }, true); if (me) sfxTone(400, 200, 0.2, 'square', 0.07); }
-  else if (it === 'peel') { kartAddObj({ t: 'peel', id, x: r2(h.pos.x - fx * 2.6), y: r2(h.pos.y), z: r2(h.pos.z - fz * 2.6), o: h.idx }, true); if (me) sfxSlap(0.2); }
+  else if (it === 'mud') { const sp = Math.max(30, h.speed + 16); kartAddObj({ t: 'mud', id, x: r2(h.pos.x + fx * 2.6), y: r2(h.pos.y), z: r2(h.pos.z + fz * 2.6), vx: r2(fx * sp), vz: r2(fz * sp), o: h.idx }, true); if (me) sfxTone(300, 120, 0.25, 'triangle', 0.09); }
+  else if (it === 'eggs') { kartAddObj({ t: 'eggs', id, x: r2(h.pos.x - fx * 2.6), y: r2(h.pos.y), z: r2(h.pos.z - fz * 2.6), o: h.idx }, true); if (me) sfxSlap(0.2); }
   return true;
 }
 function kartItemLabel(h) {
@@ -4412,7 +4424,27 @@ function flash(big, small = '', secs = 2.2, color = 'var(--bone)') {
   el.classList.add('show'); flashTimer = secs;
 }
 
+function showPodium(ids, title, sub) { // race results: the top 3 on a podium, everyone else listed below
+  const el = $('podium'), who = ids.map(byId).filter(Boolean), nm = b => b === player ? 'You' : b.name || 'Frog';
+  el.innerHTML = ''; if (!who.length) { el.hidden = true; return; }
+  const h = document.createElement('h2'); h.textContent = title; const sm = document.createElement('small'); sm.textContent = sub;
+  const steps = document.createElement('div'); steps.className = 'pod-steps';
+  [1, 0, 2].forEach(i => { // 2nd on the left, 1st in the middle, 3rd on the right
+    const d = document.createElement('div'), b = who[i]; d.className = `pod-step p${i + 1}${b === player ? ' me' : ''}`;
+    if (b) { const n = document.createElement('b'), c = document.createElement('i'); n.textContent = nm(b); c.textContent = ordinal(i + 1); d.append(n, c); }
+    steps.append(d);
+  });
+  el.append(h, sm, steps);
+  if (who.length > 3) {
+    const ul = document.createElement('ol'); ul.className = 'pod-rest';
+    who.slice(3).forEach((b, i) => { const li = document.createElement('li'), s = document.createElement('span'); s.textContent = ordinal(i + 4); li.append(s, nm(b)); if (b === player) li.className = 'me'; ul.append(li); });
+    el.append(ul);
+  }
+  el.hidden = false; $('flash').classList.remove('show');
+}
+
 function startRound(firstId, seed) {
+  $('podium').hidden = true;
   setTimeout(() => { sendHere(); renderOnline(); }, 500);
   if (player.hog) exitHog();
   ejectAiHogs();
@@ -5527,6 +5559,7 @@ async function joinNet(code, lobby, role = 'auto') {
     if (e.k === 'round' && peerId === net.hostId) startRound(e.first, e.seed);
     else if (e.k === 'q' && peerId === net.hostId) questEvent(String(e.ev), Math.min(10, +e.n || 1));
     else if (e.k === 'bump' && peerId === net.hostId) { player.vel.set(+e.x || 0, +e.y || 6, +e.z || 0); sfxSlap(0.35); rumble(200, 0.8); flash('Bumped!', 'Someone knocked you off the pad.', 1.4, '#ffd23f'); }
+    else if (e.k === 'podium' && peerId === net.hostId && Array.isArray(e.r)) { const r = e.r.slice(0, 12).map(String); showPodium(r, r[0] === myId ? 'You win the Toadhog Race!' : `${(byId(r[0]) || {}).name || String(e.w).slice(0, 24)} wins the Toadhog Race!`, String(e.sub || '').slice(0, 80)); }
     else if (e.k === 'msg' && peerId === net.hostId) flash(String(e.big).slice(0, 60), String(e.small || '').slice(0, 140), 2.6, /^(#[0-9a-f]{3,6}|var\(--[a-z]+\))$/i.test(e.color || '') ? e.color : 'var(--bone)');
     else if (e.k === 'home' && peerId === net.hostId) { ctfRespawn(player, false); flash(e.msg ? String(e.msg).slice(0, 40) : 'Tagged!', 'Back to your base.', 2, TEAM_CSS[1 - (player.team || 0)]); }
     else if (e.k === 'm2' && e.d && MODE2[mode] && MODE2[mode].onEvent) MODE2[mode].onEvent(e.d, peerId);
@@ -7862,7 +7895,7 @@ const MODE2 = {
         if (!h.item && !(h.rollT > 0)) for (const b of track.items) {
           if (b.hideT > 0 || (h.pos.x - b.x) ** 2 + (h.pos.z - b.z) ** 2 > 2.6 || Math.abs(h.pos.y - b.y) > 2.5) continue;
           b.hideT = 4; h.rollT = 1; kartSend({ t: 'ib', n: track.items.indexOf(b) });
-          if (h.seats.includes(player)) sfxTone(600, 1400, 0.25, 'triangle', 0.08);
+          if (h.seats.includes(player)) { sfxTone(1100, 300, 0.1, 'sine', 0.1); sfxTone(600, 1400, 0.25, 'triangle', 0.06); } // pop!
           break;
         }
         const d = h.seats[0];
@@ -7871,7 +7904,7 @@ const MODE2 = {
           const fx = -Math.sin(h.yaw), fz = -Math.cos(h.yaw);
           const ahead = hogs.some(o => o !== h && o.seats[0] && Math.hypot(o.pos.x - h.pos.x, o.pos.z - h.pos.z) < 30 && ((o.pos.x - h.pos.x) * fx + (o.pos.z - h.pos.z) * fz) / (Math.hypot(o.pos.x - h.pos.x, o.pos.z - h.pos.z) || 1) > 0.95);
           const behind = hogs.some(o => o !== h && o.seats[0] && Math.hypot(o.pos.x - h.pos.x, o.pos.z - h.pos.z) < 12 && (o.pos.x - h.pos.x) * fx + (o.pos.z - h.pos.z) * fz < 0);
-          const go = h.item === 'shell' ? ahead || h.itemT > 9 : h.item === 'peel' ? behind || h.itemT > 7 : h.itemT > 0.8 + (h.idx % 3) * 0.5;
+          const go = h.item === 'mud' ? ahead || h.itemT > 9 : h.item === 'eggs' ? behind || h.itemT > 7 : h.itemT > 0.8 + (h.idx % 3) * 0.5;
           if (go && state === 'play') kartUse(h);
         }
       }
@@ -7915,9 +7948,12 @@ const MODE2 = {
         if ((b.kIdx - cp + TRACK_N) % TRACK_N >= 8) continue;
         b.score = s + 1;
         if (b.score >= TRACK_LAPS * 4) {
-          state = 'over'; overT = 8;
-          announce(b === player ? 'You win the Toadhog Race!' : `${b.name} wins the Toadhog Race!`, `${TRACK_LAPS} laps in ${fmt(roundTime)}. New race soon.`, '#ffd23f', 5, b);
+          state = 'over'; overT = 9; questFor(b, 'win');
+          const ids = bodies.slice().sort((x, y) => this.progress(y) - this.progress(x)).map(idOf), sub = `${TRACK_LAPS} laps in ${fmt(roundTime)}. New race soon.`;
+          showPodium(ids, b === player ? 'You win the Toadhog Race!' : `${b.name} wins the Toadhog Race!`, sub);
+          if (net) net.ev.send({ k: 'podium', r: ids, w: (b === player ? playerName : b.name) || 'Someone', sub });
           if (b === player) addFlies(10);
+          else { const p = this.place(player); if (p <= 3) addFlies(4 - p); }
           return;
         }
       }
@@ -7948,7 +7984,7 @@ const MODE2 = {
     row(b) { return `Lap ${Math.min(TRACK_LAPS, Math.floor((b.score || 0) / 4) + 1)} · ${ordinal(this.place(b))}`; },
     onEvent(d) {
       if (!d || !track) return;
-      if (d.t === 'shell' || d.t === 'peel') kartAddObj(d, false);
+      if (d.t === 'mud' || d.t === 'eggs') kartAddObj(d, false);
       else if (d.t === 'ix') { const o = kartObjs.find(x => x.id === d.id); if (o) kartDropObj(o, false); }
       else if (d.t === 'ib') { const b = track.items[d.n | 0]; if (b) b.hideT = 4; }
       else if (d.t === 'star') { const h = hogs[d.i | 0]; if (h) h.starT = 6; }
