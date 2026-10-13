@@ -54,6 +54,24 @@ Plug in or pair a gamepad (Xbox, PlayStation, Switch Pro, or most Bluetooth cont
 
 On menus, the D-pad or left stick moves between buttons, `A` picks, and `B` goes back. Controllers that support rumble buzz when you get tagged, frozen, bumped, or bounce.
 
+Controllers with only one stick work too: until you move a right stick, pushing the left stick sideways turns you.
+
+#### Magicsee R1 finger ring
+
+Pair the ring with the tablet, then every time you turn it on, hold `@` and press `B` to put it in game mode. (Music mode, the one it starts in, only sends volume and song keys, which the tablet keeps for itself. Key mode, `@` + `C`, moves you around but its buttons land in different places.)
+
+| Button | Action |
+| --- | --- |
+| Stick | Push: up for forward, down for back, sideways to turn |
+| Trigger | Jump (honk in a toadhog) |
+| Top button (hold) | Grab and hang on |
+| `B` | Jump, or get in and out of a toadhog when you're next to one |
+| `D` | Throw, or close a panel |
+| `C` | Use your gadget |
+| `A` (hold) | Big pushes |
+
+On menus the stick moves between buttons and the trigger or `B` picks.
+
 ### Gadgets
 
 Colored boxes float around every map (except in Toadhog Race, which has its own items). Touch one to pick up its gadget:

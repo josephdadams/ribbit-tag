@@ -574,6 +574,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
         <li class="keys-li"><span class="ic">Pad</span><div><strong>Controller</strong>
           <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RB</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>LT</kbd></dt><dd>Use your gadget</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
+          <p class="keys-sub">Magicsee R1 ring (hold <kbd>@</kbd> and press <kbd>B</kbd> after turning it on)</p><dl class="keys"><dt><kbd>Stick</kbd></dt><dd>Push forward / back, sideways to turn</dd><dt><kbd>Trigger</kbd></dt><dd>Jump</dd><dt>Hold <kbd>top button</kbd></dt><dd>Grab and hang on</dd><dt><kbd>B</kbd></dt><dd>Jump, or get in a toadhog</dd><dt><kbd>D</kbd></dt><dd>Throw / go back</dd></dl>
           <p class="keys-sub">On menus</p><dl class="keys"><dt><kbd>D-pad</kbd></dt><dd>Move around</dd><dt><kbd>A</kbd></dt><dd>Pick</dd><dt><kbd>B</kbd></dt><dd>Go back</dd></dl></div></li>
         <li class="keys-li"><span class="ic">Key</span><div><strong>Keyboard</strong>
           <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>C</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>R</kbd></dt><dd>Use your gadget</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>L</kbd></dt><dd>Scores</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
@@ -5998,6 +5999,9 @@ addEventListener('keydown', e => {
   }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const talkOpen = !$('talk').hidden;
+  if ((state === 'menu' || wardrobeOpen || !$('frogsPanel').hidden || !$('questsPanel').hidden) && /^Arrow/.test(e.code)) { // arrow keys (or the ring's key mode) move between buttons
+    e.preventDefault(); padMoveFocus(e.code === 'ArrowDown' || e.code === 'ArrowRight' ? 1 : -1); return;
+  }
   if (wardrobeOpen) { if (e.code === 'Escape') closeWardrobe(); return; }
   if (!$('frogsPanel').hidden) { if (e.code === 'Escape') $('frogsClose').click(); return; }
   if (state === 'menu') {
@@ -7224,10 +7228,20 @@ function kingEnd() {
 // In a game: left stick pushes (up = forward, down = back, sideways = sideways), right stick turns,
 // A jumps, RT/R2 makes big pushes, X talks (D-pad sends quick replies), Y player list, Start menu.
 // On menus: D-pad or left stick moves between buttons, A presses, B goes back.
+// One-stick controllers (the Magicsee R1 finger ring, or any pad whose right stick hasn't moved yet):
+// the stick's sideways turns instead of pushing sideways, and the trigger (LB on the ring) jumps.
+// The ring has to be in game mode (hold @ and press B) or key mode (hold @ and press C); its music mode
+// only sends volume and media keys, which the tablet keeps for itself.
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, RS: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
-let padPrev = [], padNavT = 0, padSeen = false;
+let padPrev = [], padNavT = 0, padSeen = false, padRightSeen = false;
+const isRing = p => /magicsee|\bring\b/i.test(p.id);
 addEventListener('gamepadconnected', e => {
-  padSeen = true;
+  padSeen = true; padRightSeen = false;
+  if (isRing(e.gamepad)) {
+    flash('Ring connected', 'Stick up to push, sideways to turn, trigger to jump.', 3, 'var(--leaf)');
+    if (!usedKeys) $('hint').textContent = 'Stick up to push · sideways to turn · trigger to jump · hold the top button to grab';
+    return;
+  }
   flash('Controller connected', 'Left stick to push, right stick to turn, A to jump.', 2.6, 'var(--leaf)');
   if (!usedKeys) $('hint').textContent = 'Left stick to push · right stick to turn · A to jump · hold RB to grab · X to talk';
 });
@@ -7269,34 +7283,45 @@ function pollGamepad(dt) {
   const b = i => !!(p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.5));
   const pressed = i => b(i) && !padPrev[i];
   const dz = v => Math.abs(v) < 0.18 ? 0 : v;
-  const lx = dz(p.axes[0] || 0), ly = dz(p.axes[1] || 0), rx = dz(p.axes[2] || 0);
+  let lx = dz(p.axes[0] || 0), ly = dz(p.axes[1] || 0);
+  const rx = dz(p.axes[2] || 0);
+  if (rx || dz(p.axes[3] || 0)) padRightSeen = true;
+  const ring = isRing(p), oneStick = ring || !padRightSeen;
   const inMenu = state === 'menu' || !$('questsPanel').hidden || !$('frogsPanel').hidden || wardrobeOpen;
   if (inMenu || !$('players').hidden) {
     padNavT -= dt;
     const up = b(PAD.UP) || ly < -0.5 || b(PAD.LEFT) || lx < -0.5, down = b(PAD.DOWN) || ly > 0.5 || b(PAD.RIGHT) || lx > 0.5;
     if ((up || down) && padNavT <= 0) { padMoveFocus(down ? 1 : -1); padNavT = 0.22; }
     if (!up && !down) padNavT = 0;
-    if (pressed(PAD.A)) { initAudio(); const el = document.activeElement; if (el && el.tagName === 'BUTTON') el.click(); else padMoveFocus(0); }
+    if (pressed(PAD.A) || (ring && pressed(PAD.LB))) { initAudio(); const el = document.activeElement; if (el && el.tagName === 'BUTTON') el.click(); else padMoveFocus(0); }
     if (pressed(PAD.B)) padBack();
     if (wardrobeOpen && mannequin) mannequin.group.rotation.y += rx * dt * 3;
   } else if (state !== 'menu') {
     const talkOpen = !$('talk').hidden;
-    player.yaw -= rx * 2.8 * dt;
+    if (!talkOpen) { // the D-pad moves too (the ring's key mode sends its stick as a D-pad)
+      if (b(PAD.UP)) ly = -1; else if (b(PAD.DOWN)) ly = 1;
+      if (b(PAD.LEFT)) lx = -1; else if (b(PAD.RIGHT)) lx = 1;
+    }
+    const turn = oneStick ? lx : 0; // one stick: sideways turns
+    if (oneStick) lx = 0;
+    player.yaw -= (rx + turn) * 2.8 * dt;
     if (pressed(PAD.RS)) tiltRecenter();
-    hogPad.t = player.hog ? -ly + (b(PAD.RT) ? 1 : 0) - (b(PAD.LT) ? 1 : 0) : 0; hogPad.s = player.hog ? -lx : 0;
-    if (pressed(PAD.LB)) toggleHog();
+    hogPad.t = player.hog ? -ly + (b(PAD.RT) ? 1 : 0) - (b(PAD.LT) ? 1 : 0) : 0; hogPad.s = player.hog ? -(lx + turn) : 0;
+    // the ring has no LB to spare: its trigger jumps, and A gets in and out of a toadhog when you're by one
+    let jumpPressed = pressed(PAD.A) || (ring && pressed(PAD.LB)), jumpHeld = b(PAD.A) || (ring && b(PAD.LB));
+    if (ring ? pressed(PAD.A) && (player.hog || (nearHog() && canRide())) : pressed(PAD.LB)) { toggleHog(); jumpPressed = jumpHeld = false; }
     padGrip = b(PAD.RB) && !talkOpen;
     if (!player.hog && player.gad && pressed(PAD.LT)) gadgetDown(); else if (gadgetHeld && !b(PAD.LT) && padPrev[PAD.LT]) gadgetUp();
-    if (player.hog) { if (pressed(PAD.A)) honk(); }
+    if (player.hog) { if (jumpPressed) honk(); }
     else if (keyCd <= 0 && player.frozen <= 0) {
       const power = b(PAD.RT) || (b(PAD.LT) && !player.gad) ? 1.8 : 0.9, mag = Math.hypot(lx, ly);
       let did = false;
-      if (pressed(PAD.A) || (b(PAD.A) && keyCd <= 0 && player.grounded)) did = keyJump();
+      if (jumpPressed || (jumpHeld && keyCd <= 0 && player.grounded)) did = keyJump();
       else if (mag > 0.3) {
         if (Math.abs(ly) >= Math.abs(lx)) did = keyPush((ly < 0 ? 220 : -260) * Math.min(1, mag + 0.2), power, 0);
         else did = keyPush(170 * Math.min(1, mag + 0.2), power, lx < 0 ? Math.PI / 2 : -Math.PI / 2);
       }
-      if (did) { keyCd = b(PAD.A) ? 0.35 : 0.34 - mag * 0.08; usedKeys = true; }
+      if (did) { keyCd = jumpHeld ? 0.35 : 0.34 - mag * 0.08; usedKeys = true; }
     }
     if (pressed(PAD.X)) { if (talkOpen) $('talk').hidden = true; else openTalk(); }
     if (talkOpen) {
