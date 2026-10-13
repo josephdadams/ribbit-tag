@@ -68,6 +68,16 @@ Computer frogs grab and use gadgets too. The host can turn **Gadgets** off in th
 
 Turn on **Look around** in the menu settings and the tablet becomes your frog's head: point it left, right, up or down to look that way, and pushes go where you're looking. Keep moving with the controller or swipes. Tablets without a gyroscope (like most Fire tablets) can only feel tilting, so tilt up and down to look and lean the tablet like a steering wheel to turn.
 
+### Hand camera
+
+Turn on **Hand camera** in the menu settings and the front camera watches your real hands. Prop the tablet up so it can see both of them. Each hand works like a thumb on that side of the screen:
+
+- **Push your hand down** to shove off and launch forward. Faster pushes make bigger leaps.
+- **Move your hand sideways** to turn.
+- **Make a fist** next to a wall, tree or ceiling to hang on. Open your hand to let go.
+
+A little camera picture in the corner shows what it sees, with dots on each hand (yellow means a fist). The hand tracker ([MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker)) runs on the tablet itself, so the camera picture never leaves the device. It needs the internet the first time to download the tracker.
+
 ### Keyboard
 
 | Key | Action |

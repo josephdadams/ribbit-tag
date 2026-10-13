@@ -107,6 +107,7 @@ h1 span { color: var(--lava); display: block; }
 #hogBtn { position: absolute; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: var(--leaf); color: var(--ink); font-size: 1.3rem; padding: 12px 22px; touch-action: manipulation; }
 #gadgetBtn { position: absolute; right: 16px; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.3rem; padding: 14px 22px; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 0 4px 0 #b8941a; }
 #itemBtn { position: absolute; left: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.4rem; padding: 14px 24px; touch-action: manipulation; box-shadow: 0 4px 0 #b8941a; }
+#camView { position: absolute; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: 120px; height: 90px; border-radius: 12px; border: 2px solid rgba(10,26,16,.72); opacity: .85; }
 #radar { position: absolute; top: calc(58px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
 #radar .arrow { width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 18px solid currentColor; display: inline-block; }
 #radar.chase { color: var(--lava); }
@@ -337,6 +338,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   <button id="hogBtn" class="chip" type="button" hidden>Drive</button>
   <button id="itemBtn" class="chip" type="button" hidden></button>
   <button id="gadgetBtn" class="chip" type="button" hidden></button>
+  <canvas id="camView" width="160" height="120" hidden></canvas>
   <div id="bubbles"></div>
   <div id="scores" hidden>
     <div class="pl-head"><h2 id="scTitle">Scores</h2><span class="spacer"></span><button id="scClose" class="pill-btn" type="button">Close</button></div>
@@ -521,6 +523,14 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         </div>
       </div>
       <p class="note" id="tiltNote" hidden></p>
+      <div class="row">
+        <span class="label">Hand camera</span>
+        <div class="seg" id="camSeg">
+          <button type="button" data-c="1" aria-pressed="false">On</button>
+          <button type="button" data-c="0" aria-pressed="true">Off</button>
+        </div>
+      </div>
+      <p class="note" id="camNote" hidden></p>
       <div class="row">
         <span class="label">Graphics</span>
         <div class="seg" id="gfxSeg">
@@ -3735,7 +3745,7 @@ function updateGrip() {
   const b = player, was = b.hang;
   if (!b.hangN) b.hangN = new V();
   b.hang = 0;
-  if (!(pointers.size || keys.KeyC || padGrip) || state === 'menu' || b.hog || b.frozen > 0 || b.iced || b.out || b.grounded) return;
+  if (!(pointers.size > camHandCount() || keys.KeyC || padGrip || camGrip) || state === 'menu' || b.hog || b.frozen > 0 || b.iced || b.out || b.grounded) return;
   const best = surfaceGap(b.pos);
   if (wallGap < 0.2) { b.hang = 1; b.hangN.copy(wallN); }
   else if (best < 0.2 && sN.y < -0.5) { b.hang = 2; b.hangN.copy(sN); } // the ceiling
@@ -5255,6 +5265,131 @@ function tiltUpdate(dt, steer) {
   }
   tiltLook = clamp(wrap(tiltRaw.pitch - tiltPitch0), -1.1, 1.1);
 }
+
+// ---------- Hand camera ----------
+// The front camera watches your real hands (MediaPipe, running on the tablet; no video leaves it).
+// Each hand acts like a thumb on that side of the screen: move it down to push, sideways to turn, make a fist to hang on.
+const CAM_LIB = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const CAM_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+let camOn = false, camGrip = false, camStream = null, camVideo = null, camMarker = null, camLoading = null, camLastT = -1, camNextT = 0, camGap = 70;
+const camSides = [null, null]; // per side: { p: its entry in pointers, x, y, seen, fist }
+try { camOn = localStorage.getItem('ribbit-cam') === '1'; } catch (e) {}
+const camHandCount = () => (camSides[0] ? 1 : 0) + (camSides[1] ? 1 : 0);
+function camSay(text) { const n = $('camNote'); n.hidden = !text; n.textContent = text || ''; }
+async function camLoadMarker() {
+  const v = await import(CAM_LIB + '/vision_bundle.mjs');
+  const files = await v.FilesetResolver.forVisionTasks(CAM_LIB + '/wasm');
+  const make = delegate => v.HandLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: CAM_MODEL, delegate }, runningMode: 'VIDEO', numHands: 2,
+    minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+  try { return await make('GPU'); } catch (e) { return make('CPU'); } // older tablets can't do it on the graphics chip
+}
+async function camStart() {
+  camSay('Starting the camera...');
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nocam');
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } }, audio: false });
+  } catch (e) {
+    setCam(false);
+    camSay(e && e.name === 'NotAllowedError' ? 'The tablet said no to the camera. Try tapping On again and pick Allow.' : "Couldn't find a camera to use.");
+    return;
+  }
+  if (!camOn) { camStop(); return; }
+  if (!camVideo) { camVideo = document.createElement('video'); camVideo.muted = true; camVideo.playsInline = true; camVideo.setAttribute('playsinline', ''); }
+  camVideo.srcObject = camStream;
+  try { await camVideo.play(); } catch (e) {}
+  camSay('Loading the hand tracker...');
+  try { camMarker = camMarker || await (camLoading = camLoading || camLoadMarker()); }
+  catch (e) { camLoading = null; setCam(false); camSay("The hand tracker didn't load. Check the internet and try again."); return; }
+  if (!camOn) return;
+  $('hint').textContent = 'Push your hands down to go · move them sideways to turn · make a fist to grab';
+  camSay('Hold the tablet so the camera sees both hands. Push your hands down to go, move them sideways to turn, and make a fist to hang on.');
+}
+function camStop() {
+  if (camStream) camStream.getTracks().forEach(tr => tr.stop());
+  camStream = null; camGrip = false; camLastT = -1;
+  if (camVideo) camVideo.srcObject = null;
+  for (let s = 0; s < 2; s++) camDrop(s);
+  $('camView').hidden = true;
+}
+function camDrop(side) {
+  const c = camSides[side];
+  if (c) pointers.delete(c.p.id);
+  camSides[side] = null;
+}
+function setCam(on) {
+  camOn = on;
+  document.querySelectorAll('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.c === +on)));
+  try { localStorage.setItem('ribbit-cam', on ? '1' : '0'); } catch (e) {}
+  camStop(); camSay('');
+  if (on) camStart();
+}
+document.querySelectorAll('#camSeg button').forEach(b => b.addEventListener('click', () => setCam(b.dataset.c === '1')));
+if (camOn) setCam(true);
+// a fist: the fingertips are folded back near the wrist
+function camFist(l) {
+  const d = (a, b) => Math.hypot(l[a].x - l[b].x, l[a].y - l[b].y), palm = d(0, 9) || 1;
+  return (d(8, 0) + d(12, 0) + d(16, 0) + d(20, 0)) / 4 < palm * 1.1;
+}
+function camUpdate() {
+  const view = $('camView');
+  if (!camOn || !camMarker || !camVideo || camVideo.readyState < 2) { view.hidden = true; return; }
+  const now = performance.now();
+  // the hud preview shows up in a game so you can see what the camera sees
+  view.hidden = state === 'menu';
+  if (now < camNextT || camVideo.currentTime === camLastT) return;
+  camLastT = camVideo.currentTime;
+  let res;
+  try { res = camMarker.detectForVideo(camVideo, now); } catch (e) { return; }
+  // slow tablets: look less often so the game stays smooth
+  const cost = performance.now() - now;
+  camGap = clamp(camGap * 0.8 + cost * 2.5 * 0.2, 50, 160); camNextT = now + camGap;
+  // the camera sees you mirrored, so flip it: your right hand shows on the right
+  const found = [null, null];
+  for (const l of res.landmarks || []) {
+    let x = 0, y = 0;
+    for (const i of [0, 5, 9, 13, 17]) { x += 1 - l[i].x; y += l[i].y; }
+    x /= 5; y /= 5;
+    let side = x < 0.5 ? 0 : 1;
+    if (found[side]) side = 1 - side; // two hands crossed over: give the other side one
+    if (!found[side]) found[side] = { x, y, l };
+  }
+  const W = innerWidth, H = innerHeight;
+  // small hand moves should still cover the screen, so stretch around the middle
+  const toX = x => clamp(0.5 + (x - 0.5) * 1.6, 0, 1) * W, toY = y => clamp(0.5 + (y - 0.5) * 1.6, 0, 1) * H;
+  let grip = false;
+  for (let side = 0; side < 2; side++) {
+    const f = found[side];
+    let c = camSides[side];
+    if (!f) { if (c && now - c.seen > 300) camDrop(side); continue; }
+    const fist = camFist(f.l);
+    grip = grip || fist;
+    if (!c || state === 'menu') {
+      camDrop(side);
+      if (state === 'menu') continue;
+      const x = toX(f.x), y = toY(f.y), id = 'cam' + side;
+      const p = { id, x, y, sx: x, sy: y, t0: now, t: now, side, planted: surfaceGap(player.pos) < REACH, cam: true };
+      pointers.set(id, p);
+      c = camSides[side] = { p, x: f.x, y: f.y, seen: now };
+      continue;
+    }
+    // smooth out jitter; ignore wobbles too small to mean anything
+    c.x += (f.x - c.x) * 0.6; c.y += (f.y - c.y) * 0.6; c.seen = now;
+    const x = toX(c.x), y = toY(c.y);
+    if (Math.abs(x - c.p.x) < W * 0.006 && Math.abs(y - c.p.y) < H * 0.006) continue;
+    handMove(c.p, x, y);
+  }
+  camGrip = grip && state !== 'menu';
+  if (!view.hidden) camDraw(view, res);
+}
+function camDraw(view, res) {
+  const g = view.getContext('2d'), w = view.width, h = view.height;
+  g.save(); g.translate(w, 0); g.scale(-1, 1); g.drawImage(camVideo, 0, 0, w, h); g.restore();
+  for (const l of res.landmarks || []) {
+    g.fillStyle = camFist(l) ? '#ffd23f' : '#7ddc5a';
+    for (const pt of l) { g.beginPath(); g.arc((1 - pt.x) * w, pt.y * h, 2.2, 0, 7); g.fill(); }
+  }
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(w / 2 - 0.5, 0, 1, h);
+}
 const bv = new V();
 function updateTalk(dt) {
   talkCd -= dt;
@@ -5727,16 +5862,21 @@ canvas.addEventListener('pointerdown', e => {
   pointers.set(e.pointerId, p);
   if (surfaceGap(player.pos) < REACH) { p.planted = true; sfxSlap(0.2); }
 });
+// a hand (finger or camera hand) moved to x, y on the screen: sideways turns, down pushes
+function handMove(p, x, y) {
+  const now = performance.now(), dx = x - p.x, dy = y - p.y, dt = Math.max(8, now - p.t);
+  if (player.hog) { if (player.seat !== 0) player.yaw -= dx * 0.0048; p.x = x; p.y = y; p.t = now; return; } // driving reads the drag in driveInput
+  player.yaw -= dx * 0.0048;
+  // a camera hand has to come back up after each push, so only fingers pull you backward
+  const planted = p.cam && dy < 0 ? p.planted : armPush(dy, Math.abs(dy) / dt);
+  if (planted && !p.planted && slapCd <= 0) { sfxSlap(0.22); slapCd = 0.12; }
+  p.planted = planted;
+  p.x = x; p.y = y; p.t = now;
+}
 canvas.addEventListener('pointermove', e => {
   const p = pointers.get(e.pointerId);
   if (!p || state === 'menu') return;
-  const now = performance.now(), dx = e.clientX - p.x, dy = e.clientY - p.y, dt = Math.max(8, now - p.t);
-  if (player.hog) { if (player.seat !== 0) player.yaw -= dx * 0.0048; p.x = e.clientX; p.y = e.clientY; p.t = now; return; } // driving reads the drag in driveInput
-  player.yaw -= dx * 0.0048;
-  const planted = armPush(dy, Math.abs(dy) / dt);
-  if (planted && !p.planted && slapCd <= 0) { sfxSlap(0.22); slapCd = 0.12; }
-  p.planted = planted;
-  p.x = e.clientX; p.y = e.clientY; p.t = now;
+  handMove(p, e.clientX, e.clientY);
 });
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 const endPointer = e => {
@@ -9275,6 +9415,7 @@ function update(dt, t) {
   const targetPitch = clamp(-0.12 + player.vel.y * 0.025 + (climbing ? 0.25 : 0), -0.4, 0.45);
   player.pitch += (targetPitch - player.pitch) * Math.min(1, dt * 4);
   tiltUpdate(dt, !player.hog || player.seat !== 0);
+  camUpdate();
   if (player.hog) {
     hogCamera(dt);
     const f = myFrog, h = player.hog;
