@@ -456,6 +456,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <h3 class="more-cat">Spooky</h3>
         <div class="more-grid">
           <button class="mode mini spooky" data-mode="monsters" id="mode-monsters" type="button"><b>Monster Night</b><small>Monsters chase everyone! Throw fireflies to stun them and survive 3 minutes.</small></button>
+          <button class="mode mini spooky" data-mode="lethal" id="mode-lethal" type="button"><b>Lethal Toad</b><small>Grab scrap and bring it to the ship before time runs out. Hide from Ashy and Sandman, and freeze when Gus is near!</small></button>
         </div>
         <h3 class="more-cat">Party</h3>
         <div class="more-grid">
@@ -1738,12 +1739,19 @@ const LAB_KINDS = {
   blob: { Name: 'The Goo Blob', walk: 1.6, run: 4.4, see: 12, fov: 1.9, climb: true, eye: 0x111111 },
   bot: { Name: 'The Statue Bot', walk: 2.4, run: 7.5, see: 15, fov: 1.0, statue: true, eye: 0x5fd4ff }, // only moves when nobody is looking at it
   drone: { Name: 'The Zapper Drone', walk: 3, run: 4.9, see: 18, fov: 0.8, fly: true, eye: 0xfff1b8 },
+  // Lethal Toad's monsters (from Lethal Ape)
+  ashy: { Name: 'Ashy', walk: 2.0, run: 5.3, see: 13, fov: 1.1, jump: 6, giveUp: 5, eye: 0xff8a2a }, // the calm brother, made of grey gravel
+  sandman: { Name: 'Sandman', walk: 2.7, run: 6.3, see: 17, fov: 1.4, jump: 7, giveUp: 9, eye: 0xffe14a }, // the grumpy brother: faster, and leaves sand behind
+  gus: { Name: 'Gus', walk: 1.8, run: 6.6, see: 10, ears: true, jump: 6, giveUp: 4, eye: 0xff5a7a }, // can't see at all, but hears anything that moves
 };
 const LAB = { mons: [], traps: [], lasers: [], vents: [], belt: null, tele: null, teleSpots: [], beacon: null, tadpole: null, blindT: 0, alarmT: 0, wasPlay: false };
+const LETHAL = { on: false, ship: new V(), mons: [] }; // Lethal Toad: where the ship landed, and the monsters out hunting
+const LETHAL_SHIP_R = 4.5, LETHAL_SAFE_R = 7, LETHAL_QUIET = 2.5; // the ship pad's size, how far its floodlights keep monsters away, and how slow you have to move so Gus can't hear you
 const LAB_GIVE_UP = 7; // seconds out of sight before a monster gives up
 const labEye = new V(), labTo = new V();
 const hyp = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-const labSafe = p => mapKey === 'lab' && Math.abs(p.x) < 5 && p.z > 20.3; // monsters never come into the Safe Room
+const labSafe = p => (mapKey === 'lab' && Math.abs(p.x) < 5 && p.z > 20.3) || (LETHAL.on && hyp(p, LETHAL.ship) < LETHAL_SAFE_R); // monsters never come into the Safe Room or near the ship
+const lethalLoud = b => (b.ltSpd || 0) > LETHAL_QUIET || b.ltLoud > 0; // can Gus hear this frog?
 function labClearAll() {
   LAB.mons = []; LAB.traps = []; LAB.lasers = []; LAB.vents = []; LAB.belt = LAB.tele = LAB.beacon = LAB.tadpole = null; LAB.teleSpots = []; LAB.blindT = 0; LAB.wasPlay = false;
   const el = document.getElementById('labDark'); if (el) el.style.opacity = 0;
@@ -1772,7 +1780,34 @@ function labMesh(kind) {
   const g = new THREE.Group(); mapGroup.add(g);
   const eyeMat = new THREE.MeshLambertMaterial({ color: LAB_KINDS[kind].eye, emissive: LAB_KINDS[kind].eye, emissiveIntensity: 0.7 });
   const o = { g, eyeMat };
-  if (kind === 'ape') { // a big grey-brown ape in a lab collar
+  if (kind === 'ashy' || kind === 'sandman') { // the brothers: tall, hunched and lumpy, made of gravel (Ashy) or sand (Sandman)
+    const sand = kind === 'sandman', rock = cmat(sand ? 0xd9b46a : 0x6e6a66), dark = cmat(sand ? 0xa8834a : 0x45423f);
+    for (const sx of [-1, 1]) part(g, boxGeo, dark, 0.22, 0.8, 0.26, sx * 0.2, -0.1, 0);
+    part(g, ballGeo, rock, 0.45, 0.6, 0.36, 0, 0.75, 0);
+    [[0.25, 0.95, -0.15], [-0.3, 0.6, -0.1], [0.1, 0.45, 0.25], [-0.15, 1.1, 0.2], [0.3, 0.5, 0.1]].forEach(([x, y, z], i) => part(g, ballGeo, i % 2 ? dark : rock, 0.2, 0.18, 0.2, x, y, z)); // lumps
+    o.head = new THREE.Group(); o.head.position.set(0, 1.45, -0.28); g.add(o.head);
+    part(o.head, ballGeo, rock, 0.32, 0.3, 0.3, 0, 0, 0);
+    part(o.head, ballGeo, dark, 0.14, 0.12, 0.12, 0.18, 0.18, 0.05); // a lumpy head
+    for (const sx of [-1, 1]) part(o.head, ballGeo, eyeMat, 0.07, 0.06, 0.04, sx * 0.11, 0.04, -0.28);
+    part(o.head, boxGeo, cmat(0x1b1612), 0.2, 0.04, 0.04, 0, -0.12, -0.28, 0, 0, sand ? 0.25 : -0.1); // crooked mouth
+    o.arms = [-1, 1].map(sx => { const a = new THREE.Group(); a.position.set(sx * 0.5, 1.15, -0.1); g.add(a); part(a, boxGeo, rock, 0.16, 1.3, 0.16, 0, -0.62, 0); part(a, ballGeo, dark, 0.15, 0.15, 0.15, 0, -1.3, 0); return a; });
+    g.scale.setScalar(1.15);
+  } else if (kind === 'gus') { // big, pale and eyeless, with huge ears and a wide glowing mouth
+    const skin = cmat(0xc9a7a0), dark = cmat(0x8a6a66);
+    for (const sx of [-1, 1]) part(g, boxGeo, dark, 0.3, 0.7, 0.35, sx * 0.3, -0.15, 0);
+    part(g, ballGeo, skin, 0.7, 0.75, 0.6, 0, 0.6, 0);
+    o.head = new THREE.Group(); o.head.position.set(0, 1.45, -0.1); g.add(o.head);
+    part(o.head, ballGeo, skin, 0.55, 0.45, 0.5, 0, 0, 0);
+    o.mouth = part(o.head, boxGeo, eyeMat, 0.6, 0.08, 0.1, 0, -0.12, -0.45);
+    for (let i = -2; i <= 2; i++) part(o.head, GEO.cone, cmat(0xfff8e8), 0.04, 0.08, 0.04, i * 0.12, -0.06, -0.48, Math.PI);
+    o.ears = [-1, 1].map(sx => {
+      const e = new THREE.Group(); e.position.set(sx * 0.5, 0.15, 0); o.head.add(e);
+      part(e, ballGeo, skin, 0.08, 0.38, 0.28, sx * 0.1, 0.2, 0, 0, 0, -sx * 0.4); part(e, ballGeo, cmat(0xe08a8a), 0.04, 0.28, 0.2, sx * 0.14, 0.2, -0.03, 0, 0, -sx * 0.4);
+      return e;
+    });
+    o.arms = [-1, 1].map(sx => { const a = new THREE.Group(); a.position.set(sx * 0.72, 0.95, 0); g.add(a); part(a, boxGeo, skin, 0.25, 0.9, 0.25, 0, -0.45, 0); part(a, ballGeo, dark, 0.2, 0.18, 0.2, 0, -0.95, 0); return a; });
+    g.scale.setScalar(1.2);
+  } else if (kind === 'ape') { // a big grey-brown ape in a lab collar
     const fur = cmat(0x4a3f3a), skin = cmat(0x9a8170);
     part(g, ballGeo, fur, 0.75, 0.75, 0.6, 0, 0.45, 0);
     part(g, ballGeo, skin, 0.45, 0.45, 0.2, 0, 0.45, -0.45);
@@ -1845,8 +1880,11 @@ function labThink(m, dt, play) {
       const chasing = (m.st === 1 || m.st === 2) && m.tgt === b, d = b.pos.distanceTo(m.pos);
       if (d > K.see * (chasing ? 1.5 : 1)) continue;
       if (!K.fly && !K.climb && b.pos.y - m.pos.y > 2.6) continue; // up high where it can't reach
-      if (!chasing && d > 2.5) { let rel = Math.atan2(-(b.pos.x - m.pos.x), -(b.pos.z - m.pos.z)) - m.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel)); if (Math.abs(rel) > K.fov) continue; }
-      if (!labClear(labEye, b.pos)) continue;
+      if (K.ears) { if (!lethalLoud(b)) continue; } // Gus can't see: he hears frogs that move fast, even through walls
+      else {
+        if (!chasing && d > 2.5) { let rel = Math.atan2(-(b.pos.x - m.pos.x), -(b.pos.z - m.pos.z)) - m.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel)); if (Math.abs(rel) > K.fov) continue; }
+        if (!labClear(labEye, b.pos)) continue;
+      }
       const s = d - (chasing ? 5 : 0);
       if (s < bs) { bs = s; best = b; }
     }
@@ -1854,7 +1892,7 @@ function labThink(m, dt, play) {
     else if (m.st === 1) m.st = 2;
     if (K.statue) m.watched = play && bodies.some(b => (b === player || b.isRemote) && !b.out && labWatching(b, m));
   }
-  if (m.st === 2 && (m.lostT += dt) > LAB_GIVE_UP) m.st = 3;
+  if (m.st === 2 && (m.lostT += dt) > (K.giveUp || LAB_GIVE_UP)) m.st = 3;
   if (m.st === 1 || m.st === 2) { // leave a trail of crumbs so it can find its way back
     const c = m.crumbs[m.crumbs.length - 1];
     if (!c || c.distanceTo(m.pos) > 1.5) { m.crumbs.push(m.pos.clone()); if (m.crumbs.length > 400) m.crumbs.shift(); }
@@ -1935,6 +1973,18 @@ function labDraw(m, dt, t) {
       m.arms.forEach((a, i) => { a.rotation.x = moving ? Math.sin(t * 10 + i * Math.PI) * 0.6 - (hunting ? 0.9 : 0) : 0; });
     }
     if (m.watched) m.eyeMat.emissiveIntensity = 0.15; else m.eyeMat.emissiveIntensity = 0.7;
+  } else if (m.kind === 'ashy' || m.kind === 'sandman') {
+    g.position.y += moving ? Math.abs(Math.sin(t * (hunting ? 11 : 6))) * 0.1 : 0;
+    m.arms.forEach((a, i) => { a.rotation.x = m.st === 4 ? -2.4 + Math.sin(t * 12 + i * Math.PI) * 0.3 : moving ? Math.sin(t * (hunting ? 11 : 5) + i * Math.PI) * 0.6 - (hunting ? 1.1 : 0) : Math.sin(t * 1.2 + i) * 0.1; });
+    m.head.rotation.y = moving ? 0 : Math.sin(t * 0.7) * 0.7;
+    m.head.rotation.z = m.kind === 'ashy' ? Math.sin(t * 0.5) * 0.15 : 0; // Ashy tilts his head, all calm
+  } else if (m.kind === 'gus') {
+    g.position.y += moving ? Math.abs(Math.sin(t * (hunting ? 10 : 5))) * 0.12 : 0;
+    m.arms.forEach((a, i) => { a.rotation.x = m.st === 4 ? -2.5 : moving ? Math.sin(t * (hunting ? 10 : 5) + i * Math.PI) * 0.6 - (hunting ? 0.8 : 0) : 0; });
+    m.head.rotation.z = m.st === 2 ? Math.sin(t * 1.5) * 0.35 : 0; // listening hard
+    m.head.rotation.y = m.st === 2 ? Math.sin(t * 0.8) * 0.8 : 0;
+    m.ears.forEach((e, i) => { e.rotation.z = Math.sin(t * (m.st === 2 ? 9 : 2) + i * 2) * (m.st === 2 ? 0.25 : 0.08); });
+    m.mouth.scale.y = hunting || m.st === 4 ? 0.2 + Math.abs(Math.sin(t * 8)) * 0.1 : 0.06;
   } else {
     g.position.y += Math.sin(t * 2.4 + m.home[0].x) * 0.12;
     m.rotors.forEach((r, i) => { r.rotation.y = t * 30 + i; });
@@ -1950,6 +2000,8 @@ function labDraw(m, dt, t) {
       if (m.kind === 'ape') { sfxTone(160, 120, 0.25, 'triangle', v); setTimeout(() => sfxTone(170, 120, 0.25, 'triangle', v), 300); } // hoo hoo
       else if (m.kind === 'blob') sfxTone(90, 140, 0.5, 'sine', v * 1.5);
       else if (m.kind === 'bot') { if (!m.watched) sfxTone(900, 880, 0.08, 'square', v * 0.6); }
+      else if (m.kind === 'ashy' || m.kind === 'sandman') { const f = m.kind === 'ashy' ? 95 : 130; sfxTone(f, f * 0.7, 0.5, 'sawtooth', v * 0.8); } // a gravelly rumble
+      else if (m.kind === 'gus') { sfxTone(300, 520, 0.18, 'sine', v); setTimeout(() => sfxTone(320, 560, 0.18, 'sine', v), 260); } // sniff sniff
       else sfxTone(240, 260, 0.6, 'sawtooth', v * 0.5);
     }
   }
@@ -2066,6 +2118,7 @@ function labApply(list) {
 }
 function labThreat(ai) { // the monster chasing this computer frog, if one is close
   for (const m of LAB.mons) if (m.st === 1 && m.tgt === ai && m.pos.distanceTo(ai.pos) < 14) return m;
+  for (const m of LETHAL.mons) if (m.st === 1 && m.tgt === ai && !m.K.ears && m.pos.distanceTo(ai.pos) < 14) return m; // (from Gus you hold still instead)
   return null;
 }
 function labBuild() {
@@ -7042,7 +7095,7 @@ function concealed(b) {
 }
 const CLASSICISH = ['classic', 'potato', 'bat', 'shrink', 'tongue', 'gravity'];
 const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge'];
-Object.assign(MODE_NAMES, { monsters: 'Monster Night', hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
+Object.assign(MODE_NAMES, { monsters: 'Monster Night', lethal: 'Lethal Toad', hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
   mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', kart: 'Toadhog Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines' });
 function m2Send(d, target) { if (net && isHost()) net.ev.send({ k: 'm2', d }, target ? { target } : undefined); }
 function m2Ask(d) { if (net && !isHost()) net.ev.send({ k: 'm2', d }, { target: net.hostId }); }
@@ -8413,6 +8466,363 @@ const MODE2 = {
       else projEvent(d);
     },
     end() { this.clear(); clearProj(); mapLighting(); for (const b of bodies) { setOut(b, false); } },
+  },
+  // Lethal Toad (like Lethal Ape): grab scrap, carry it back to the ship and make the quota while Ashy, Sandman and Gus hunt you.
+  // The host runs the monsters and the scrap; they use the Laboratory monsters' brains (see labThink).
+  lethal: { scrap: [], sold: 0, quota: 0, sand: [], sandT: 0, sandMeshes: [], ship: null, beacon: null, exit: null, stash: null, nextId: 1, hornT: 4, mineId: 0, alarmT: 0,
+    TIME: 240,
+    KINDS: [['duck', 'Rubber Duck', 8], ['bolt', 'Giant Bolt', 10], ['horn', 'Air Horn', 14], ['clock', 'Old Clock', 18], ['robot', 'Toy Robot', 22], ['cup', 'Golden Cup', 35, true], ['register', 'Cash Register', 45, true]],
+    scrapMesh(k) {
+      const g = new THREE.Group(), kind = this.KINDS[k][0];
+      const gold = new THREE.MeshLambertMaterial({ color: 0xffc93a, emissive: 0x6a4a00 }), black = cmat(0x111111);
+      if (kind === 'duck') {
+        const y = cmat(0xffd93a);
+        part(g, ballGeo, y, 0.28, 0.22, 0.32, 0, 0.2, 0); part(g, ballGeo, y, 0.16, 0.16, 0.16, 0, 0.45, -0.15);
+        part(g, GEO.cone, cmat(0xff8a1a), 0.06, 0.12, 0.06, 0, 0.43, -0.32, -Math.PI / 2);
+        for (const sx of [-1, 1]) part(g, ballGeo, black, 0.03, 0.03, 0.03, sx * 0.08, 0.5, -0.27);
+      } else if (kind === 'bolt') {
+        part(g, GEO.cyl, cmat(0x9aa3a8), 0.09, 0.6, 0.09, 0, 0.15, 0, 0, 0, Math.PI / 2);
+        part(g, GEO.cyl, cmat(0x7a8388), 0.2, 0.12, 0.2, 0.3, 0.15, 0, 0, 0, Math.PI / 2);
+      } else if (kind === 'horn') {
+        part(g, GEO.cyl, cmat(0xe23a3a), 0.13, 0.4, 0.13, 0, 0.2, 0);
+        part(g, GEO.cone, cmat(0xdadde0), 0.16, 0.3, 0.16, 0, 0.55, 0, Math.PI);
+      } else if (kind === 'clock') {
+        part(g, boxGeo, cmat(0x7a4a2a), 0.45, 0.55, 0.25, 0, 0.28, 0);
+        part(g, GEO.cyl, cmat(0xfff8e8), 0.17, 0.04, 0.17, 0, 0.35, -0.13, Math.PI / 2);
+        part(g, boxGeo, black, 0.02, 0.12, 0.02, 0, 0.39, -0.16); part(g, boxGeo, black, 0.09, 0.02, 0.02, 0.04, 0.35, -0.16);
+      } else if (kind === 'robot') {
+        const grey = cmat(0xb8bcc4), red = new THREE.MeshLambertMaterial({ color: 0xff3a3a, emissive: 0xaa0000 });
+        part(g, boxGeo, grey, 0.35, 0.32, 0.25, 0, 0.18, 0); part(g, boxGeo, grey, 0.26, 0.22, 0.22, 0, 0.47, 0);
+        for (const sx of [-1, 1]) part(g, ballGeo, red, 0.04, 0.04, 0.03, sx * 0.06, 0.49, -0.11);
+        part(g, GEO.cyl, black, 0.015, 0.15, 0.015, 0, 0.65, 0); part(g, ballGeo, red, 0.04, 0.04, 0.04, 0, 0.73, 0);
+      } else if (kind === 'cup') {
+        part(g, GEO.cyl, gold, 0.18, 0.05, 0.18, 0, 0.03, 0); part(g, GEO.cyl, gold, 0.05, 0.25, 0.05, 0, 0.17, 0);
+        part(g, GEO.cone, gold, 0.25, 0.35, 0.25, 0, 0.45, 0, Math.PI);
+        for (const sx of [-1, 1]) part(g, GEO.ring, gold, 0.1, 0.1, 0.4, sx * 0.25, 0.47, 0);
+      } else { // cash register
+        part(g, boxGeo, cmat(0x2f6b4a), 0.6, 0.3, 0.45, 0, 0.15, 0);
+        part(g, boxGeo, cmat(0x2f6b4a), 0.45, 0.2, 0.3, 0, 0.38, 0.05, 0.4);
+        part(g, boxGeo, cmat(0x9fe8b0), 0.25, 0.1, 0.02, 0, 0.42, -0.11, 0.4);
+        part(g, boxGeo, cmat(0xb8bcc4), 0.5, 0.08, 0.05, 0, 0.08, -0.23);
+      }
+      g.userData.ring = part(g, GEO.ring, new THREE.MeshLambertMaterial({ color: 0xffe14a, emissive: 0xffc000, transparent: true, opacity: 0.6 }), 0.5, 0.5, 0.3, 0, 0.02, 0, Math.PI / 2);
+      scene.add(g); return g;
+    },
+    buildShip() { // a landing pad with an orange rim, a sell counter and a tall beacon to find your way back
+      const g = new THREE.Group(), metal = cmat(0x5a6168), dark = cmat(0x2c3338);
+      const orange = new THREE.MeshLambertMaterial({ color: 0xff8a1a, emissive: 0xff6a00, emissiveIntensity: 0.6 });
+      part(g, GEO.cyl, metal, LETHAL_SHIP_R, 0.08, LETHAL_SHIP_R, 0, 0.04, 0);
+      part(g, GEO.ring, orange, LETHAL_SHIP_R, LETHAL_SHIP_R, 0.5, 0, 0.1, 0, Math.PI / 2);
+      part(g, GEO.ring, new THREE.MeshLambertMaterial({ color: 0xffb35a, emissive: 0xff8a1a, emissiveIntensity: 0.4, transparent: true, opacity: 0.35 }), LETHAL_SAFE_R, LETHAL_SAFE_R, 0.25, 0, 0.05, 0, Math.PI / 2); // how far the floodlights reach
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; part(g, boxGeo, cmat(0xffc61a), 1.2, 0.02, 0.3, Math.cos(a) * 2.6, 0.09, Math.sin(a) * 2.6, 0, -a); }
+      part(g, boxGeo, dark, 1.4, 1, 0.7, -(LETHAL_SHIP_R - 1), 0.5, 0, 0, Math.PI / 2);
+      part(g, boxGeo, new THREE.MeshLambertMaterial({ color: 0x7dff9a, emissive: 0x2aa04a }), 1.2, 0.06, 0.5, -(LETHAL_SHIP_R - 1), 1.02, 0, 0, Math.PI / 2);
+      part(g, GEO.cyl, metal, 0.12, 6, 0.12, LETHAL_SHIP_R - 0.6, 3, 0);
+      this.beacon = orange;
+      part(g, ballGeo, orange, 0.35, 0.35, 0.35, LETHAL_SHIP_R - 0.6, 6.2, 0);
+      scene.add(g); this.ship = g;
+    },
+    ensure() { // works on the host and on friends' screens, who never call start()
+      if (!LETHAL.on) {
+        LETHAL.on = true; const sp = MAPS[mapKey].spawn; spawnAt(sp[0], sp[1], LETHAL.ship);
+        scene.fog.near *= 0.75; scene.fog.far *= 0.75; hemiLight.intensity *= 0.75;
+      }
+      if (!this.ship) this.buildShip();
+      this.ship.position.set(LETHAL.ship.x, LETHAL.ship.y - R, LETHAL.ship.z);
+      if (LAB.mons.length) { this.stash = LAB.mons; LAB.mons = []; this.stash.forEach(m => { m.g.visible = false; }); } // the lab's own monsters take the day off
+    },
+    addMon(kind, home) { const m = labMon(kind, home); scene.add(m.g); return m; },
+    spawnMons() {
+      const taken = [LETHAL.ship];
+      LETHAL.mons = ['ashy', 'sandman', 'gus'].map(kind => {
+        let best = null, bd = -1;
+        for (let i = 0; i < 14; i++) { // somewhere far from the ship and from each other
+          const c = freeSpot(Math.random, new V(), HALF * 1.8, 0, null), d = Math.min(...taken.map(p => hyp(p, c)));
+          if (d > bd) { bd = d; best = c; }
+        }
+        taken.push(best);
+        const home = [[best.x, best.z]];
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 8; j++) { const w = freeSpot(Math.random, best, 24, 0, null); if (hyp(w, LETHAL.ship) > LETHAL_SAFE_R + 8) { home.push([w.x, w.z]); break; } }
+        if (home.length < 2) home.push([best.x + 3, best.z]); // it needs somewhere to walk to
+        return this.addMon(kind, home);
+      });
+    },
+    spawnScrap() {
+      const n = 16 + Math.min(6, remotes.size * 2), far = Math.max(12, HALF * 0.45), taken = [LETHAL.ship], W = [3, 3, 2, 2, 2, 1, 1], tot = W.reduce((a, b) => a + b, 0);
+      this.scrap = [];
+      for (let i = 0; i < n; i++) {
+        let r = Math.random() * tot, k = 0; while ((r -= W[k]) > 0) k++;
+        let p = null;
+        if (ledges.length && Math.random() < 0.25) { // some of it is up high, for climbers
+          const l = pick(ledges); p = new V((l.min.x + l.max.x) / 2, l.max.y, (l.min.z + l.max.z) / 2);
+          if (Math.abs(p.x) > HALF - 2 || Math.abs(p.z) > HALF - 2 || p.y > 7 || hyp(p, LETHAL.ship) < far) p = null;
+        }
+        if (!p) { for (let j = 0; j < 12; j++) { p = freeSpot(Math.random, new V(), HALF * 1.8, 4, taken); if (hyp(p, LETHAL.ship) > far) break; } p.y = standY(p.x, p.z) - R; }
+        taken.push(p);
+        this.scrap.push({ id: this.nextId++, k, pos: p, carrier: 0 });
+      }
+      const total = this.scrap.reduce((a, s) => a + this.KINDS[s.k][2], 0);
+      this.quota = Math.round(total * 0.75 / 5) * 5;
+    },
+    start() {
+      this.end();
+      this.ensure();
+      for (const b of bodies) { b.score = 0; b.labCd = 0; b.ltCrumbs = []; b.ltBan = {}; b.ltStuckP = null; b.ltRoamT = b.ltRoamT2 = b.ltTrail = b.ltRestT = 0; b.ltLookout = false; setOut(b, false); }
+      this.sold = 0; this.sand = []; this.sandT = 0; this.hornT = 4; this.mineId = 0;
+      if (isHost()) { this.spawnScrap(); this.spawnMons(); this.findExit(); }
+      flash('Lethal Toad!', 'Grab scrap and bring it back to the ship. Ashy and Sandman chase you if they see you. Gus is blind, so FREEZE when he is close!', 4.5, '#ff9f5a');
+    },
+    findExit() { // the most open way out from the ship, so computer frogs can find their way out of a room
+      const s = LETHAL.ship, from = new V(s.x, s.y + 0.5, s.z), to = new V();
+      this.exit = null; let bd = 0;
+      for (let i = 0; i < 16; i++) {
+        const a = i / 16 * Math.PI * 2;
+        for (const d of [22, 17, 12, 8]) {
+          to.set(clamp(s.x + Math.cos(a) * d, -HALF + 2, HALF - 2), s.y + 0.5, clamp(s.z + Math.sin(a) * d, -HALF + 2, HALF - 2));
+          const dd = hyp(to, s);
+          if (dd > bd && labClear(from, to)) { bd = dd; this.exit = new V(to.x, s.y, to.z); break; }
+        }
+      }
+    },
+    heavy(b) { const s = this.scrap.find(s => s.carrier === idOf(b)); return !!(s && this.KINDS[s.k][3]); },
+    pushMul() { return this.heavy(player) ? 0.75 : 1; },
+    speed(ai) { return this.heavy(ai) ? 0.65 : 0.8; }, // a little slower, so you aren't left with nothing to do
+    caught(b, m) { // the host: drop the scrap where you got caught, and back to the ship
+      for (const s of this.scrap) if (s.carrier === idOf(b)) { s.carrier = 0; s.pos.set(b.pos.x, b.grounded ? b.pos.y - R : standY(b.pos.x, b.pos.z) - R, b.pos.z); }
+      b.labCd = 3;
+      if (b.isRemote) m2Send({ t: 'caught', n: m.K.Name }, b.id);
+      else this.sendBack(b, m.K.Name);
+    },
+    sendBack(b, name) {
+      const s = LETHAL.ship;
+      b.pos.set(s.x + (Math.random() - 0.5) * 4, s.y, s.z + (Math.random() - 0.5) * 4); b.vel.set(0, 0, 0); b.labCd = 3; b.frozen = Math.max(b.frozen, 1.2);
+      if (b.ltLp) b.ltLp.copy(b.pos); b.ltSpd = 0;
+      if (b === player) { flash('Caught!', `${name} got you and you dropped your scrap. Back to the ship!`, 2.4, '#ff6b6b'); rumble(320, 0.8); sfxTone(220, 60, 0.6, 'sawtooth', 0.14); }
+      else say(b, pick(["Aaah! It got me!", "I dropped my scrap!", "Back to the ship!"]));
+    },
+    sell(s, b) {
+      const v = this.KINDS[s.k][2];
+      s.sold = true; this.sold += v; b.score = (b.score || 0) + v;
+      if (!b.isRemote && b !== player) b.ltRestT = roundTime + 8 + Math.random() * 6; // computer frogs catch their breath on the ship
+      this.soldMsg(s.k, idOf(b)); m2Send({ t: 'sold', k: s.k, w: idOf(b) });
+    },
+    soldMsg(k, wid) {
+      const K = this.KINDS[k] || this.KINDS[0], b = byId(wid);
+      sfxTone(1200, 1800, 0.12, 'square', b === player ? 0.08 : 0.04); setTimeout(() => sfxTone(1600, 2400, 0.2, 'triangle', b === player ? 0.08 : 0.04), 110); // ka-ching!
+      if (b === player) { flash('Sold!', `+$${K[2]} for the ${K[1]}. Go find more!`, 1.8, 'var(--leaf)'); addFlies(1); }
+      else if (b && !b.isRemote) say(b, pick(["Ka-ching!", `Sold the ${K[1]}!`, "The company will love this!"]));
+    },
+    update(dt, t, host) {
+      this.ensure();
+      const play = state === 'play';
+      for (const b of bodies) { // how fast is everyone moving? (Gus listens for it)
+        const lp = b.ltLp || (b.ltLp = b.pos.clone()), s = dt > 0 ? Math.min(20, hyp(b.pos, lp) / dt) : 0;
+        b.ltSpd = (b.ltSpd || 0) + (s - (b.ltSpd || 0)) * Math.min(1, dt * 5); lp.copy(b.pos);
+        if (mapKey !== 'lab' && b.labCd > 0) b.labCd -= dt; // (on the lab map, labFrame counts it down)
+        if (b.ltLoud > 0) b.ltLoud -= dt;
+      }
+      // the monsters
+      for (const m of LETHAL.mons) {
+        if (host) labThink(m, dt, play);
+        else if (m.netPos) {
+          m.pos.lerp(m.netPos, Math.min(1, dt * 10));
+          let r = m.netYaw - m.yaw; r = Math.atan2(Math.sin(r), Math.cos(r)); m.yaw += r * Math.min(1, dt * 10);
+        }
+        labDraw(m, dt, t);
+      }
+      if (host && play) {
+        for (const m of LETHAL.mons) {
+          if (m.st === 4) continue;
+          for (const b of bodies) {
+            if (b.out || b.hog || b.labCd > 0 || labSafe(b.pos) || b.pos.distanceTo(m.pos) > 1.3) continue;
+            if (m.K.ears && !lethalLoud(b)) continue; // hold still and Gus can't find you, even right next to him
+            this.caught(b, m); labGot(m, b); m.blindT = 8; break; // then it leaves everyone alone for a bit while it wanders back
+          }
+        }
+        // Sandman leaves piles of sand behind him when he chases you; they slow you down
+        const sm = LETHAL.mons.find(m => m.kind === 'sandman');
+        if (sm && sm.st === 1 && (this.sandT -= dt) <= 0) { this.sandT = 0.9; this.sand.push({ x: sm.pos.x, y: sm.pos.y - R, z: sm.pos.z, life: 14 }); if (this.sand.length > 16) this.sand.shift(); }
+        for (const s of this.sand) s.life -= dt;
+        this.sand = this.sand.filter(s => s.life > 0);
+        // pick up scrap by touching it; sell it by carrying it onto the ship's pad
+        for (const s of this.scrap) {
+          if (s.carrier) {
+            const b = byId(s.carrier);
+            if (!b || b.out) { s.carrier = 0; continue; }
+            s.pos.set(b.pos.x, b.pos.y - R, b.pos.z);
+            if (hyp(b.pos, LETHAL.ship) < LETHAL_SHIP_R - 0.5 && Math.abs(b.pos.y - LETHAL.ship.y) < 2) this.sell(s, b);
+          } else {
+            const b = bodies.find(b => !b.out && !b.hog && !(b.labCd > 0) && Math.hypot(b.pos.x - s.pos.x, b.pos.y - R - s.pos.y, b.pos.z - s.pos.z) < 1.4 && !this.scrap.some(o => o.carrier === idOf(b)));
+            if (b) s.carrier = idOf(b);
+          }
+        }
+        for (const s of this.scrap) if (s.sold && s.g) scene.remove(s.g);
+        this.scrap = this.scrap.filter(s => !s.sold);
+      }
+      this.drawSand();
+      this.drawScrap(t);
+      // the Air Horn honks now and then while someone carries it, and Gus hears it
+      if ((this.hornT -= dt) <= 0) {
+        this.hornT = 4.5 + Math.random() * 2;
+        for (const s of this.scrap) {
+          const b = s.carrier && this.KINDS[s.k][0] === 'horn' ? byId(s.carrier) : null; if (!b) continue;
+          if (host) b.ltLoud = 1.2;
+          const d = b.pos.distanceTo(player.pos);
+          if (play && d < 25) { const v = 0.1 * (1 - d / 25); sfxTone(440, 430, 0.3, 'square', v); setTimeout(() => sfxTone(350, 345, 0.4, 'square', v), 320); }
+        }
+      }
+      // what am I carrying?
+      const mine = this.scrap.find(s => s.carrier === myId);
+      if (mine && mine.id !== this.mineId && play) {
+        const K = this.KINDS[mine.k];
+        flash(`Got the ${K[1]}!`, `Worth $${K[2]}. ${K[3] ? "It's heavy! " : ''}${K[0] === 'horn' ? 'It honks, and Gus can hear it! ' : ''}Bring it back to the ship.`, 2.4, '#ffc93a');
+        sfxTone(700, 1100, 0.12, 'triangle', 0.08);
+      }
+      this.mineId = mine ? mine.id : 0;
+      // who's after me?
+      let chased = null;
+      for (const m of LETHAL.mons) {
+        const me = m.tid === myId, wasMe = m.ptid === myId && (m.pst === 1 || m.pst === 2);
+        if (play && me && m.st === 1 && !wasMe) {
+          flash(`${m.K.Name} ${m.K.ears ? 'hears' : 'sees'} you!`, m.K.ears ? 'FREEZE! Gus can only hear you when you move fast.' : 'Run! Get out of sight, or back to the ship.', 2.2, '#ff6b6b');
+          sfxTone(520, 260, 0.2, 'square', 0.1); setTimeout(() => sfxTone(520, 260, 0.3, 'square', 0.1), 220); rumble(200, 0.6);
+        }
+        if (play && wasMe && m.st === 3) { flash('You got away!', `${m.K.Name} gave up.`, 2, 'var(--leaf)'); sfxTone(600, 1000, 0.25, 'sine', 0.08); addFlies(1); }
+        if (play && me && m.st === 1) chased = m;
+        m.pst = m.st; m.ptid = m.tid;
+      }
+      if (chased && (this.alarmT -= dt) <= 0) { this.alarmT = 0.55; sfxTone(70, 50, 0.15, 'sine', 0.18); setTimeout(() => sfxTone(65, 45, 0.12, 'sine', 0.14), 160); }
+      if (this.beacon) this.beacon.emissiveIntensity = 0.4 + Math.abs(Math.sin(t * 2.5)) * 0.6;
+      if (!host || !play) return;
+      if (this.quota > 0 && this.sold >= this.quota) {
+        state = 'over'; overT = 6;
+        announce('Quota met!', `You sold $${this.sold} of scrap. The company is happy!`, 'var(--leaf)', 5, bodies.slice());
+        addFlies(10);
+      } else if (roundTime >= this.TIME) {
+        state = 'over'; overT = 6;
+        announce('Out of time!', `You sold $${this.sold} of the $${this.quota} quota. The ship had to leave!`, '#ff9f5a', 5);
+      }
+    },
+    drawSand() {
+      const base = trackOn ? [] : (MAPS[mapKey].slow || []);
+      slowZones = this.sand.length ? base.concat(this.sand.map(s => [s.x - 1.1, s.x + 1.1, s.z - 1.1, s.z + 1.1])) : base;
+      while (this.sandMeshes.length < this.sand.length) { const m = new THREE.Mesh(ballGeo, cmat(0xd9b46a)); scene.add(m); this.sandMeshes.push(m); }
+      this.sandMeshes.forEach((m, i) => {
+        const s = this.sand[i]; m.visible = !!s; if (!s) return;
+        const k = Math.min(1, s.life / 2); m.position.set(s.x, s.y, s.z); m.scale.set(1.2 * k, 0.18 * k, 1.2 * k);
+      });
+    },
+    drawScrap(t) {
+      for (const s of this.scrap) {
+        if (!s.g) s.g = this.scrapMesh(s.k);
+        const b = s.carrier ? byId(s.carrier) : null;
+        if (b) { s.g.position.set(b.pos.x, b.pos.y + 0.75 * (b.size || 1), b.pos.z); s.g.rotation.y = b.yaw || 0; s.g.userData.ring.visible = false; }
+        else { s.g.position.set(s.pos.x, s.pos.y + 0.08 + Math.sin(t * 2 + s.id) * 0.05, s.pos.z); s.g.rotation.y = t * 0.8 + s.id; s.g.userData.ring.visible = true; }
+      }
+    },
+    goal(ai) {
+      if (ai.labCd > 0) { ai.ltCrumbs = []; return null; }
+      if (LETHAL.mons.some(m => m.K.ears && (m.st === 1 || m.st === 2 || m.st === 4) && m.pos.distanceTo(ai.pos) < 10)) { // Gus is listening: freeze!
+        if (!ai.ltShh) { ai.ltShh = true; if (Math.random() < 0.5) say(ai, pick(["Shh! Freeze!", "Don't move, Gus is listening!", "Stay still..."])); }
+        return ai.pos;
+      }
+      ai.ltShh = false;
+      const crumbs = ai.ltCrumbs || (ai.ltCrumbs = []), ban = ai.ltBan || (ai.ltBan = {}), carrying = this.scrap.some(s => s.carrier === ai.id);
+      // stuck? (pushing into a wall) try another piece of scrap, or follow our trail home
+      if (!ai.ltStuckP || roundTime - ai.ltStuckT > 3) {
+        if (ai.ltStuckP && hyp(ai.pos, ai.ltStuckP) < 1.5) { // try another piece of scrap, hop off somewhere else for a moment, or follow our trail home
+          if (ai.ltTarget) ban[ai.ltTarget] = roundTime + 20;
+          ai.ltTrail = roundTime + 6; ai.ltRoamT = roundTime + 2.5; const a = Math.random() * Math.PI * 2;
+          ai.ltRoam = new V(clamp(ai.pos.x + Math.cos(a) * 8, -HALF + 2, HALF - 2), ai.pos.y, clamp(ai.pos.z + Math.sin(a) * 8, -HALF + 2, HALF - 2));
+        }
+        ai.ltStuckP = ai.pos.clone(); ai.ltStuckT = roundTime;
+      }
+      if (hyp(ai.pos, LETHAL.ship) < LETHAL_SHIP_R) crumbs.length = 0;
+      else if (!carrying) { const c = crumbs[crumbs.length - 1]; if (!c || hyp(c, ai.pos) > 1.5) { crumbs.push(ai.pos.clone()); if (crumbs.length > 300) crumbs.shift(); } } // a trail back to the ship
+      if (carrying) { // head home: straight there if we can see the ship, otherwise back along our trail
+        ai.ltTarget = 0;
+        labEye.copy(LETHAL.ship); labEye.y += 0.5;
+        if (!(ai.ltTrail > roundTime) && labClear(ai.pos, labEye) || !crumbs.length) return LETHAL.ship;
+        while (crumbs.length > 1 && hyp(crumbs[crumbs.length - 1], ai.pos) < 1.2) crumbs.pop();
+        if (crumbs.length === 1 && hyp(crumbs[0], ai.pos) < 1.2) crumbs.pop();
+        if (!crumbs.length) return LETHAL.ship;
+        return crumbs[crumbs.length - 1];
+      }
+      const n = ais.indexOf(ai);
+      if (n % 2 === 1 && n < ais.length - 1) { // every other computer frog stays on the ship as a lookout, like in Lethal Company
+        if (!ai.ltLookout) { ai.ltLookout = true; if (Math.random() < 0.5) say(ai, pick(["I'll watch the ship!", "I'm the lookout!", "Bring me something shiny!"])); }
+        return hyp(ai.pos, LETHAL.ship) > LETHAL_SHIP_R - 1 ? LETHAL.ship : ai.pos;
+      }
+      if (ai.ltRestT > roundTime) return LETHAL.ship;
+      if (ai.ltRoamT > roundTime) return ai.ltRoam;
+      let best = null, bs = 1e9;
+      for (const s of this.scrap) if (!s.carrier && !(ban[s.id] > roundTime) && hyp(s.pos, ai.pos) < 20) { // only scrap it can see: it doesn't have your radar
+        labEye.set(s.pos.x, s.pos.y + 0.4, s.pos.z);
+        if (!labClear(ai.pos, labEye)) continue;
+        const sc = hyp(s.pos, ai.pos) + ((s.id * 7 + n * 3) % 5) * 2 + (s.pos.y > 1 ? 6 : 0) + (LETHAL.mons.some(m => hyp(m.pos, s.pos) < 7) ? 15 : 0);
+        if (sc < bs) { bs = sc; best = s; }
+      }
+      ai.ltTarget = best ? best.id : 0;
+      if (!best) { // nothing in sight: go exploring
+        if (!ai.ltRoam || hyp(ai.ltRoam, ai.pos) < 2 || !(ai.ltRoamT2 > roundTime)) {
+          ai.ltRoamT2 = roundTime + 6;
+          ai.ltRoam = hyp(ai.pos, LETHAL.ship) < LETHAL_SAFE_R && this.exit ? this.exit.clone() : freeSpot(Math.random, ai.pos, 24, 0, null);
+        }
+        return ai.ltRoam;
+      }
+      return best ? new V(best.pos.x, best.pos.y + R, best.pos.z) : null;
+    },
+    hud() {
+      const mine = this.scrap.find(s => s.carrier === myId), left = Math.max(0, this.TIME - roundTime);
+      let radar = 'hide';
+      if (mine) radar = { pos: LETHAL.ship, label: 'Ship' };
+      else { let best = null, bd = 1e9; for (const s of this.scrap) if (!s.carrier) { const d = hyp(s.pos, player.pos); if (d < bd) { bd = d; best = s; } } if (best) radar = { pos: best.pos, label: this.KINDS[best.k][1] }; }
+      return { chip: player.labCd > 0 ? 'CAUGHT!' : mine ? 'TO THE SHIP!' : 'FIND SCRAP!', bg: player.labCd > 0 ? '#9aa0a6' : mine ? '#ffc93a' : '#ff9f5a',
+        info: `$${this.sold} of $${this.quota} quota · ${fmt(left)} left${mine ? ` · carrying the ${this.KINDS[mine.k][1]}` : ''}`, radar };
+    },
+    row(b) { return `$${b.score || 0}`; },
+    snap() {
+      return { q: this.quota, s: this.sold, sh: [LETHAL.ship.x, LETHAL.ship.y, LETHAL.ship.z].map(r2),
+        i: this.scrap.map(s => [s.id, s.k, r2(s.pos.x), r2(s.pos.y), r2(s.pos.z), s.carrier || 0]),
+        m: LETHAL.mons.map(m => [m.kind[0], r2(m.pos.x), r2(m.pos.y), r2(m.pos.z), r2(m.yaw), m.st, m.tid || 0]),
+        sd: this.sand.map(s => [r2(s.x), r2(s.y), r2(s.z), r2(s.life)]) };
+    },
+    apply(ms) {
+      this.quota = +ms.q || 0; this.sold = +ms.s || 0;
+      if (Array.isArray(ms.sh)) { this.ensure(); LETHAL.ship.set(+ms.sh[0] || 0, +ms.sh[1] || 0, +ms.sh[2] || 0); }
+      this.ensure();
+      const have = new Map(this.scrap.map(s => [s.id, s])), next = [];
+      for (const r of Array.isArray(ms.i) ? ms.i : []) {
+        if (!Array.isArray(r)) continue;
+        const s = have.get(r[0]) || { id: r[0], k: clamp(r[1] | 0, 0, this.KINDS.length - 1), pos: new V(), carrier: 0 };
+        have.delete(r[0]); s.pos.set(+r[2] || 0, +r[3] || 0, +r[4] || 0); s.carrier = r[5] || 0; next.push(s);
+      }
+      for (const s of have.values()) if (s.g) scene.remove(s.g);
+      this.scrap = next;
+      const KM = { a: 'ashy', s: 'sandman', g: 'gus' }, mons = Array.isArray(ms.m) ? ms.m : [];
+      if (!LETHAL.mons.length) LETHAL.mons = mons.map(r => this.addMon(KM[r[0]] || 'ashy', [[+r[1] || 0, +r[3] || 0]]));
+      mons.forEach((r, i) => {
+        const m = LETHAL.mons[i]; if (!m || !Array.isArray(r)) return;
+        (m.netPos || (m.netPos = new V())).set(+r[1] || 0, +r[2] || 0, +r[3] || 0); m.netYaw = +r[4] || 0;
+        m.st = clamp(r[5] | 0, 0, 4); m.tid = r[6] || 0;
+      });
+      this.sand = (Array.isArray(ms.sd) ? ms.sd : []).map(r => ({ x: +r[0] || 0, y: +r[1] || 0, z: +r[2] || 0, life: +r[3] || 0 }));
+    },
+    onEvent(d) {
+      if (d.t === 'caught') this.sendBack(player, String(d.n || 'A monster'));
+      else if (d.t === 'sold') this.soldMsg(d.k | 0, d.w);
+    },
+    end() {
+      for (const m of LETHAL.mons) if (m.g.parent) m.g.parent.remove(m.g);
+      LETHAL.mons = [];
+      for (const s of this.scrap) if (s.g) scene.remove(s.g);
+      this.scrap = []; this.sand = []; this.sandMeshes.forEach(m => scene.remove(m)); this.sandMeshes = [];
+      if (this.ship) { scene.remove(this.ship); this.ship = this.beacon = null; }
+      if (LETHAL.on) { LETHAL.on = false; slowZones = trackOn ? [] : (MAPS[mapKey].slow || []); mapLighting(); }
+      if (this.stash && mapKey === 'lab' && !LAB.mons.length && this.stash[0].g.parent) { LAB.mons = this.stash; LAB.mons.forEach(m => { m.g.visible = true; }); labReset(); }
+      this.stash = null;
+      for (const b of bodies) { b.labCd = 0; b.ltLoud = 0; }
+    },
   },
   sardines: { hider: null, found: [], count: 0,
     start() {

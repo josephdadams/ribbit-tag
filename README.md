@@ -105,6 +105,7 @@ On the menu: `1` Infection, `2` Classic Tag, `3` Capture the Lily Pad, `4` Freez
 - **Free Play**: no tagging. Explore, climb, bounce, talk to the frogs, and catch flies.
 
 - **Monster Night** (in More modes, under Spooky): everyone teams up against monsters that hunt you down. Pumpkin Heads are fast, Swamp Blobs climb walls, and Ghosts float through walls. Throw fireflies (`F`, a quick tap, or `B`) to stun them, touch caught friends to free them, and survive 3 minutes. Spookiest on Haunted Manor.
+- **Lethal Toad** (in More modes, under Spooky, inspired by Lethal Ape): your ship lands and the team has 4 minutes to grab scrap (rubber ducks, golden cups, cash registers and more) and carry it back to the ship to make the quota. Three monsters hunt you: **Ashy** (made of grey gravel, the calm one who gives up quickly), **Sandman** (his sandy brother: faster, grumpier, and he leaves piles of sand that slow you down), and **Gus** (blind, but he hears anything that moves fast, even through walls, so freeze or sneak when he's close). Get caught and you drop your scrap and go back to the ship. Monsters never come near the ship's lights. Heavy scrap slows you down, and the Air Horn honks, so Gus can hear whoever is carrying it. Some computer frogs stay on the ship as lookouts. Best on The Laboratory or The Backrooms.
 
 Tap **More modes** on the menu for even more:
 
