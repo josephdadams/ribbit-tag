@@ -3707,7 +3707,12 @@ function collide(b) {
   p.x = clamp(p.x, -HALF + R, HALF - R); p.z = clamp(p.z, -HALF + R, HALF - R);
   if (p.y > 40) { p.y = 40; if (v.y > 0) v.y = 0; }
 }
+const finite3 = v => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
 function physics(b, dt) {
+  // a safety net: if a glitch ever makes a frog's position or speed "not a number", put it back where it last was
+  if (!finite3(b.vel)) b.vel.set(0, 0, 0);
+  if (!finite3(b.pos)) { if (b.okPos) b.pos.copy(b.okPos); else spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], b.pos); }
+  if (!Number.isFinite(b.yaw)) b.yaw = 0;
   if (b.hang) { // hanging on: no gravity, a falling frog is caught, and we lean into the surface so we stay stuck to it
     const v = b.vel; v.y *= Math.exp(-(v.y < 0 ? 10 : 3) * dt);
     const f = Math.exp(-4 * dt); v.x *= f; v.z *= f;
@@ -3722,6 +3727,7 @@ function physics(b, dt) {
   const wet = b.pos.y < R + 0.3 && (water && b.pos.z > water.z || slowZones.some(([x0, x1, z0, z1]) => b.pos.x > x0 && b.pos.x < x1 && b.pos.z > z0 && b.pos.z < z1));
   const k = wet ? 6 : b.onIce ? 0.35 : b.grounded ? (b.isPlayer ? 3.2 : 4) : airDrag, f = Math.exp(-k * dt);
   b.vel.x *= f; b.vel.z *= f;
+  if (finite3(b.pos) && finite3(b.vel)) (b.okPos || (b.okPos = new V())).copy(b.pos);
 }
 // Grabbing: hold a finger down (or C, or RB) while touching a wall, tree or ceiling to hang on. Swipe down to climb.
 let padGrip = false;
