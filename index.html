@@ -108,6 +108,8 @@ h1 span { color: var(--lava); display: block; }
 #gadgetBtn { position: absolute; right: 16px; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.3rem; padding: 14px 22px; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 0 4px 0 #b8941a; }
 #itemBtn { position: absolute; left: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.4rem; padding: 14px 24px; touch-action: manipulation; box-shadow: 0 4px 0 #b8941a; }
 #camView { position: absolute; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(240px, 38vw); height: auto; aspect-ratio: 4 / 3; border-radius: 14px; border: 2px solid rgba(10,26,16,.72); opacity: .85; }
+#camView.big { width: min(440px, 50vw); }
+#camView.half { left: 0; top: 0; bottom: 0; width: 50vw; height: 100%; aspect-ratio: auto; border-radius: 0; border: 0; border-right: 3px solid rgba(10,26,16,.72); object-fit: contain; background: rgba(10,26,16,.6); opacity: .9; }
 #radar { position: absolute; top: calc(58px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
 #radar .arrow { width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 18px solid currentColor; display: inline-block; }
 #radar.chase { color: var(--lava); }
@@ -324,6 +326,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 
 <div id="hud" hidden>
   <div id="vignette"></div>
+  <canvas id="camView" width="320" height="240" hidden></canvas>
   <div class="hud-top">
     <div id="status" class="chip safe">SAFE</div>
     <button id="info" class="chip" type="button" title="What mode is this?"></button>
@@ -338,7 +341,6 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   <button id="hogBtn" class="chip" type="button" hidden>Drive</button>
   <button id="itemBtn" class="chip" type="button" hidden></button>
   <button id="gadgetBtn" class="chip" type="button" hidden></button>
-  <canvas id="camView" width="320" height="240" hidden></canvas>
   <div id="bubbles"></div>
   <div id="scores" hidden>
     <div class="pl-head"><h2 id="scTitle">Scores</h2><span class="spacer"></span><button id="scClose" class="pill-btn" type="button">Close</button></div>
@@ -535,6 +537,14 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <div class="seg" id="camFaceSeg">
           <button type="button" data-f="user" aria-pressed="true">Front</button>
           <button type="button" data-f="environment" aria-pressed="false">Back</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Camera size</span>
+        <div class="seg" id="camSizeSeg">
+          <button type="button" data-s="small" aria-pressed="true">Small</button>
+          <button type="button" data-s="big" aria-pressed="false">Big</button>
+          <button type="button" data-s="half" aria-pressed="false">Half</button>
         </div>
       </div>
       <p class="note" id="camNote" hidden></p>
@@ -5358,6 +5368,15 @@ function setCamFacing(f) {
   if (camOn) setCam(true);
 }
 document.querySelectorAll('#camFaceSeg button').forEach(b => b.addEventListener('click', () => setCamFacing(b.dataset.f)));
+// how big the camera picture is: a corner, a bigger corner, or the whole left half of the screen
+function setCamSize(sz) {
+  if (!['small', 'big', 'half'].includes(sz)) sz = 'small';
+  $('camView').className = sz === 'small' ? '' : sz;
+  document.querySelectorAll('#camSizeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === sz)));
+  try { localStorage.setItem('ribbit-camsize', sz); } catch (e) {}
+}
+document.querySelectorAll('#camSizeSeg button').forEach(b => b.addEventListener('click', () => setCamSize(b.dataset.s)));
+try { setCamSize(localStorage.getItem('ribbit-camsize')); } catch (e) { setCamSize('small'); }
 document.querySelectorAll('#camFaceSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === camFacing)));
 function camStop() {
   if (camStream) camStream.getTracks().forEach(tr => tr.stop());

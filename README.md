@@ -76,7 +76,7 @@ Turn on **Hand camera** in the menu settings and the camera watches your real ha
 - **Move your hand sideways** to turn.
 - **Make a fist** next to a wall, tree or ceiling to hang on. Open your hand to let go.
 
-A little camera picture in the corner shows what it sees, with dots on each hand (yellow means a fist). The hand tracker ([MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker)) runs on the tablet itself, so the camera picture never leaves the device. It needs the internet the first time to download the tracker.
+A camera picture shows what it sees, with dots on each hand (yellow means a fist). **Camera size** makes it Small or Big in the corner, or Half to fill the whole left side of the screen. The hand tracker ([MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker)) runs on the tablet itself, so the camera picture never leaves the device. It needs the internet the first time to download the tracker.
 
 ### Keyboard
 
