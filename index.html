@@ -90,6 +90,14 @@ h1 span { color: var(--lava); display: block; }
 .keys dd { margin: 0; }
 .mode-label { margin: 16px 0 0; }
 .keys-sub { margin: 10px 0 0; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--leaf); }
+.padcheck { margin: 8px 0 4px; padding: 8px 10px 10px; border-radius: 12px; background: var(--canopy); font-size: .88rem; }
+.padcheck .keys-sub { margin: 0 0 4px; }
+.padcheck p { margin: 0; }
+.padcheck .pc-pad { margin-top: 8px; }
+.padcheck .pc-name { color: var(--bone); font-weight: 700; overflow-wrap: anywhere; }
+.padcheck .pc-axes { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.padcheck .pc-bar { display: inline-block; width: 40px; height: 6px; border-radius: 3px; background: rgba(0,0,0,.35); position: relative; vertical-align: middle; margin-left: 3px; }
+.padcheck .pc-bar i { position: absolute; top: -2px; width: 4px; height: 10px; border-radius: 2px; background: var(--leaf); margin-left: -2px; }
 @media (max-width: 720px) { .card { grid-template-columns: 1fr; padding: 18px; } }
 
 /* HUD */
@@ -573,6 +581,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">💦</span><span>Grab a <strong>gadget box</strong>: a <strong>Bubble Bazooka</strong>, a <strong>Firefly Jet Pack</strong> or <strong>Tongue Shooters</strong>. Use it with the yellow gadget button.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
         <li class="keys-li"><span class="ic">Pad</span><div><strong>Controller</strong>
+          <div class="padcheck"><p class="keys-sub">Controller check</p><p id="padCheckMsg">Plug in a controller, then press a button on it.</p><div id="padCheckList"></div></div>
           <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RB</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>LT</kbd></dt><dd>Use your gadget</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
           <p class="keys-sub">Magicsee R1 ring (hold <kbd>@</kbd> and press <kbd>B</kbd> after turning it on)</p><dl class="keys"><dt><kbd>Stick</kbd></dt><dd>Push forward / back, sideways to turn</dd><dt><kbd>Trigger</kbd></dt><dd>Jump</dd><dt>Hold <kbd>top button</kbd></dt><dd>Grab and hang on</dd><dt><kbd>B</kbd></dt><dd>Jump, or get in a toadhog</dd><dt><kbd>D</kbd></dt><dd>Throw / go back</dd></dl>
           <p class="keys-sub">On menus</p><dl class="keys"><dt><kbd>D-pad</kbd></dt><dd>Move around</dd><dt><kbd>A</kbd></dt><dd>Pick</dd><dt><kbd>B</kbd></dt><dd>Go back</dd></dl></div></li>
@@ -7275,7 +7284,34 @@ function padBack() {
   else if (!$('players').hidden) togglePlayers(false);
   else if (!$('talk').hidden) $('talk').hidden = true;
 }
+// Controller check on the menu: shows what the browser can see, so you can tell if a controller is reaching the game at all.
+// Some joysticks only show up as a keyboard, so the last key pressed is shown too.
+let padCheckT = 0, padCheckKey = '';
+addEventListener('keydown', e => { padCheckKey = e.key === ' ' ? 'Space' : e.key; });
+function padCheck(dt) {
+  if ((padCheckT -= dt) > 0 || $('menu').hidden) return;
+  padCheckT = 0.1;
+  const pads = (navigator.getGamepads ? [...navigator.getGamepads()] : []).filter(p => p && p.connected);
+  const list = $('padCheckList'), keyNote = padCheckKey ? ` Last key: ${padCheckKey}.` : '';
+  $('padCheckMsg').textContent = !navigator.getGamepads ? 'This browser can\'t use controllers.' + keyNote
+    : !window.isSecureContext ? 'Controllers only work when the game is opened from an https:// address.' + keyNote
+    : !pads.length ? 'No controller yet. Plug one in, then press a button on it.' + keyNote
+    : `${pads.length === 1 ? 'Found a controller' : `Found ${pads.length} controllers`}. Press buttons and move the sticks.` + keyNote;
+  while (list.children.length > pads.length) list.lastChild.remove();
+  pads.forEach((p, n) => {
+    let el = list.children[n];
+    if (!el) { el = document.createElement('div'); el.className = 'pc-pad'; el.innerHTML = '<p class="pc-name"></p><p class="pc-btns"></p><div class="pc-axes"></div>'; list.append(el); }
+    el.querySelector('.pc-name').textContent = p.id + (p.mapping === 'standard' ? '' : ' (unusual layout)');
+    const down = p.buttons.map((x, i) => x.pressed || x.value > 0.5 ? (Object.keys(PAD).find(k => PAD[k] === i) || '#' + i) : null).filter(Boolean);
+    el.querySelector('.pc-btns').textContent = `${p.buttons.length} buttons. Pressed: ${down.length ? down.join(', ') : 'none'}`;
+    const ax = el.querySelector('.pc-axes');
+    while (ax.children.length < p.axes.length) { const s = document.createElement('span'); s.innerHTML = '<b></b><span class="pc-bar"><i></i></span>'; ax.append(s); }
+    while (ax.children.length > p.axes.length) ax.lastChild.remove();
+    p.axes.forEach((v, i) => { const s = ax.children[i]; s.firstChild.textContent = `Axis ${i}`; s.querySelector('i').style.left = `${(Math.max(-1, Math.min(1, v)) + 1) * 50}%`; });
+  });
+}
 function pollGamepad(dt) {
+  padCheck(dt);
   const p = activePad();
   padGrip = false;
   if (!p) return;
