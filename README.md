@@ -141,7 +141,7 @@ Tap **More modes** on the menu for even more:
 | --- | --- | --- | --- |
 | **Hide and Seek**: seekers count to 20, found frogs help seek | **Mud Splat**: throw mud, three splats sends a frog home | **Hop Race**: through 8 glowing rings in order | **Musical Lily Pads**: when the music stops, find a pad |
 | **Bat Tag**: lights out, the lava frog glows | **Lily Pad Soccer**: push the ball onto their lily pad | **Floor Is Lava**: the lava rises, climb high | **Sardines**: find the hider, then hide with them |
-| **Shrink Tag**: each tag shrinks you, last big frog wins | **Pond Ball**: dodgeball, hit frogs sit out | **Bug Swarm**: everyone squashes bugs to save the lily pad | |
+| **Shrink Tag**: each tag shrinks you, last big frog wins | **Pond Ball**: dodgeball, hit frogs sit out | **Bug Swarm**: everyone squashes bugs to save the lily pad | **Slap Battle**: slap frogs off a giant floating lily pad |
 | **Sticky Tongue Tag**: the lava frog tags from afar | | **Simon Says Frog**: only obey "Silver says" | |
 | **Keep Away**: hold the golden crown the longest | | **Toadhog Race**: the map turns into a race track, first to 3 laps wins | |
 | **Gravity Swap**: gravity changes every 20 seconds | | | |
@@ -149,6 +149,16 @@ Tap **More modes** on the menu for even more:
 In Toadhog Race every map has its own track: a figure 8 with a bridge, clovers full of hairpins, a wavy flower or a big loop, with hills to catch air off and tunnels. The hazards fit the map: ice, oil and slime spin you out, mud and chocolate slow you down, lava pops you up, boost pads shoot you forward, and blocks slide across the road. Every frog starts in a toadhog on the grid. Drive through the rainbow ? boxes for an item, then press `F` (or `B` on a controller, or the item button) to use it: 🔥 Turbo, 🐢 Turtle Shell (fires ahead and bounces off walls), 🍌 Banana Peel (drops behind you) or ⭐ Golden Fly (fast, and nothing can stop you). Frogs near the back get the better items. Hit a hill fast enough and your toadhog takes off. Bump other hogs to knock them off their line: hit one from behind to shove it forward, or hit its side to slide it over and spin it. Drop out with `G` and you can climb back in.
 
 In Mud Splat and Pond Ball, throw with `F`, a quick tap on the screen, or `B` on a controller.
+
+**Slap Battle** (inspired by the slap games on Roblox, and Abraham's idea): everyone starts on a giant lily pad floating high over the map. Slap with `F`, a quick tap, the **Slap** button, `B` on a controller, `D` on the Magicsee R1 ring, or by making a fist with Hand camera. Each slap knocks a frog back; knock one off the edge within a few seconds of slapping it and you score. Frogs who fall pop back onto the pad a moment later. First to 15, or the most after 2½ minutes, wins. Glove boxes appear on the pad; grab one to swap gloves:
+
+| Glove | Power |
+| --- | --- |
+| 🧤 Lily Glove | Everyone starts with it. A good all-round slap |
+| 🥊 Big Bonk | Slow, but sends frogs flying |
+| ⚡ Zippy Glove | Super quick little slaps, and you zoom forward |
+| 🎈 Boing Glove | Pops frogs way up high |
+| 🧊 Slippy Glove | Slapped frogs slide like they're on ice |
 
 ## Daily quests
 

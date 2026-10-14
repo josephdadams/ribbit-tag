@@ -440,7 +440,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <button class="mode kingmode" id="modeKing" type="button"><b>King of the Lily Pad</b><small>Hold the golden pad alone to score. Bump others off!</small></button>
         <button class="mode freemode" id="modeFree" type="button"><b>Free Play</b><small>No tagging. Explore, climb and catch flies.</small></button>
       </div>
-      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (17)</button>
+      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (18)</button>
       <div id="moreModes" hidden>
         <h3 class="more-cat">Tag twists</h3>
         <div class="more-grid">
@@ -474,6 +474,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <div class="more-grid">
           <button class="mode mini" data-mode="musical" id="mode-musical" type="button"><b>Musical Lily Pads</b><small>When the music stops, find a lily pad.</small></button>
           <button class="mode mini" data-mode="sardines" id="mode-sardines" type="button"><b>Sardines</b><small>Find the hider, then hide with them.</small></button>
+          <button class="mode mini" data-mode="slap" id="mode-slap" type="button"><b>Slap Battle</b><small>Slap frogs off the giant lily pad! Grab glove boxes for new powers.</small></button>
         </div>
       </div>
       <button class="wardrobe-btn quests-btn" id="questsBtn" type="button"><span>Daily quests</span><span class="wb-count" id="questCount">0/3</span></button>
@@ -632,7 +633,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-27';
+const APP_VERSION = 'ribbit-28';
 const DONATE_URL = 'https://ko-fi.com/josephdadams'; // a Ko-fi page like https://ko-fi.com/name; the menu's donate note stays hidden while this is empty
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
@@ -3762,7 +3763,7 @@ function physics(b, dt) {
   collide(b);
   if (b.isPlayer && b.grounded && !wasGrounded && vy < -6) sfxSlap(0.18);
   const wet = b.pos.y < R + 0.3 && (water && b.pos.z > water.z || slowZones.some(([x0, x1, z0, z1]) => b.pos.x > x0 && b.pos.x < x1 && b.pos.z > z0 && b.pos.z < z1));
-  const k = wet ? 6 : b.onIce ? 0.35 : b.grounded ? (b.isPlayer ? 3.2 : 4) : airDrag, f = Math.exp(-k * dt);
+  const k = wet ? 6 : b.onIce || b.slipT > 0 ? 0.35 : b.grounded ? (b.isPlayer ? 3.2 : 4) : airDrag, f = Math.exp(-k * dt);
   b.vel.x *= f; b.vel.z *= f;
   if (finite3(b.pos) && finite3(b.vel)) (b.okPos || (b.okPos = new V())).copy(b.pos);
 }
@@ -5474,6 +5475,7 @@ function camUpdate() {
     if (Math.abs(x - c.p.x) < W * 0.006 && Math.abs(y - c.p.y) < H * 0.006) continue;
     handMove(c.p, x, y);
   }
+  if (mode === 'slap' && state === 'play' && grip && !camGrip) tryThrow(); // Slap Battle: make a fist to slap
   camGrip = grip && state !== 'menu';
   if (!view.hidden) camDraw(view, lms, mx);
 }
@@ -5982,7 +5984,7 @@ const endPointer = e => {
   if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 14 || performance.now() - p.t0 > 350) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  if (['mud', 'dodge', 'monsters'].includes(mode) && state === 'play') { tryThrow(ray.ray.direction.clone()); return; }
+  if (['mud', 'dodge', 'monsters', 'slap'].includes(mode) && state === 'play') { tryThrow(ray.ray.direction.clone()); return; }
   const hit = ray.intersectObjects(ais.map(a => a.group).concat(mysteryActive ? [mysteryActive.group] : []), true)[0];
   if (hit && hit.object.userData.mystery) {
     const m = mysteries[hit.object.userData.mystery];
@@ -6228,7 +6230,7 @@ $('modeFree').addEventListener('click', () => begin('free', 0, 'host'));
 $('modeKing').addEventListener('click', () => begin('king', 0, 'host'));
 document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode, 0, 'host')));
 $('optsBtn').addEventListener('click', () => { const open = $('opts').hidden; $('opts').hidden = !open; $('optsBtn').setAttribute('aria-expanded', String(open)); $('optsBtn').textContent = open ? 'Fewer options' : 'Other options'; });
-$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (17)'; });
+$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (18)'; });
 $('menuBtn').addEventListener('click', () => {
   if (player.hog) exitHog();
   ejectAiHogs();
@@ -7389,7 +7391,7 @@ function concealed(b) {
 const CLASSICISH = ['classic', 'potato', 'bat', 'shrink', 'tongue', 'gravity'];
 const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge'];
 Object.assign(MODE_NAMES, { monsters: 'Monster Night', lethal: 'Lethal Toad', hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
-  mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', kart: 'Toadhog Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines' });
+  mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', kart: 'Toadhog Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines', slap: 'Slap Battle' });
 function m2Send(d, target) { if (net && isHost()) net.ev.send({ k: 'm2', d }, target ? { target } : undefined); }
 function m2Ask(d) { if (net && !isHost()) net.ev.send({ k: 'm2', d }, { target: net.hostId }); }
 function alive() { return bodies.filter(b => !b.out); }
@@ -7468,6 +7470,7 @@ function projEvent(d) {
 // the throw button (F, a quick tap, or B on a controller)
 let throwCd = 0;
 function tryThrow(dirV) {
+  if (mode === 'slap') return state === 'play' && MODE2.slap.press(dirV);
   if (state !== 'play' || !['mud', 'dodge', 'monsters'].includes(mode) || player.frozen > 0 || player.out || throwCd > 0) return false;
   if (mode === 'dodge' && !MODE2.dodge.balls.some(bl => bl.holder === player)) { flash('No ball!', 'Grab a red ball first.', 1, 'var(--bone)'); return false; }
   throwCd = mode === 'mud' ? 0.55 : mode === 'monsters' ? 1.1 : 0.4;
@@ -7774,6 +7777,31 @@ function mapLighting() {
   if (lantern) lantern.visible = false;
 }
 
+// Slap Battle gloves: grab a glove box on the pad to swap. push = how far, up = how high, cd = seconds between slaps
+const GLOVES = {
+  lily: { e: '🧤', name: 'Lily Glove', color: 0x52d273, push: 8, up: 5, cd: 0.55, say: 'A good all-round slap.' },
+  bonk: { e: '🥊', name: 'Big Bonk', color: 0xe63946, push: 16, up: 7.5, cd: 1.3, say: 'Slow, but it sends frogs flying!' },
+  zippy: { e: '⚡', name: 'Zippy Glove', color: 0xffd23f, push: 6, up: 4.5, cd: 0.22, dash: 6, say: 'Super quick slaps, and you zoom forward.' },
+  boing: { e: '🎈', name: 'Boing Glove', color: 0xff70a6, push: 5, up: 14, cd: 0.7, say: 'Pops frogs way up high!' },
+  slippy: { e: '🧊', name: 'Slippy Glove', color: 0x9fdcff, push: 7, up: 4, cd: 0.8, slip: 2.5, say: 'Slapped frogs slide like they are on ice.' },
+};
+const SLAP_R = 10, SLAP_WIN = 15, SLAP_TIME = 150;
+let slapSwing = 0; // your glove hand swinging across
+Object.assign(M, { slapPad: lam(0x2f8a3c), slapRim: lam(0x24692d), slapVein: lam(0x45a653), slapStem: lam(0x4f8a3a) });
+const gloveBoxMats = {};
+function gloveBoxMat(k) {
+  if (!gloveBoxMats[k]) {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = GLOVES[k];
+    x.fillStyle = '#' + g.color.toString(16).padStart(6, '0'); x.fillRect(0, 0, 64, 64);
+    x.strokeStyle = '#fff'; x.lineWidth = 5; x.strokeRect(3, 3, 58, 58);
+    x.font = '40px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(g.e, 32, 36);
+    gloveBoxMats[k] = new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(c), emissive: 0x333333 });
+  }
+  return gloveBoxMats[k];
+}
+// your own glove, a puffy mitten over your right hand
+const gloveMesh = new THREE.Mesh(ballGeo, new THREE.MeshLambertMaterial({ color: 0x52d273, transparent: true, depthTest: false })); // transparent so it draws after the hand
+gloveMesh.scale.set(0.15, 0.1, 0.19); gloveMesh.position.set(0, 0.01, -0.08); gloveMesh.renderOrder = 11; gloveMesh.visible = false; hands[1].add(gloveMesh);
 const MODE2 = {
   // ===== Tag twists =====
   hide: { tagBase: true, infectLike: true, count: 0,
@@ -9174,6 +9202,243 @@ const MODE2 = {
     apply(ms) { this.hider = ms.h ? byId(ms.h) : null; this.found = (ms.f || []).map(byId).filter(Boolean); for (const b of bodies) b.sardFound = this.found.includes(b); this.count = ms.c; },
     end() { overlay('blind', false); for (const b of bodies) { b.sardFound = false; } this.hider = null; this.found = []; },
   },
+  // ===== Slap Battle: a giant lily pad floats over the map. Slap frogs off it! =====
+  // Each device slaps with its own frog (guests ask the host, who passes the hit along); the host counts who got slapped off.
+  slap: { y: 12, c: new V(), group: null, cols: [], mapKey: null, round: 0, myRound: -1, cd: 0, downT: 0, boxes: [], boxT: 4, boxMeshes: [], pows: [], myGlove: 'lily',
+    build(cx, cz, y) {
+      this.clear();
+      this.c.set(cx, 0, cz); this.y = y; this.mapKey = mapKey;
+      const g = this.group = new THREE.Group(); g.position.set(cx, y, cz); scene.add(g);
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(SLAP_R, SLAP_R * 0.92, 0.6, 28), M.slapPad); pad.position.y = -0.3; g.add(pad);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(SLAP_R - 0.25, 0.14, 4, 28), M.slapRim); rim.rotation.x = Math.PI / 2; rim.position.y = 0.02; g.add(rim);
+      for (let i = 0; i < 7; i++) part(g, boxGeo, M.slapVein, 0.12, 0.04, SLAP_R * 1.8, 0, 0.01, 0, 0, i * Math.PI / 7);
+      part(g, new THREE.CylinderGeometry(0.5, 0.7, 1, 8), M.slapStem, 1, y, 1, 0, -y / 2 - 0.6, 0); // the stem, all the way down
+      part(g, ballGeo, M.lotusPink, 0.5, 0.3, 0.5, 0, 0.15, 0);
+      // a round pad made of flat strips you can stand on
+      const N = 10, w = SLAP_R * 2 / N;
+      for (let i = 0; i < N; i++) {
+        const z0 = -SLAP_R + i * w, zm = z0 + w / 2, hw = Math.sqrt(Math.max(0, SLAP_R * SLAP_R - zm * zm)) + 0.15;
+        const bx = { min: new V(cx - hw, y - 0.6, cz + z0), max: new V(cx + hw, y, cz + z0 + w) };
+        boxes.push(bx); this.cols.push(bx);
+      }
+    },
+    clear() {
+      for (const bx of this.cols) { const i = boxes.indexOf(bx); if (i >= 0) boxes.splice(i, 1); }
+      this.cols = [];
+      if (this.group) { scene.remove(this.group); this.group.traverse(o => { if (o.geometry && o.geometry !== boxGeo && o.geometry !== ballGeo) o.geometry.dispose(); }); this.group = null; }
+    },
+    // high enough to float over everything under it
+    pickSpot() {
+      const mc = mapCenter(), lim = Math.max(0, HALF - SLAP_R - 1.5), cx = clamp(mc.x, -lim, lim), cz = clamp(mc.z, -lim, lim), reach = SLAP_R + 1;
+      let top = MAPS[mapKey].spawnHigh ? 8 : 0;
+      for (let a = 0; a < 12; a++) for (const r of [0, 0.5, 1]) { const x = cx + Math.cos(a / 2) * r * reach, z = cz + Math.sin(a / 2) * r * reach; top = Math.max(top, groundAt(x, z)); }
+      for (const bx of boxes) if (bx.max.x > cx - reach && bx.min.x < cx + reach && bx.max.z > cz - reach && bx.min.z < cz + reach) top = Math.max(top, bx.max.y);
+      for (const t of trees) if (Math.hypot(t.x - cx, t.z - cz) < reach + t.r) top = Math.max(top, t.h + 3);
+      for (const s of blobs) if (Math.hypot(s.c.x - cx, s.c.z - cz) < reach + s.r) top = Math.max(top, s.c.y + s.r);
+      return [cx, cz, r2(clamp(top + 5, 10, 34))];
+    },
+    spawnOn(b, i, n) { // a spot on the pad, around the middle
+      const a = n ? (i / n) * Math.PI * 2 + 0.4 : Math.random() * Math.PI * 2, r = n ? 5.5 : 2 + Math.random() * 4;
+      b.pos.set(this.c.x + Math.sin(a) * r, this.y + R + 0.05, this.c.z + Math.cos(a) * r); b.vel.set(0, 0, 0); b.slipT = 0; b.slapDown = false;
+      if (b === player) { player.yaw = Math.atan2(b.pos.x - this.c.x, b.pos.z - this.c.z); player.hang = 0; }
+      else if (!b.isRemote) b.yaw = Math.atan2(b.pos.x - this.c.x, b.pos.z - this.c.z);
+    },
+    start() {
+      this.round++; this.myRound = this.round; this.cd = 0; this.downT = 0; this.boxes = []; this.boxT = 4;
+      const [cx, cz, y] = this.pickSpot(); this.build(cx, cz, y);
+      const mine = bodies.filter(b => !b.isRemote);
+      mine.forEach((b, i) => { b.glove = 'lily'; this.spawnOn(b, i, mine.length); });
+      for (const b of bodies) { b.glove = 'lily'; b.score = 0; b.hits = 0; b.slapT = 1 + Math.random() * 2; }
+      flash('Slap Battle!', 'Slap frogs off the giant lily pad! Tap the screen, press F, or B to slap.', 3.4, '#ffd23f');
+    },
+    lowAt(b) { return b.pos.y < this.y - 4; },
+    near(b) { return !b.out && b.pos.y > this.y - 2; },
+    // the slap button: swing at whoever is in front of you
+    press(dirV) {
+      if (player.out || this.downT > 0 || this.cd > 0 || !this.group) return false;
+      const g = GLOVES[player.glove] || GLOVES.lily;
+      this.cd = g.cd; slapSwing = 0.25;
+      const fwd = (dirV || camForward()).clone().setY(0); if (fwd.lengthSq() < 1e-4) fwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); fwd.normalize();
+      let tg = null, td = 1e9;
+      for (const b of bodies) {
+        if (b === player || !this.near(b)) continue;
+        tn.subVectors(b.pos, player.pos); const d = tn.length(); tn.y = 0; tn.normalize();
+        const facing = tn.dot(fwd);
+        if (d < 1.5 || (d < 3 && facing > 0.35)) { const s = d - facing; if (s < td) { td = s; tg = b; } }
+      }
+      if (g.dash) { player.vel.addScaledVector(fwd, g.dash); player.vel.y = Math.max(player.vel.y, 2.5); }
+      if (!tg) { sfxTone(700, 250, 0.1, 'triangle', 0.04); return true; }
+      const d = tn.subVectors(tg.pos, player.pos).setY(0); if (d.lengthSq() < 1e-4) d.copy(fwd); d.normalize();
+      this.pow(tg.pos, g); sfxSlap(0.6); sfxTone(260, 90, 0.12, 'square', 0.06); rumble(80, 0.5);
+      if (isHost()) this.hit(player, tg, player.glove, d.x, d.z);
+      else m2Ask({ t: 'slap', b: idOf(tg), d: [r2(d.x), r2(d.z)] });
+      return true;
+    },
+    // host only: a slap landed, so knock the frog back (or tell its device to)
+    hit(a, b, gk, dx, dz) {
+      const g = GLOVES[gk] || GLOVES.lily, v = [r2(dx * g.push), g.up, r2(dz * g.push)];
+      b.slapBy = a; b.slapAt = performance.now();
+      a.swing = 1;
+      if (b === player) this.gotHit(v, g, a);
+      else if (b.isRemote) m2Send({ t: 'hit', v, s: g.slip || 0, by: idOf(a) }, b.id);
+      else { b.vel.set(v[0], v[1], v[2]); b.slipT = g.slip || 0; b.hopT = Math.max(b.hopT, 0.5); }
+      if (a !== player) this.pow(b.pos, g);
+      m2Send({ t: 'pow', p: [r2(b.pos.x), r2(b.pos.y), r2(b.pos.z)], g: gk, a: idOf(a) });
+    },
+    gotHit(v, g, a) {
+      player.vel.set(v[0], v[1], v[2]); player.slipT = g.slip || 0; player.hang = 0;
+      sfxSlap(0.7); sfxTone(220, 70, 0.15, 'square', 0.07); rumble(220, 0.9); handKick[0] = handKick[1] = 0.2;
+      flash('SLAP!', `${a ? (a === player ? 'You' : a.name) : 'Someone'} slapped you${g.slip ? ' and you slide like on ice' : ''}!`, 0.9, '#ffd23f');
+    },
+    pow(p, g) { // a quick ring that pops out where the slap lands
+      let fx = this.pows.find(f => f.t <= 0);
+      if (!fx) {
+        if (this.pows.length >= 6) return;
+        fx = { t: 0, mesh: new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.09, 4, 14), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })) };
+        this.pows.push(fx);
+      }
+      fx.t = 0.3; fx.mesh.material.color.setHex(g.color); fx.mesh.position.copy(p); fx.mesh.position.y += 0.3;
+      fx.mesh.lookAt(camera.position); scene.add(fx.mesh);
+    },
+    // glove boxes on the pad (the host places them; everyone draws them)
+    drawBoxes(t) {
+      while (this.boxMeshes.length < this.boxes.length) { const m = new THREE.Mesh(boxGeo, gloveBoxMat('lily')); m.scale.setScalar(0.8); scene.add(m); this.boxMeshes.push(m); }
+      this.boxMeshes.forEach((m, i) => {
+        const bx = this.boxes[i]; m.visible = !!bx && !!this.group;
+        if (!m.visible) return;
+        m.material = gloveBoxMat(bx.k); m.position.set(bx.x, this.y + 0.8 + Math.sin(t * 3 + i) * 0.15, bx.z); m.rotation.y = t * 1.5 + i;
+      });
+    },
+    drawGloves(dt) {
+      for (const b of bodies) {
+        if (b === player || !b.arms) continue;
+        if (!b.slapGlove) { b.slapGlove = part(b.arms[1], ballGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), 0.2, 0.17, 0.22, 0, -0.9, -0.05); }
+        b.slapGlove.visible = true; b.slapGlove.material.color.setHex((GLOVES[b.glove] || GLOVES.lily).color);
+      }
+      gloveMesh.visible = true; gloveMesh.material.color.setHex((GLOVES[player.glove] || GLOVES.lily).color);
+      for (const fx of this.pows) if (fx.t > 0) { fx.t -= dt; const k = 1 - fx.t / 0.3; fx.mesh.scale.setScalar(0.4 + k * 1.1); fx.mesh.material.opacity = 1 - k; if (fx.t <= 0) scene.remove(fx.mesh); }
+    },
+    update(dt, t, host) {
+      if (!this.group || this.mapKey !== mapKey) { if (host) { const [cx, cz, y] = this.pickSpot(); this.build(cx, cz, y); } else return; }
+      this.cd -= dt;
+      for (const b of bodies) if (b.slipT > 0) b.slipT -= dt;
+      this.drawGloves(dt); this.drawBoxes(t);
+      // a new glove for me?
+      const mg = player.glove || 'lily';
+      if (mg !== this.myGlove) { this.myGlove = mg; const g = GLOVES[mg]; if (mg !== 'lily' && state === 'play') { flash(`${g.e} ${g.name}!`, g.say, 2.2, '#ffd23f'); sfxTone(500, 1000, 0.2, 'triangle', 0.08); } }
+      // fell off? back up in a moment
+      if (this.downT > 0) { if ((this.downT -= dt) <= 0) this.spawnOn(player, 0, 0); }
+      else if (state === 'play' && this.lowAt(player)) {
+        this.downT = 1.6; sfxTone(500, 120, 0.4, 'sine', 0.08);
+        flash('Splash!', 'You got knocked off. Back up in a second!', 1.5, '#9fdcff');
+      }
+      if (!host || state !== 'play') return;
+      const now = performance.now();
+      for (const b of bodies) {
+        const low = this.lowAt(b) && b.pos.y > -40; // (a friend who just joined starts far below)
+        if (low && !b.slapDown) {
+          b.slapDown = true; b.hits = (b.hits || 0) + 1;
+          if (!b.isRemote && b !== player) b.backT = 1.6;
+          const a = b.slapBy && now - b.slapAt < 6000 && b.slapBy !== b && bodies.includes(b.slapBy) ? b.slapBy : null;
+          b.slapBy = null;
+          if (a) {
+            a.score = (a.score || 0) + 1; questFor(a, 'tag');
+            const who = b === player ? 'you' : b.name;
+            if (a === player) { flash('Slapped off!', `You slapped ${who} off the lily pad! +1 fly`, 1.6, 'var(--leaf)'); addFlies(1); sfxTone(600, 1200, 0.2, 'triangle', 0.08); }
+            else if (a.isRemote && net) net.ev.send({ k: 'msg', big: 'Slapped off!', small: `You slapped ${b === player ? 'the host' : b.name} off the lily pad!`, color: 'var(--leaf)' }, { target: a.id });
+          }
+        } else if (!low && b.pos.y > this.y - 1) b.slapDown = false;
+        if (b.backT > 0 && (b.backT -= dt) <= 0) this.spawnOn(b, 0, 0);
+      }
+      // computer frogs slap whoever is close
+      for (const a of ais) {
+        if (a.out || !this.near(a) || (a.slapT = (a.slapT || 1) - dt) > 0) continue;
+        let tg = null, td = 2.2; for (const b of bodies) if (b !== a && this.near(b)) { const d = b.pos.distanceTo(a.pos); if (d < td) { td = d; tg = b; } }
+        if (!tg) { a.slapT = 0.3; continue; }
+        const g = GLOVES[a.glove] || GLOVES.lily;
+        a.slapT = g.cd + (0.8 + Math.random() * 1.6) / DIFF[diff];
+        if (Math.random() < 0.35) continue; // a miss
+        const d = tn.subVectors(tg.pos, a.pos).setY(0); if (d.lengthSq() < 1e-4) d.set(Math.random() - 0.5, 0, Math.random() - 0.5); d.normalize();
+        if (g.dash) a.vel.addScaledVector(d, g.dash * 0.5);
+        if (tg === player || a.pos.distanceTo(player.pos) < 14) sfxSlap(tg === player ? 0.6 : 0.3);
+        this.hit(a, tg, a.glove, d.x, d.z);
+      }
+      // glove boxes
+      if (this.boxes.length < 2 && (this.boxT -= dt) <= 0) {
+        this.boxT = 7 + Math.random() * 5;
+        const ks = Object.keys(GLOVES).filter(k => k !== 'lily'), a = Math.random() * Math.PI * 2, r = 2 + Math.random() * (SLAP_R - 4);
+        this.boxes.push({ k: pick(ks), x: r2(this.c.x + Math.sin(a) * r), z: r2(this.c.z + Math.cos(a) * r) });
+      }
+      for (const bx of this.boxes.slice()) {
+        const b = bodies.find(q => this.near(q) && Math.hypot(q.pos.x - bx.x, q.pos.z - bx.z) < 1.3 && Math.abs(q.pos.y - this.y - 0.8) < 1.6);
+        if (b) { b.glove = bx.k; this.boxes.splice(this.boxes.indexOf(bx), 1); }
+      }
+      const lead = this.leader();
+      if ((lead && (lead.score || 0) >= SLAP_WIN) || roundTime >= SLAP_TIME) {
+        state = 'over'; overT = 6;
+        if (lead && lead.score > 0) {
+          announce(lead === player ? 'You win Slap Battle!' : `${lead.name} wins Slap Battle!`, `${lead.score} frog${lead.score === 1 ? '' : 's'} slapped off. New round soon.`, '#ffd23f', 5, lead);
+          if (lead === player) { addFlies(10); questEvent('win'); }
+        } else announce('Nobody got slapped off!', 'New round soon.', '#ffd23f', 5);
+      }
+    },
+    leader() { // most frogs slapped off; fewer falls breaks a tie
+      let best = null;
+      for (const b of bodies) if (!best || (b.score || 0) > (best.score || 0) || ((b.score || 0) === (best.score || 0) && (b.hits || 0) < (best.hits || 0))) best = b;
+      return best;
+    },
+    goal(ai) {
+      if (!this.group || !this.near(ai)) return null;
+      const c = this.c, inward = p => { const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), m = SLAP_R - 2.2; return d > m ? new V(c.x + dx / d * m, this.y, c.z + dz / d * m) : p; };
+      if (Math.hypot(ai.pos.x - c.x, ai.pos.z - c.z) > SLAP_R - 2.5) return new V(c.x, this.y, c.z); // too close to the edge
+      if (ai.glove === 'lily') { const bx = this.boxes.find(q => Math.hypot(q.x - ai.pos.x, q.z - ai.pos.z) < 6); if (bx) return new V(bx.x, this.y, bx.z); }
+      let tg = null, td = 1e9; for (const b of bodies) if (b !== ai && this.near(b)) { const d = b.pos.distanceTo(ai.pos); if (d < td) { td = d; tg = b; } }
+      return tg ? inward(tg.pos) : new V(c.x, this.y, c.z);
+    },
+    speed() { return 0.55; },
+    hud() {
+      const lead = this.leader(), g = GLOVES[player.glove] || GLOVES.lily;
+      return { chip: this.downT > 0 ? 'SPLASH!' : `${g.e} ${player.score || 0} slapped off`, bg: '#ffd23f',
+        info: `Leader: ${lead === player ? 'You' : lead.name} ${lead.score || 0} · first to ${SLAP_WIN} · ${fmt(Math.max(0, SLAP_TIME - roundTime))}`, radar: 'hide' };
+    },
+    row(b) { return `${(GLOVES[b.glove] || GLOVES.lily).e} ${b.score || 0} slapped off · fell ${b.hits || 0}`; },
+    snap() {
+      const g = {}; for (const b of bodies) if (b.glove && b.glove !== 'lily') g[idOf(b)] = b.glove;
+      return { y: this.y, c: [r2(this.c.x), r2(this.c.z)], r: this.round, b: this.boxes.map(bx => [bx.k, bx.x, bx.z]), g };
+    },
+    apply(ms) {
+      if (!this.group || this.mapKey !== mapKey || this.y !== ms.y || this.c.x !== ms.c[0] || this.c.z !== ms.c[1]) this.build(ms.c[0], ms.c[1], ms.y);
+      this.boxes = (ms.b || []).filter(q => GLOVES[q[0]]).map(q => ({ k: q[0], x: +q[1] || 0, z: +q[2] || 0 }));
+      for (const b of bodies) b.glove = GLOVES[ms.g && ms.g[idOf(b)]] ? ms.g[idOf(b)] : 'lily';
+      if (ms.r !== this.myRound) { // a new round: hop onto the pad
+        this.myRound = ms.r; this.round = ms.r; this.downT = 0; this.cd = 0; this.spawnOn(player, 0, 0);
+        flash('Slap Battle!', 'Slap frogs off the giant lily pad! Tap the screen, press F, or B to slap.', 3.4, '#ffd23f');
+      }
+    },
+    onEvent(d, from) {
+      if (d.t === 'slap' && isHost()) {
+        const a = remotes.get(from), b = byId(String(d.b)), now = performance.now();
+        if (!a || !b || a === b || !Array.isArray(d.d) || (a.slapCdT || 0) > now || a.pos.distanceTo(b.pos) > 5) return;
+        const g = GLOVES[a.glove] || GLOVES.lily; a.slapCdT = now + g.cd * 700;
+        const dx = +d.d[0] || 0, dz = +d.d[1] || 0, l = Math.hypot(dx, dz) || 1;
+        this.hit(a, b, a.glove, dx / l, dz / l);
+        if (b !== player && a.pos.distanceTo(player.pos) < 14) sfxSlap(0.3);
+      } else if (d.t === 'hit' && Array.isArray(d.v)) {
+        const v = d.v.map(x => clamp(+x || 0, -30, 30));
+        this.gotHit(v, { slip: clamp(+d.s || 0, 0, 3) }, byId(String(d.by)));
+      } else if (d.t === 'pow' && Array.isArray(d.p)) {
+        const a = byId(String(d.a)); if (a && a !== player) a.swing = 1;
+        if (a !== player) { const p = new V(+d.p[0] || 0, +d.p[1] || 0, +d.p[2] || 0); this.pow(p, GLOVES[d.g] || GLOVES.lily); if (p.distanceTo(player.pos) < 14) sfxSlap(0.3); }
+      }
+    },
+    end() {
+      this.clear(); this.boxes = []; this.downT = 0;
+      this.boxMeshes.forEach(m => scene.remove(m)); this.boxMeshes = [];
+      this.pows.forEach(f => { scene.remove(f.mesh); f.t = 0; });
+      for (const b of bodies) { b.glove = 'lily'; b.slipT = 0; if (b.slapGlove) b.slapGlove.visible = false; }
+      gloveMesh.visible = false;
+    },
+  },
 };
 
 // ---------- Frogs online ----------
@@ -9515,7 +9780,7 @@ function update(dt, t) {
   // keyboard: W/S push forward/back, A/D turn, Q/E push sideways, Space jumps, Shift for big pushes
   const turnKeys = (keys.ArrowLeft || keys.KeyA ? 1 : 0) - (keys.ArrowRight || keys.KeyD ? 1 : 0);
   player.yaw += turnKeys * 2.4 * dt;
-  handKick[0] = Math.max(0, handKick[0] - dt); handKick[1] = Math.max(0, handKick[1] - dt);
+  handKick[0] = Math.max(0, handKick[0] - dt); handKick[1] = Math.max(0, handKick[1] - dt); slapSwing = Math.max(0, slapSwing - dt);
   keyMove();
   updateGrip();
 
@@ -9580,6 +9845,7 @@ function update(dt, t) {
     for (const q of pointers.values()) if (q.side === side) p = q;
     if (p) handTarget.set(clamp((p.x / innerWidth * 2 - 1) * 0.45, -0.5, 0.5), clamp(-(p.y / innerHeight * 2 - 1) * 0.28 - 0.14, -0.45, 0.1), -0.55);
     else handTarget.copy(hand.rest).y += Math.sin(t * 2 + side) * 0.01 - (handKick[side] > 0 ? 0.16 : 0);
+    if (side === 1 && slapSwing > 0) { const k = Math.sin((1 - slapSwing / 0.25) * Math.PI); handTarget.x -= k * 0.45; handTarget.y += k * 0.12; handTarget.z -= k * 0.15; }
     hand.position.lerp(handTarget, Math.min(1, dt * 18));
     const squash = (p || handKick[side] > 0) && inReach ? 0.7 : 1;
     hand.scale.y += (squash - hand.scale.y) * Math.min(1, dt * 15);
@@ -9632,6 +9898,7 @@ function update(dt, t) {
     hgb.hidden = !nh || (!player.hog && !canRide());
     const kh = mode === 'kart' && state !== 'menu' && player.hog && player.seat === 0 ? player.hog : null, ib = $('itemBtn');
     ib.hidden = !(kh && (kh.item || kh.rollT > 0)); if (!ib.hidden) ib.textContent = kartItemLabel(kh);
+    if (mode === 'slap' && state === 'play') { ib.hidden = false; ib.textContent = `${(GLOVES[player.glove] || GLOVES.lily).e} Slap${usedKeys ? ' (F)' : ''}`; }
     const gb = $('gadgetBtn'); gb.hidden = !(player.gad && gadgetsActive() && !player.hog); if (!gb.hidden) gb.textContent = gadgetLabel();
     if (nh) hgb.textContent = (player.hog ? 'Hop out' : nh.seats[0] === null ? 'Drive' : 'Hop in') + (usedKeys ? ' (G)' : '');
     $('playersBtn').textContent = net ? `Players ${remotes.size + 1}` : 'Players';
@@ -9700,7 +9967,7 @@ function modeRules() { // the same one-line rules the menu buttons show
 }
 $('info').addEventListener('click', e => { e.currentTarget.blur(); modeRules(); });
 $('hogBtn').addEventListener('click', e => { e.currentTarget.blur(); toggleHog(); });
-$('itemBtn').addEventListener('click', e => { e.currentTarget.blur(); if (mode === 'kart' && state === 'play' && player.hog && player.seat === 0) kartUse(player.hog); });
+$('itemBtn').addEventListener('click', e => { e.currentTarget.blur(); if (mode === 'slap') tryThrow(); else if (mode === 'kart' && state === 'play' && player.hog && player.seat === 0) kartUse(player.hog); });
 function showGfx() { document.querySelectorAll('#gfxSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === gfx))); }
 const gfxAtLoad = gfx;
 document.querySelectorAll('#gfxSeg button').forEach(b => b.addEventListener('click', () => {
