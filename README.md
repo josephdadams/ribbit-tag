@@ -88,13 +88,23 @@ Turn on **Look around** in the menu settings and the tablet becomes your frog's 
 
 ### Hand camera
 
-Turn on **Hand camera** in the menu settings and the camera watches your real hands. Pick **Front** or **Back** under **Which camera**, then point that camera so it can see both hands. Each hand works like a thumb on that side of the screen:
+Set **Hand camera** to **Hands** in the menu settings and the camera watches your real hands. Pick **Front** or **Back** under **Which camera**, then point that camera so it can see both hands. Each hand works like a thumb on that side of the screen:
 
 - **Push your hand down** to shove off and launch forward. Faster pushes make bigger leaps.
 - **Move your hand sideways** to turn.
 - **Make a fist** next to a wall, tree or ceiling to hang on. Open your hand to let go.
 
 A camera picture shows what it sees, with dots on each hand (yellow means a fist). **Camera size** makes it Small or Big in the corner, or Half to fill the whole left side of the screen. The hand tracker ([MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker)) runs on the tablet itself, so the camera picture never leaves the device. It needs the internet the first time to download the tracker.
+
+#### Wands
+
+Set **Hand camera** to **Wands** to track two bright colors instead of bare hands. It's much lighter than the hand tracker, so it keeps up better on slow tablets like the Fire, and fast swings still count. Make a wand for each hand with something brightly colored on the end: a painted ping-pong ball or a circle of craft foam works well. The game starts out looking for **neon green on the left** and **hot pink on the right**.
+
+- **Push a wand down** to shove off, **move it sideways** to turn, just like hands.
+- **Pull a wand close to the camera** next to a wall, tree or ceiling to hang on. Move it back out to let go.
+- Using other colors? Tap **Set colors**, hold each wand in its circle on the camera picture, and wait for the countdown. **Green + pink** puts the starting colors back.
+
+Pick two colors that look very different from each other, and from your clothes and the room behind you. Good light helps a lot.
 
 ### Keyboard
 

@@ -321,6 +321,9 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .pill-btn { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer; background: var(--canopy); color: var(--bone); }
 .pill-btn:focus-visible, .name-in:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
 .note { margin: 6px 0 0; font-size: .85rem; opacity: .75; max-width: 46ch; }
+.wandsw { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--ink); }
+#wandCalView { display: block; width: 100%; max-width: 420px; height: auto; margin-top: 10px; border-radius: 14px; border: 2px solid var(--ink); }
+#wandCalView[hidden] { display: none; }
 .note a { color: var(--leaf); font-weight: 800; }
 .bubble.nametag { padding: 3px 10px 4px; font-size: .85rem; opacity: .9; }
 .name-in { font: inherit; font-size: 16px; font-weight: 800; border: 0; border-radius: 999px; padding: 7px 14px; background: var(--ink); color: var(--bone); width: 11em; max-width: 100%; }
@@ -536,10 +539,20 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       <div class="row">
         <span class="label">Hand camera</span>
         <div class="seg" id="camSeg">
-          <button type="button" data-c="1" aria-pressed="false">On</button>
+          <button type="button" data-c="1" data-m="hands" aria-pressed="false">Hands</button>
+          <button type="button" data-c="1" data-m="wands" aria-pressed="false">Wands</button>
           <button type="button" data-c="0" aria-pressed="true">Off</button>
         </div>
       </div>
+      <div class="row" id="wandRow" hidden>
+        <span class="label">Wand colors</span>
+        <span class="wandsw" id="wandSw0"></span><span class="wandsw" id="wandSw1"></span>
+        <div class="seg">
+          <button type="button" id="wandSet">Set colors</button>
+          <button type="button" id="wandReset">Green + pink</button>
+        </div>
+      </div>
+      <canvas id="wandCalView" width="320" height="240" hidden></canvas>
       <div class="row">
         <span class="label">Which camera</span>
         <div class="seg" id="camFaceSeg">
@@ -5302,7 +5315,18 @@ const CAM_OPTS = { runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence
 let camOn = false, camFacing = 'user', camGrip = false, camStream = null, camVideo = null, camMarker = null, camLoading = null, camLastT = -1, camNextT = 0, camGap = 70;
 let camWorker = null, camBusy = 0, camRes = null;
 const camSides = [null, null]; // per side: { p: its entry in pointers, x, y, seen, fist }
-try { camOn = localStorage.getItem('ribbit-cam') === '1'; camFacing = localStorage.getItem('ribbit-camfacing') === 'environment' ? 'environment' : 'user'; } catch (e) {}
+// Wands mode skips MediaPipe: hold a bright color in each hand (neon green left, hot pink right, or whatever
+// Set colors learned) and the camera just looks for those two colors. Much lighter, and it keeps up with fast swings.
+let camMode = 'hands';
+const WAND_DEF = [{ h: 120, s: 0.6, v: 0.6 }, { h: 325, s: 0.6, v: 0.7 }];
+let wandCols = WAND_DEF.map(c => Object.assign({}, c)), wandCv = null, wandCal = 0;
+const wandBase = [0, 0]; // each wand's usual size, so pulling it close to the camera reads as a grab
+try {
+  camOn = localStorage.getItem('ribbit-cam') === '1'; camFacing = localStorage.getItem('ribbit-camfacing') === 'environment' ? 'environment' : 'user';
+  camMode = localStorage.getItem('ribbit-cammode') === 'wands' ? 'wands' : 'hands';
+  const wc = JSON.parse(localStorage.getItem('ribbit-wandcols'));
+  if (Array.isArray(wc) && wc.length === 2 && wc.every(c => c && isFinite(c.h) && isFinite(c.s) && isFinite(c.v))) wandCols = wc;
+} catch (e) {}
 // The tracker runs in a background worker so looking for hands never freezes the game.
 // (jsDelivr serves the plain-script build with a type workers refuse to load directly, so fetch it and run it.)
 const CAM_WORKER = `let m;
@@ -5352,13 +5376,18 @@ async function camStart() {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 320 }, height: { ideal: 240 } }, audio: false });
   } catch (e) {
     setCam(false);
-    camSay(e && e.name === 'NotAllowedError' ? 'The tablet said no to the camera. Try tapping On again and pick Allow.' : "Couldn't find a camera to use.");
+    camSay(e && e.name === 'NotAllowedError' ? 'The tablet said no to the camera. Try tapping Hands or Wands again and pick Allow.' : "Couldn't find a camera to use.");
     return;
   }
   if (!camOn) { camStop(); return; }
   if (!camVideo) { camVideo = document.createElement('video'); camVideo.muted = true; camVideo.playsInline = true; camVideo.setAttribute('playsinline', ''); }
   camVideo.srcObject = camStream;
   try { await camVideo.play(); } catch (e) {}
+  if (camMode === 'wands') {
+    $('hint').textContent = 'Push your wands down to go · move them sideways to turn · pull one close to the camera to grab';
+    camSay((camFacing === 'user' ? 'Hold the tablet so the camera sees both wands.' : 'Point the back camera at your wands.') + ' Push them down to go, move them sideways to turn, and pull one close to the camera to hang on.');
+    return;
+  }
   camSay('Loading the hand tracker...');
   // background worker first; tablets that can't run it there look for hands between frames instead
   try {
@@ -5402,52 +5431,188 @@ function camDrop(side) {
 }
 function setCam(on) {
   camOn = on;
-  document.querySelectorAll('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.c === +on)));
-  try { localStorage.setItem('ribbit-cam', on ? '1' : '0'); } catch (e) {}
+  document.querySelectorAll('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === '0' ? !on : on && b.dataset.m === camMode)));
+  $('wandRow').hidden = !(on && camMode === 'wands');
+  try { localStorage.setItem('ribbit-cam', on ? '1' : '0'); localStorage.setItem('ribbit-cammode', camMode); } catch (e) {}
+  wandCal = 0; $('wandCalView').hidden = true;
   camStop(); camSay('');
   if (on) camStart();
 }
-document.querySelectorAll('#camSeg button').forEach(b => b.addEventListener('click', () => setCam(b.dataset.c === '1')));
-if (camOn) setCam(true);
+document.querySelectorAll('#camSeg button').forEach(b => b.addEventListener('click', () => { if (b.dataset.m) camMode = b.dataset.m; setCam(b.dataset.c === '1'); }));
+setCam(camOn);
+function wandSwatches() {
+  // shown a bit brighter than the camera saw it, so dim-room colors still read as a color
+  wandCols.forEach((c, i) => {
+    const v = Math.max(c.v, 0.8), s = Math.max(c.s, 0.6), l = v * (1 - s / 2), sl = l > 0 && l < 1 ? (v - l) / Math.min(l, 1 - l) : 0;
+    $('wandSw' + i).style.background = `hsl(${c.h}, ${Math.round(sl * 100)}%, ${Math.round(l * 100)}%)`;
+  });
+}
+wandSwatches();
+function wandSave() {
+  wandSwatches(); wandBase[0] = wandBase[1] = 0;
+  try { localStorage.setItem('ribbit-wandcols', JSON.stringify(wandCols)); } catch (e) {}
+}
+// Set colors: a 5-second countdown while you hold each wand in its circle, then it learns those two colors
+$('wandSet').addEventListener('click', () => {
+  if (!camOn || camMode !== 'wands') { camMode = 'wands'; setCam(true); }
+  wandCal = performance.now() + 5000; $('wandCalView').hidden = false;
+  camSay('Hold your left wand in the left circle and your right wand in the right circle.');
+});
+$('wandReset').addEventListener('click', () => { wandCols = WAND_DEF.map(c => Object.assign({}, c)); wandSave(); camSay('Back to neon green on the left and hot pink on the right.'); });
 // a fist: the fingertips are folded back near the wrist
 function camFist(l) {
   const d = (a, b) => Math.hypot(l[a].x - l[b].x, l[a].y - l[b].y), palm = d(0, 9) || 1;
   return (d(8, 0) + d(12, 0) + d(16, 0) + d(20, 0)) / 4 < palm * 1.1;
 }
+// ---- Wands: find two bright colors in a small copy of each camera frame ----
+const WW = 160, WH = 120, CELL = 8, GX = WW / CELL, GY = WH / CELL;
+const wandMark = new Uint8Array(WW * WH), wandCnt = [new Uint16Array(GX * GY), new Uint16Array(GX * GY)];
+function wandFrame() {
+  if (!wandCv) { wandCv = document.createElement('canvas'); wandCv.width = WW; wandCv.height = WH; }
+  const g = wandCv.getContext('2d', { willReadFrequently: true });
+  g.drawImage(camVideo, 0, 0, WW, WH);
+  return g.getImageData(0, 0, WW, WH).data;
+}
+// rgb (0-255) to hue in degrees, saturation and brightness 0-1, written into out
+function wandHsv(r, g, b, out) {
+  const mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
+  let h = 0;
+  if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  out[0] = h * 60; out[1] = mx ? d / mx : 0; out[2] = mx / 255;
+}
+const wandHsvTmp = [0, 0, 0];
+// returns [left, right], each null or { x, y (0-1, as you see it), size, grip }
+function wandFind() {
+  const px = wandFrame(), hsv = wandHsvTmp;
+  // how close a pixel has to be to each learned color; greyish or dark pixels never count
+  const want = wandCols.map(c => ({ h: c.h, s: Math.max(0.32, c.s * 0.5), v: Math.max(0.22, c.v * 0.4) }));
+  wandCnt[0].fill(0); wandCnt[1].fill(0);
+  for (let i = 0, y = 0; y < WH; y++) for (let x = 0; x < WW; x++, i++) {
+    wandMark[i] = 0;
+    wandHsv(px[i * 4], px[i * 4 + 1], px[i * 4 + 2], hsv);
+    for (let k = 0; k < 2; k++) {
+      const w = want[k], dh = Math.abs(hsv[0] - w.h);
+      if (Math.min(dh, 360 - dh) < 20 && hsv[1] > w.s && hsv[2] > w.v) { wandMark[i] = k + 1; wandCnt[k][(y / CELL | 0) * GX + (x / CELL | 0)]++; break; }
+    }
+  }
+  const mirror = camFacing === 'user', found = [null, null];
+  for (let k = 0; k < 2; k++) {
+    // the busiest 3x3 patch of grid cells is the wand; stray specks of that color elsewhere don't pull it around
+    const cnt = wandCnt[k];
+    let best = 0, bx = 0, by = 0;
+    for (let cy = 1; cy < GY - 1; cy++) for (let cx = 1; cx < GX - 1; cx++) {
+      let s = 0;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) s += cnt[(cy + j) * GX + cx + i];
+      if (s > best) { best = s; bx = cx; by = cy; }
+    }
+    if (best < 10) continue;
+    // middle of that wand's pixels around the busy patch (a bit wider, so a big close-up wand is all counted)
+    let sx = 0, sy = 0, n = 0;
+    const x0 = Math.max(0, (bx - 3) * CELL), x1 = Math.min(WW, (bx + 4) * CELL), y0 = Math.max(0, (by - 3) * CELL), y1 = Math.min(WH, (by + 4) * CELL);
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (wandMark[y * WW + x] === k + 1) { sx += x; sy += y; n++; }
+    // pulled close to the camera, the wand looks much bigger than usual: that's a grab
+    if (!wandBase[k]) wandBase[k] = n;
+    else if (n < wandBase[k]) wandBase[k] += (n - wandBase[k]) * 0.2;
+    else if (n < wandBase[k] * 1.6) wandBase[k] += (n - wandBase[k]) * 0.02;
+    const x = (sx / n + 0.5) / WW;
+    found[k] = { x: mirror ? 1 - x : x, y: (sy / n + 0.5) / WH, size: n, grip: n > wandBase[k] * 2.3 };
+  }
+  return found;
+}
+// Set colors: average the brightly colored pixels inside each circle once the countdown ends
+const WAND_SPOTS = [0.25, 0.75], WAND_R = 0.08;
+function wandLearn() {
+  const px = wandFrame(), hsv = wandHsvTmp, mirror = camFacing === 'user', missed = [];
+  const learned = WAND_SPOTS.map((spot, k) => {
+    const cx = (mirror ? 1 - spot : spot) * WW, cy = WH / 2, r = WAND_R * WW;
+    let hx = 0, hy = 0, s = 0, v = 0, n = 0;
+    for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
+      const i = (y * WW + x) * 4;
+      wandHsv(px[i], px[i + 1], px[i + 2], hsv);
+      if (hsv[1] < 0.3 || hsv[2] < 0.2) continue;
+      hx += Math.cos(hsv[0] * Math.PI / 180); hy += Math.sin(hsv[0] * Math.PI / 180); s += hsv[1]; v += hsv[2]; n++;
+    }
+    if (n < 25) { missed.push(k ? 'right' : 'left'); return wandCols[k]; }
+    return { h: Math.round((Math.atan2(hy, hx) * 180 / Math.PI + 360) % 360), s: s / n, v: v / n };
+  });
+  wandCols = learned; wandSave();
+  if (missed.length) camSay(`Couldn't see a bright color in the ${missed.join(' or ')} circle. Try brighter wands or more light, then Set colors again.`);
+  else {
+    const dh = Math.abs(learned[0].h - learned[1].h);
+    camSay(Math.min(dh, 360 - dh) < 40 ? 'Got them, but the two colors look alike, so the game may mix up your wands. Different colors work best.' : 'Got your wand colors! Start a game to try them.');
+  }
+}
+function wandCalDraw(now) {
+  const view = $('wandCalView'), g = view.getContext('2d'), w = view.width, h = view.height;
+  camVideoDraw(g, w, h);
+  WAND_SPOTS.forEach((spot, k) => {
+    g.lineWidth = 4; g.strokeStyle = $('wandSw' + k).style.background || '#fff';
+    g.beginPath(); g.arc(spot * w, h / 2, WAND_R * w, 0, 7); g.stroke();
+  });
+  const left = String(Math.ceil((wandCal - now) / 1000));
+  g.fillStyle = '#fff'; g.strokeStyle = 'rgba(10,26,16,.8)'; g.lineWidth = 6; g.font = 'bold 64px sans-serif'; g.textAlign = 'center';
+  g.strokeText(left, w / 2, 70); g.fillText(left, w / 2, 70);
+}
 function camUpdate() {
-  const view = $('camView');
-  if (!camOn || !(camWorker || camMarker) || !camVideo || camVideo.readyState < 2 || !camStream) { view.hidden = true; return; }
+  const view = $('camView'), wands = camMode === 'wands';
+  if (!camOn || !(wands || camWorker || camMarker) || !camVideo || camVideo.readyState < 2 || !camStream) { view.hidden = true; return; }
   const now = performance.now();
   // the hud preview shows up in a game so you can see what the camera sees
   view.hidden = state === 'menu';
-  let lms;
-  if (camWorker) {
-    // hand the newest camera frame to the worker whenever it's free, and use its answer when one comes back
-    if (camBusy && now - camBusy > 2000) camBusy = 0; // a lost frame: don't wait forever
-    if (!camBusy && camVideo.currentTime !== camLastT) {
-      camLastT = camVideo.currentTime; camBusy = now;
-      createImageBitmap(camVideo).then(bmp => camWorker.postMessage({ bmp, t: now }, [bmp]), () => { camBusy = 0; });
+  let found = [null, null], marks;
+  if (wands) {
+    if (wandCal) {
+      if (now < wandCal) { wandCalDraw(now); return; }
+      wandCal = 0; $('wandCalView').hidden = true; wandLearn(); return;
     }
-    if (!camRes) return;
-    lms = camRes; camRes = null;
-  } else {
+    if (state === 'menu') { camDrop(0); camDrop(1); camGrip = false; return; }
     if (now < camNextT || camVideo.currentTime === camLastT) return;
     camLastT = camVideo.currentTime;
-    try { lms = camMarker.detectForVideo(camVideo, now).landmarks || []; } catch (e) { return; }
+    found = wandFind();
     // slow tablets: look less often so the game stays smooth
     const cost = performance.now() - now;
-    camGap = clamp(camGap * 0.8 + cost * 2.5 * 0.2, 50, 160); camNextT = now + camGap;
-  }
-  // the front camera sees you mirrored, so flip it: your right hand shows on the right
-  const mirror = camFacing === 'user', mx = x => mirror ? 1 - x : x;
-  const found = [null, null];
-  for (const l of lms) {
-    let x = 0, y = 0;
-    for (const i of [0, 5, 9, 13, 17]) { x += mx(l[i].x); y += l[i].y; }
-    x /= 5; y /= 5;
-    let side = x < 0.5 ? 0 : 1;
-    if (found[side]) side = 1 - side; // two hands crossed over: give the other side one
-    if (!found[side]) found[side] = { x, y, l };
+    camGap = clamp(camGap * 0.8 + cost * 2.5 * 0.2, 30, 120); camNextT = now + camGap;
+    marks = (g, w, h) => found.forEach((f, k) => {
+      if (!f) return;
+      g.lineWidth = 4; g.strokeStyle = f.grip ? '#ffd23f' : $('wandSw' + k).style.background;
+      g.beginPath(); g.arc(f.x * w, f.y * h, Math.max(10, Math.sqrt(f.size) * w / WW), 0, 7); g.stroke();
+    });
+  } else {
+    let lms;
+    if (camWorker) {
+      // hand the newest camera frame to the worker whenever it's free, and use its answer when one comes back
+      if (camBusy && now - camBusy > 2000) camBusy = 0; // a lost frame: don't wait forever
+      if (!camBusy && camVideo.currentTime !== camLastT) {
+        camLastT = camVideo.currentTime; camBusy = now;
+        createImageBitmap(camVideo).then(bmp => camWorker.postMessage({ bmp, t: now }, [bmp]), () => { camBusy = 0; });
+      }
+      if (!camRes) return;
+      lms = camRes; camRes = null;
+    } else {
+      if (now < camNextT || camVideo.currentTime === camLastT) return;
+      camLastT = camVideo.currentTime;
+      try { lms = camMarker.detectForVideo(camVideo, now).landmarks || []; } catch (e) { return; }
+      // slow tablets: look less often so the game stays smooth
+      const cost = performance.now() - now;
+      camGap = clamp(camGap * 0.8 + cost * 2.5 * 0.2, 50, 160); camNextT = now + camGap;
+    }
+    // the front camera sees you mirrored, so flip it: your right hand shows on the right
+    const mirror = camFacing === 'user', mx = x => mirror ? 1 - x : x;
+    for (const l of lms) {
+      let x = 0, y = 0;
+      for (const i of [0, 5, 9, 13, 17]) { x += mx(l[i].x); y += l[i].y; }
+      x /= 5; y /= 5;
+      let side = x < 0.5 ? 0 : 1;
+      if (found[side]) side = 1 - side; // two hands crossed over: give the other side one
+      if (!found[side]) found[side] = { x, y, grip: camFist(l) };
+    }
+    marks = (g, w, h) => {
+      for (const l of lms) {
+        g.fillStyle = camFist(l) ? '#ffd23f' : '#7ddc5a';
+        for (const pt of l) { g.beginPath(); g.arc(mx(pt.x) * w, pt.y * h, 3.5, 0, 7); g.fill(); }
+      }
+    };
   }
   const W = innerWidth, H = innerHeight;
   // small hand moves should still cover the screen, so stretch around the middle
@@ -5457,8 +5622,7 @@ function camUpdate() {
     const f = found[side];
     let c = camSides[side];
     if (!f) { if (c && now - c.seen > 300) camDrop(side); continue; }
-    const fist = camFist(f.l);
-    grip = grip || fist;
+    grip = grip || f.grip;
     if (!c || state === 'menu') {
       camDrop(side);
       if (state === 'menu') continue;
@@ -5475,15 +5639,15 @@ function camUpdate() {
     handMove(c.p, x, y);
   }
   camGrip = grip && state !== 'menu';
-  if (!view.hidden) camDraw(view, lms, mx);
+  if (!view.hidden) camDraw(view, marks);
 }
-function camDraw(view, lms, mx) {
-  const g = view.getContext('2d'), w = view.width, h = view.height;
+function camVideoDraw(g, w, h) {
   g.save(); if (camFacing === 'user') { g.translate(w, 0); g.scale(-1, 1); } g.drawImage(camVideo, 0, 0, w, h); g.restore();
-  for (const l of lms) {
-    g.fillStyle = camFist(l) ? '#ffd23f' : '#7ddc5a';
-    for (const pt of l) { g.beginPath(); g.arc(mx(pt.x) * w, pt.y * h, 3.5, 0, 7); g.fill(); }
-  }
+}
+function camDraw(view, marks) {
+  const g = view.getContext('2d'), w = view.width, h = view.height;
+  camVideoDraw(g, w, h);
+  marks(g, w, h);
   g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(w / 2 - 1, 0, 2, h);
 }
 const bv = new V();
