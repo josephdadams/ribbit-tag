@@ -472,6 +472,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <div class="more-grid">
           <button class="mode mini spooky" data-mode="monsters" id="mode-monsters" type="button"><b>Monster Night</b><small>Monsters chase everyone! Throw fireflies to stun them and survive 3 minutes.</small></button>
           <button class="mode mini spooky" data-mode="lethal" id="mode-lethal" type="button"><b>Lethal Toad</b><small>Grab scrap and bring it to the ship before time runs out. Hide from Ashy and Sandman, and freeze when Gus is near!</small></button>
+          <button class="mode mini spooky" data-mode="blood" id="mode-blood" type="button"><b>Blood A</b><small>Blood Asher haunts the dark forest. If he sees you, he chases you! Nobody has a name tag. Listen for his scream on the telephone speakers and survive 3 minutes.</small></button>
         </div>
         <h3 class="more-cat">Party</h3>
         <div class="more-grid">
@@ -1794,6 +1795,8 @@ const LAB_KINDS = {
   ashy: { Name: 'Ashy', walk: 2.0, run: 5.3, see: 13, fov: 1.1, jump: 6, giveUp: 5, eye: 0xff8a2a }, // the calm brother, made of grey gravel
   sandman: { Name: 'Sandman', walk: 2.7, run: 6.3, see: 17, fov: 1.4, jump: 7, giveUp: 9, eye: 0xffe14a }, // the grumpy brother: faster, and leaves sand behind
   gus: { Name: 'Gus', walk: 1.8, run: 6.6, see: 10, ears: true, jump: 6, giveUp: 4, eye: 0xff5a7a }, // can't see at all, but hears anything that moves
+  // Blood A's ghost (Asher's idea)
+  blood: { Name: 'Blood Asher', walk: 2.6, run: 6.4, see: 18, fov: 1.3, fly: true, giveUp: 6, eye: 0x9a1010 }, // floats through the dark forest and screams down his telephone
 };
 const LAB = { mons: [], traps: [], lasers: [], vents: [], belt: null, tele: null, teleSpots: [], beacon: null, tadpole: null, blindT: 0, alarmT: 0, wasPlay: false };
 const LETHAL = { on: false, ship: new V(), mons: [] }; // Lethal Toad: where the ship landed, and the monsters out hunting
@@ -1858,6 +1861,31 @@ function labMesh(kind) {
     });
     o.arms = [-1, 1].map(sx => { const a = new THREE.Group(); a.position.set(sx * 0.72, 0.95, 0); g.add(a); part(a, boxGeo, skin, 0.25, 0.9, 0.25, 0, -0.45, 0); part(a, ballGeo, dark, 0.2, 0.18, 0.2, 0, -0.95, 0); return a; });
     g.scale.setScalar(1.2);
+  } else if (kind === 'blood') { // Blood Asher: a pale see-through ghost with curly hair, ribs showing, and a telephone in his hand
+    o.ghostMat = new THREE.MeshLambertMaterial({ color: 0xdcd6e4, emissive: 0x3a3448, transparent: true, opacity: 0.7 });
+    const gm = o.ghostMat, bone = cmat(0xf2ead8), hair = cmat(0x3a0c10), hole = cmat(0x2a0608), black = cmat(0x0a0a0a);
+    o.tail = part(g, GEO.cone, gm, 0.36, 1.1, 0.3, 0, -0.45, 0, Math.PI); // a wispy tail instead of legs
+    part(g, ballGeo, gm, 0.38, 0.48, 0.3, 0, 0.3, 0);
+    part(g, ballGeo, hole, 0.27, 0.34, 0.2, 0, 0.32, -0.12); // the dark inside of his chest
+    for (let i = 0; i < 4; i++) part(g, GEO.arc, bone, 0.3 - i * 0.025, 0.31, 0.16, 0, 0.55 - i * 0.12, 0, -Math.PI / 2); // ribs
+    part(g, boxGeo, bone, 0.06, 0.42, 0.05, 0, 0.36, -0.31); // breastbone
+    part(g, GEO.cyl, gm, 0.12, 0.18, 0.12, 0, 0.8, 0);
+    o.head = new THREE.Group(); o.head.position.set(0, 1.08, 0); g.add(o.head);
+    part(o.head, ballGeo, gm, 0.3, 0.33, 0.29, 0, 0, 0);
+    for (const sx of [-1, 1]) { part(o.head, ballGeo, black, 0.09, 0.1, 0.05, sx * 0.11, 0.05, -0.26); part(o.head, ballGeo, eyeMat, 0.04, 0.04, 0.03, sx * 0.11, 0.05, -0.3); } // hollow eyes with red dots
+    o.mouth = part(o.head, ballGeo, black, 0.08, 0.06, 0.04, 0, -0.15, -0.26); // opens wide to scream
+    for (let i = 0; i < 22; i++) { // curly hair: a mop of little curls on top and down the back
+      const a = i * 2.4, up = 0.2 + (i % 5) * 0.18, r = 0.3 * Math.cos(up * 0.9);
+      if (Math.sin(a) < -0.55 && up < 0.5) continue; // leave his face clear
+      part(o.head, GEO.ring, hair, 0.075, 0.075, 0.5, Math.cos(a) * r, 0.1 + up * 0.24, Math.sin(a) * r * 0.95 + 0.03, a, i * 0.7, 0);
+    }
+    part(o.head, ballGeo, hair, 0.3, 0.17, 0.29, 0, 0.17, 0.03);
+    o.arms = [-1, 1].map(sx => { const a = new THREE.Group(); a.position.set(sx * 0.4, 0.62, 0); g.add(a); part(a, boxGeo, gm, 0.1, 0.62, 0.1, 0, -0.3, 0); part(a, ballGeo, gm, 0.08, 0.08, 0.08, 0, -0.64, 0); return a; });
+    const phone = new THREE.Group(); phone.position.set(0, -0.68, -0.05); phone.rotation.set(-Math.PI / 2, 0, 0); o.arms[1].add(phone); // an old red telephone handset
+    const red = cmat(0xb3121a);
+    part(phone, boxGeo, red, 0.07, 0.36, 0.06, 0, 0, 0);
+    for (const sy of [-1, 1]) part(phone, GEO.cyl, red, 0.07, 0.07, 0.07, 0, sy * 0.17, -0.05, Math.PI / 2);
+    for (let i = 0; i < 6; i++) part(phone, GEO.ring, black, 0.035, 0.035, 0.4, 0.05 + i * 0.03, -0.2 - i * 0.03, 0.02, 0, Math.PI / 2, 0); // the curly cord
   } else if (kind === 'ape') { // a big grey-brown ape in a lab collar
     const fur = cmat(0x4a3f3a), skin = cmat(0x9a8170);
     part(g, ballGeo, fur, 0.75, 0.75, 0.6, 0, 0.45, 0);
@@ -2029,6 +2057,19 @@ function labDraw(m, dt, t) {
     m.arms.forEach((a, i) => { a.rotation.x = m.st === 4 ? -2.4 + Math.sin(t * 12 + i * Math.PI) * 0.3 : moving ? Math.sin(t * (hunting ? 11 : 5) + i * Math.PI) * 0.6 - (hunting ? 1.1 : 0) : Math.sin(t * 1.2 + i) * 0.1; });
     m.head.rotation.y = moving ? 0 : Math.sin(t * 0.7) * 0.7;
     m.head.rotation.z = m.kind === 'ashy' ? Math.sin(t * 0.5) * 0.15 : 0; // Ashy tilts his head, all calm
+  } else if (m.kind === 'blood') {
+    const sc = m.screamT > 0;
+    if (sc) m.screamT -= dt;
+    g.position.y += Math.sin(t * 1.8 + m.home[0].x) * 0.15;
+    g.rotation.x = clamp(-m.spd * 0.03, -0.25, 0); // leans in when he chases you
+    m.tail.rotation.z = Math.PI + Math.sin(t * 3) * 0.15;
+    m.arms[0].rotation.x = hunting || m.st === 4 ? -1.5 + Math.sin(t * 14) * 0.12 : Math.sin(t * 1.3) * 0.15; // reaching for you
+    m.arms[1].rotation.x = sc ? -2.5 : hunting ? -1.1 : Math.sin(t * 1.3 + 1) * 0.15; // the phone goes up to his mouth to scream
+    m.arms[1].rotation.z = sc ? -0.5 : 0;
+    m.mouth.scale.set(sc ? 0.11 : 0.08, sc ? 0.13 + Math.abs(Math.sin(t * 30)) * 0.03 : hunting ? 0.09 : 0.05, 0.04);
+    m.head.rotation.z = sc ? Math.sin(t * 40) * 0.08 : Math.sin(t * 0.6) * 0.2; // shakes while he screams
+    m.head.rotation.y = moving ? 0 : Math.sin(t * 0.5) * 0.6;
+    m.ghostMat.opacity = 0.62 + Math.sin(t * 7) * Math.sin(t * 2.3) * 0.12; // flickers
   } else if (m.kind === 'gus') {
     g.position.y += moving ? Math.abs(Math.sin(t * (hunting ? 10 : 5))) * 0.12 : 0;
     m.arms.forEach((a, i) => { a.rotation.x = m.st === 4 ? -2.5 : moving ? Math.sin(t * (hunting ? 10 : 5) + i * Math.PI) * 0.6 - (hunting ? 0.8 : 0) : 0; });
@@ -2053,6 +2094,7 @@ function labDraw(m, dt, t) {
       else if (m.kind === 'bot') { if (!m.watched) sfxTone(900, 880, 0.08, 'square', v * 0.6); }
       else if (m.kind === 'ashy' || m.kind === 'sandman') { const f = m.kind === 'ashy' ? 95 : 130; sfxTone(f, f * 0.7, 0.5, 'sawtooth', v * 0.8); } // a gravelly rumble
       else if (m.kind === 'gus') { sfxTone(300, 520, 0.18, 'sine', v); setTimeout(() => sfxTone(320, 560, 0.18, 'sine', v), 260); } // sniff sniff
+      else if (m.kind === 'blood') sfxTone(190, 120, 1.1, 'sine', v * 0.9); // a low moan
       else sfxTone(240, 260, 0.6, 'sawtooth', v * 0.5);
     }
   }
@@ -4350,6 +4392,40 @@ function sfxSlap(vol = 0.25) {
   const g = actx.createGain(); g.gain.value = vol;
   s.connect(f); f.connect(g); g.connect(actx.destination); s.start();
 }
+// Blood Asher's scream, as it sounds coming out of an old telephone loudspeaker: a wailing voice squashed into
+// a thin, crackly band, with a click when the line opens. pan: -1 left to 1 right; delay in seconds.
+let phoneCurve = null;
+function phoneScream(vol, pan = 0, delay = 0) {
+  if (!actx || vol < 0.003) return;
+  if (!phoneCurve) { phoneCurve = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 127.5 - 1; phoneCurve[i] = 9 * x / (1 + 8 * Math.abs(x)); } }
+  if (!noiseBuf) sfxSlap(0); // makes the noise buffer
+  const t = actx.currentTime + 0.03 + delay, dur = 1.8;
+  const out = actx.createGain(); out.gain.value = vol;
+  let last = out;
+  if (actx.createStereoPanner) { const p = actx.createStereoPanner(); p.pan.value = clamp(pan, -1, 1); out.connect(p); last = p; }
+  last.connect(actx.destination);
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200; lp.connect(out);
+  const pk = actx.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 1700; pk.Q.value = 1.2; pk.gain.value = 9; pk.connect(lp);
+  const hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 480; hp.connect(pk);
+  const sh = actx.createWaveShaper(); sh.curve = phoneCurve; sh.connect(hp);
+  const env = actx.createGain(); env.connect(sh);
+  env.gain.setValueAtTime(0.0001, t + 0.12); env.gain.exponentialRampToValueAtTime(0.9, t + 0.22);
+  env.gain.setValueAtTime(0.9, t + dur - 0.5); env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const lfo = actx.createOscillator(), lg = actx.createGain(); lfo.frequency.value = 7.5; lg.gain.value = 45; lfo.connect(lg);
+  for (const det of [0, 14, -9]) { // a wailing voice: up fast, holding high and shaking, then falling away
+    const o = actx.createOscillator(); o.type = 'sawtooth'; o.detune.value = det * 3;
+    o.frequency.setValueAtTime(380, t + 0.12); o.frequency.exponentialRampToValueAtTime(900, t + 0.4);
+    o.frequency.exponentialRampToValueAtTime(1100, t + dur * 0.6); o.frequency.exponentialRampToValueAtTime(420, t + dur);
+    lg.connect(o.frequency);
+    const og = actx.createGain(); og.gain.value = 0.3; o.connect(og); og.connect(env); o.start(t + 0.1); o.stop(t + dur + 0.05);
+  }
+  lfo.start(t); lfo.stop(t + dur + 0.05);
+  for (const [at, len, g] of [[0, 0.06, 0.8], [0.12, dur, 0.25]]) { // the click of the line, then a hiss under the scream
+    const n = actx.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+    const ng = actx.createGain(); ng.gain.setValueAtTime(g, t + at); ng.gain.exponentialRampToValueAtTime(0.001, t + at + len);
+    n.connect(ng); ng.connect(sh); n.start(t + at); n.stop(t + at + len + 0.02);
+  }
+}
 function sfxTone(f0, f1, dur, type = 'square', vol = 0.12) {
   if (!actx) return;
   const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
@@ -6085,7 +6161,7 @@ function netFrame(dt) {
   for (const r of remotes.values()) {
     bv.copy(r.pos); bv.y += 1.3; bv.project(camera);
     const d = r.pos.distanceTo(player.pos);
-    if (bv.z > 1 || d > 40 || (r.bubbleT || 0) > 0 || concealed(r)) { r.tag.hidden = true; continue; }
+    if (bv.z > 1 || d > 40 || (r.bubbleT || 0) > 0 || concealed(r) || (mode === 'blood' && state === 'play')) { r.tag.hidden = true; continue; } // (no name tags in Blood A)
     r.tag.hidden = false; r.tag.classList.toggle('lava', r.it);
     r.tag.style.transform = `translate(${(bv.x + 1) / 2 * innerWidth}px, ${(1 - bv.y) / 2 * innerHeight}px) translate(-50%, -100%)`;
   }
@@ -7554,7 +7630,7 @@ function concealed(b) {
 }
 const CLASSICISH = ['classic', 'potato', 'bat', 'shrink', 'tongue', 'gravity'];
 const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge'];
-Object.assign(MODE_NAMES, { monsters: 'Monster Night', lethal: 'Lethal Toad', hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
+Object.assign(MODE_NAMES, { monsters: 'Monster Night', lethal: 'Lethal Toad', blood: 'Blood A', hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
   mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', kart: 'Toadhog Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines', slap: 'Slap Battle' });
 function m2Send(d, target) { if (net && isHost()) net.ev.send({ k: 'm2', d }, target ? { target } : undefined); }
 function m2Ask(d) { if (net && !isHost()) net.ev.send({ k: 'm2', d }, { target: net.hostId }); }
@@ -9307,6 +9383,180 @@ const MODE2 = {
       if (this.stash && mapKey === 'lab' && !LAB.mons.length && this.stash[0].g.parent) { LAB.mons = this.stash; LAB.mons.forEach(m => { m.g.visible = true; }); labReset(); }
       this.stash = null;
       for (const b of bodies) { b.labCd = 0; b.ltLoud = 0; }
+    },
+  },
+  // Blood A (Asher's idea): Blood Asher, a ghost with curly hair and his ribs showing, floats through a dark forest.
+  // If he sees you he chases you (he uses the Laboratory monsters' brains, see labThink). Nobody has a name tag,
+  // so in the dark you can't tell a friend from him. Now and then he screams into his telephone, and you hear it
+  // crackle out of the loudspeakers on the telephone poles out in the woods. Survive 3 minutes; touch caught friends to free them.
+  blood: { ghost: null, props: null, spots: [], solid: [], lamps: [], on: false, screamN: 0, screamT: 8, sawHunt: false, alarmT: 0, pst: 0, ptid: 0,
+    TIME: 180,
+    ensure() { // works on the host and on friends' screens, who never call start()
+      this.on = true; // night in the woods, with a little lantern so you can see a few steps ahead
+      if (!lantern) { lantern = new THREE.PointLight(0xfff0c8, 1.3, 11, 1.4); camera.add(lantern); }
+      lantern.visible = true; lantern.intensity = 0.9; lantern.distance = 14;
+      scene.background.setHex(0x0a0610); scene.fog.color.setHex(0x0a0610); scene.fog.near = 4; scene.fog.far = 30;
+      hemiLight.intensity = 0.16; sun.intensity = 0.05;
+      if (LAB.mons.length) { this.stash = LAB.mons; LAB.mons = []; this.stash.forEach(m => { m.g.visible = false; }); } // the lab's own monsters take the night off
+    },
+    build() { // a telephone pole with loudspeakers in a little grove of dead trees, at each spot
+      if (this.props || !this.spots.length) return;
+      const g = new THREE.Group(), wood = cmat(0x3b2a1e), dead = cmat(0x2a2320), metal = cmat(0x6a6f74);
+      const solid = (x, z, w, h) => { const y = standY(x, z); const b = { min: new V(x - w / 2, y, z - w / 2), max: new V(x + w / 2, y + h, z + w / 2) }; boxes.push(b); this.solid.push(b); return y; };
+      this.lamps = [];
+      for (const [x, z] of this.spots) {
+        const y = solid(x, z, 0.4, 5.5);
+        part(g, GEO.cyl, wood, 0.14, 5.5, 0.14, x, y + 2.75, z);
+        part(g, boxGeo, wood, 1.6, 0.12, 0.12, x, y + 5, z);
+        for (const sx of [-1, 1]) part(g, ballGeo, cmat(0x9fb8c0), 0.06, 0.08, 0.06, x + sx * 0.7, y + 5.12, z); // insulators
+        for (let i = 0; i < 3; i++) { // three loudspeaker horns pointing out into the woods
+          const a = i * Math.PI * 2 / 3;
+          part(g, GEO.cone, metal, 0.3, 0.7, 0.3, x + Math.sin(a) * 0.4, y + 4.3, z + Math.cos(a) * 0.4, -Math.PI / 2, a, 0).rotation.order = 'YXZ'; // the wide end faces out
+        }
+        part(g, boxGeo, metal, 0.3, 0.4, 0.2, x, y + 3.6, z - 0.15);
+        const lamp = new THREE.MeshLambertMaterial({ color: 0x5a1010, emissive: 0xff1a1a, emissiveIntensity: 0 });
+        part(g, ballGeo, lamp, 0.12, 0.12, 0.12, x, y + 5.7, z); this.lamps.push(lamp);
+        for (let k = 0; k < 3; k++) { // dead trees to hide behind
+          const a = k * 2.1 + x, d = 3 + (k % 2) * 1.5, tx = clamp(x + Math.cos(a) * d, -HALF + 2, HALF - 2), tz = clamp(z + Math.sin(a) * d, -HALF + 2, HALF - 2), h = 3.5 + k;
+          if (blockedAt(tx, tz)) continue;
+          const ty = solid(tx, tz, 0.6, h);
+          part(g, GEO.cyl, dead, 0.28, h, 0.28, tx, ty + h / 2, tz);
+          for (const s of [-1, 1]) part(g, boxGeo, dead, 0.1, 1.4, 0.1, tx + s * 0.45, ty + h * 0.7 + s * 0.3, tz, 0, a, -s * 0.8);
+        }
+      }
+      scene.add(g); this.props = g;
+    },
+    ghostAt(x, z) { const m = labMon('blood', [[x, z]]); m.screamT = 0; scene.add(m.g); return m; },
+    start() {
+      this.end(); this.ensure();
+      for (const b of bodies) { setOut(b, false); b.score = 0; b.labCd = 0; }
+      this.screamN = 0; this.screamT = 6; this.sawHunt = false; this.alarmT = 0;
+      if (isHost()) {
+        const taken = [];
+        for (let i = 0; i < 7; i++) { const p = freeSpot(Math.random, new V(), HALF * 1.8, 14, taken); taken.push(p); }
+        this.spots = taken.map(p => [r2(p.x), r2(p.z)]);
+        this.build();
+        let best = null, bd = -1;
+        for (let i = 0; i < 14; i++) { // start far away from everyone
+          const c = freeSpot(Math.random, new V(), HALF * 1.8, 0, null), d = Math.min(...bodies.map(b => hyp(b.pos, c)));
+          if (d > bd) { bd = d; best = c; }
+        }
+        const home = [[best.x, best.z]];
+        for (let i = 0; i < 5; i++) { const w = freeSpot(Math.random, new V(), HALF * 1.6, 0, null); home.push([w.x, w.z]); } // he wanders the whole forest
+        this.ghost = labMon('blood', home); this.ghost.screamT = 0; scene.add(this.ghost.g);
+      }
+      flash('Blood A', "Blood Asher is out there. If he sees you, he chases you! Nobody has a name tag tonight. Listen for his scream on the telephone speakers. Survive 3 minutes.", 5, '#d62828');
+    },
+    scream() { // he screams into his telephone, and it comes out of the speakers in the woods
+      const m = this.ghost; if (m) m.screamT = 1.8;
+      this.lamps.forEach(l => { l.emissiveIntensity = 1; });
+      this.lampT = 1.8;
+      if (state !== 'play') return;
+      const near = this.spots.map(([x, z]) => ({ x, z, d: Math.hypot(x - player.pos.x, z - player.pos.z) })).sort((a, b) => a.d - b.d).slice(0, 3);
+      near.forEach((s, i) => {
+        let rel = Math.atan2(-(s.x - player.pos.x), -(s.z - player.pos.z)) - (player.yaw || 0); rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+        const v = Math.max(i ? 0 : 0.05, 0.24 * Math.pow(clamp(1 - s.d / 60, 0, 1), 1.4));
+        phoneScream(v, -Math.sin(rel) * 0.8, s.d / 120); // farther speakers arrive a little later, like an echo through the trees
+      });
+      rumble(400, 0.5);
+      const ai = pick(ais.filter(a => !a.out)); if (ai) setTimeout(() => say(ai, pick(["Did you hear that?!", "That came from the speakers!", "He's on the phone again...", "I don't like this forest.", "Was that Blood Asher?!"])), 2000);
+    },
+    update(dt, t, host) {
+      this.ensure();
+      const play = state === 'play', m = this.ghost;
+      for (const b of bodies) if (b.labCd > 0 && mapKey !== 'lab') b.labCd -= dt;
+      if (m) {
+        if (host) labThink(m, dt, play);
+        else if (m.netPos) { m.pos.lerp(m.netPos, Math.min(1, dt * 10)); let r = m.netYaw - m.yaw; r = Math.atan2(Math.sin(r), Math.cos(r)); m.yaw += r * Math.min(1, dt * 10); }
+        labDraw(m, dt, t);
+      }
+      if (this.lampT > 0) { this.lampT -= dt; const k = this.lampT > 0 ? (0.5 + Math.abs(Math.sin(t * 25)) * 0.5) * Math.min(1, this.lampT) : 0; this.lamps.forEach(l => { l.emissiveIntensity = k; }); }
+      // is he after me?
+      if (m && play) {
+        const me = m.tid === myId && m.st === 1, wasMe = this.ptid === myId && (this.pst === 1 || this.pst === 2);
+        if (me && !wasMe) { flash('He sees you!', 'RUN! Hide behind something until he gives up.', 2, '#d62828'); rumble(250, 0.7); }
+        if (wasMe && m.st === 3 && !player.out) { flash('You got away!', 'Blood Asher gave up... for now.', 2, 'var(--leaf)'); addFlies(1); }
+        if (me && (this.alarmT -= dt) <= 0) { this.alarmT = 0.5; sfxTone(70, 50, 0.15, 'sine', 0.18); setTimeout(() => sfxTone(65, 45, 0.12, 'sine', 0.14), 160); } // your heart pounding
+        this.pst = m.st; this.ptid = m.tid;
+      }
+      if (!host || !m) return;
+      // he screams when he spots someone, and now and then while he wanders
+      const hunt = m.st === 1;
+      this.screamT -= dt;
+      if (play && ((hunt && !this.sawHunt && this.screamT < 12) || this.screamT <= 0)) { this.screamT = 16 + Math.random() * 14; this.screamN++; this.scream(); }
+      this.sawHunt = hunt;
+      if (!play) return;
+      if (m.st !== 4) for (const b of bodies) { // caught!
+        if (b.out || b.hog || b.immune > 0 || b.pos.distanceTo(m.pos) > 1.4) continue;
+        setOut(b, true); b.frozen = 999; labGot(m, b); m.blindT = 5;
+        const msg = 'Blood Asher got you! A friend can touch you to free you.';
+        if (b === player) { flash('Caught!', msg, 2.4, '#d62828'); rumble(320, 0.8); sfxTone(220, 60, 0.6, 'sawtooth', 0.14); }
+        else if (b.isRemote && net) net.ev.send({ k: 'msg', big: 'Caught!', small: msg, color: '#d62828' }, { target: b.id });
+        else say(b, pick(["Aaah! He got me!", "Help! Somebody free me!", "His ribs! I saw his ribs!"]));
+        break;
+      }
+      // free frogs rescue caught ones by touching them
+      for (const a of bodies) if (!a.out) for (const b of bodies) if (b.out && a.pos.distanceTo(b.pos) < 1.4) {
+        setOut(b, false); b.frozen = 0; b.immune = 3; a.score = (a.score || 0) + 1; questFor(a, 'rescue');
+        if (b === player) flash('Rescued!', 'A friend saved you. Run!', 1.6, 'var(--leaf)');
+        if (a === player) { flash('Rescued!', `You saved ${b.name}.`, 1.4, 'var(--leaf)'); addFlies(1); }
+      }
+      const free = alive();
+      if (!free.length) { state = 'over'; overT = 6; announce('Blood Asher got everyone!', `You lasted ${fmt(roundTime)}. Try again!`, '#d62828', 5); }
+      else if (roundTime >= this.TIME) {
+        state = 'over'; overT = 6;
+        announce('You survived Blood A!', `${free.length} frog${free.length > 1 ? 's' : ''} made it out of the forest.`, 'var(--leaf)', 5, free);
+        if (!player.out) addFlies(10);
+      }
+    },
+    goal(ai) {
+      if (ai.out) { ai.hopT = 1; return ai.pos; }
+      const m = this.ghost;
+      if (m) {
+        const d = m.pos.distanceTo(ai.pos);
+        if (d < 7 || (d < 16 && m.st === 1 && m.tgt === ai)) { // run away
+          const away = ai.pos.clone().sub(m.pos).setY(0).normalize().multiplyScalar(9).add(ai.pos);
+          away.x = clamp(away.x + (Math.random() - 0.5) * 5, -HALF + 3, HALF - 3); away.z = clamp(away.z + (Math.random() - 0.5) * 5, -HALF + 3, HALF - 3);
+          return away;
+        }
+      }
+      let cb = null, cd = 30; for (const b of bodies) if (b.out && b !== ai && !(m && m.pos.distanceTo(b.pos) < 8)) { const d = b.pos.distanceTo(ai.pos); if (d < cd) { cd = d; cb = b; } }
+      return cb ? cb.pos : null;
+    },
+    hud() {
+      const m = this.ghost, chased = m && m.st === 1 && m.tid === myId, free = alive().length;
+      return { chip: player.out ? 'CAUGHT!' : chased ? 'RUN!' : 'HIDE!', bg: player.out ? '#9aa0a6' : '#d62828',
+        info: `${free} frog${free === 1 ? '' : 's'} free · ${fmt(Math.max(0, this.TIME - roundTime))} left`, radar: 'hide' };
+    },
+    row(b) { return b.out ? 'Caught' : `${b.score || 0} rescues`; },
+    snap() {
+      const m = this.ghost;
+      return { sp: this.spots, sc: this.screamN, g: m ? [r2(m.pos.x), r2(m.pos.y), r2(m.pos.z), r2(m.yaw), m.st, m.tid || 0] : null };
+    },
+    apply(ms) {
+      this.ensure();
+      if (!this.props && Array.isArray(ms.sp)) { this.spots = ms.sp.filter(Array.isArray).slice(0, 12).map(([x, z]) => [+x || 0, +z || 0]); this.build(); }
+      const g = ms.g;
+      if (Array.isArray(g)) {
+        if (!this.ghost) this.ghost = this.ghostAt(+g[0] || 0, +g[2] || 0);
+        const m = this.ghost;
+        (m.netPos || (m.netPos = new V())).set(+g[0] || 0, +g[1] || 0, +g[2] || 0); m.netYaw = +g[3] || 0;
+        m.st = clamp(g[4] | 0, 0, 4); m.tid = g[5] || 0;
+      }
+      const sc = ms.sc | 0;
+      if (this.heard == null) this.heard = sc; // don't replay a scream from before we joined
+      if (sc > this.heard) { this.heard = sc; this.scream(); }
+    },
+    end() {
+      if (this.ghost && this.ghost.g.parent) this.ghost.g.parent.remove(this.ghost.g);
+      this.ghost = null;
+      if (this.props) { scene.remove(this.props); this.props = null; }
+      for (const b of this.solid) { const i = boxes.indexOf(b); if (i >= 0) boxes.splice(i, 1); }
+      this.solid = []; this.lamps = []; this.spots = []; this.heard = null; this.lampT = 0;
+      if (this.on) { this.on = false; mapLighting(); if (lantern) { lantern.intensity = 1.3; lantern.distance = 11; } }
+      if (this.stash && mapKey === 'lab' && !LAB.mons.length && this.stash[0].g.parent) { LAB.mons = this.stash; LAB.mons.forEach(m => { m.g.visible = true; }); labReset(); }
+      this.stash = null;
+      for (const b of bodies) b.labCd = 0;
     },
   },
   sardines: { hider: null, found: [], count: 0,
