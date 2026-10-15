@@ -155,13 +155,22 @@ Tap **More modes** on the menu for even more:
 | **Shrink Tag**: each tag shrinks you, last big frog wins | **Pond Ball**: dodgeball, hit frogs sit out | **Bug Swarm**: everyone squashes bugs to save the lily pad | **Slap Battle**: slap frogs off a giant floating lily pad |
 | **Sticky Tongue Tag**: the lava frog tags from afar | **Basketball**: dribble, shoot hoops and slam dunk | **Simon Says Frog**: only obey "Silver says" | |
 | **Keep Away**: hold the golden crown the longest | | **Toadhog Race**: the map turns into a race track, first to 3 laps wins | |
-| **Gravity Swap**: gravity changes every 20 seconds | | | |
+| **Gravity Swap**: gravity changes every 20 seconds | | **Swing Frog**: shoot webs, swing around Frog City and catch golden flies | |
 
 In Toadhog Race every map has its own track: a figure 8 with a bridge, clovers full of hairpins, a wavy flower or a big loop, with hills to catch air off and tunnels. The hazards fit the map: ice, oil and slime spin you out, mud and chocolate slow you down, lava pops you up, boost pads shoot you forward, and blocks slide across the road. Every frog starts in a toadhog on the grid. Drive through the rainbow ? boxes for an item, then press `F` (or `B` on a controller, or the item button) to use it: 🔥 Turbo, 🐢 Turtle Shell (fires ahead and bounces off walls), 🍌 Banana Peel (drops behind you) or ⭐ Golden Fly (fast, and nothing can stop you). Frogs near the back get the better items. Hit a hill fast enough and your toadhog takes off. Bump other hogs to knock them off their line: hit one from behind to shove it forward, or hit its side to slide it over and spin it. Drop out with `G` and you can climb back in.
 
 In Mud Splat and Pond Ball, throw with `F`, a quick tap on the screen, or `B` on a controller.
 
 **Basketball** (Asher's idea): a hoop stands over each team's lily pad. Touch the orange ball to grab it and you dribble it along. Shoot with `F`, a quick tap, the **Shoot** button, `B` on a controller, or a fist with Hand camera: facing the other team's hoop it's a shot (close shots almost always go in, and shots from far away are worth 3), and facing anywhere else it's a pass to a teammate. Jump right next to their hoop with the ball for a **slam dunk**. Bump into whoever has the ball to steal it. First to 21, or the most after 4 minutes, wins.
+
+**Swing Frog** (Asher's idea): everyone gets web shooters, and the game takes you to Frog City. A web sticks high up on whatever is ahead of you, and you swing on it: let go at the top of the swing to fly, then shoot the next one before you land. Shoot a web at a wall you're right next to and it zips you up the wall, and over onto the roof if the roof is close enough. 30 golden flies hide on rooftops and inside the buildings (look for their glowing beams, and follow the arrow at the top). Computer frogs go for the rooftop flies, so the ones inside are yours to find. Most golden flies when they're all caught, or after 5 minutes, wins.
+
+| How | Quick web (lets go by itself) | Hang on until you let go |
+| --- | --- | --- |
+| Touch | Tap the screen where you want it to stick | Hold the **Web** button |
+| Keyboard | `F` | Hold `R` |
+| Controller | `B` | Hold `LT` |
+| Hand camera | Flick a wand (or your hand) fast, or make a fist | |
 
 **Slap Battle** (inspired by the slap games on Roblox, and Abraham's idea): everyone starts on a giant lily pad floating high over the map. Slap with `F`, a quick tap, the **Slap** button, `B` on a controller, `D` on the Magicsee R1 ring, or by making a fist with Hand camera. Each slap knocks a frog back; knock one off the edge within a few seconds of slapping it and you score. Frogs who fall pop back onto the pad a moment later. First to 15, or the most after 2½ minutes, wins. Glove boxes appear on the pad; grab one to swap gloves:
 
@@ -183,10 +192,11 @@ Tap **Scores** during a game (or press `L`) to see everyone in the game ranked b
 
 ## Maps
 
-Forest, Mega Map, Frog Gulch, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), The Backrooms (a yellow maze under humming lights), and The Laboratory (a secret lab with monsters loose).
+Forest, Mega Map, Frog City, Frog Gulch, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), The Backrooms (a yellow maze under humming lights), and The Laboratory (a secret lab with monsters loose).
 
 - **Mega Map**: one giant world. Forest in the middle, a city to the east, snowy peaks to the north, and caves underneath. Tunnels, a subway, a log bridge and a skybridge join it all up, and a ramp lets you drive down into the caves.
 - **The Stump** and several other maps have **jump walls**: two tall plank walls close together. Push off one, then the other, to climb fast.
+- **Frog City**: a giant city on a grid of streets, with a park in the middle. Walk into the shops and towers (Fly Pizza, Tadpole Toys, the Frog Museum and more), climb up through a hole in every floor, and come out a hatch on the roof. Frog Tower is the tallest building, 60 m high. Two toadhogs are parked by the park.
 - **Frog Gulch**: a long grassy canyon with a base at each end (great for Capture the Lily Pad), rolling hills, a rock arch and teleporters up to the cliff perches.
 
 ### The Laboratory
