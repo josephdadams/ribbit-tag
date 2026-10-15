@@ -317,6 +317,8 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 .say button { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; background: var(--lava); color: var(--ink); }
 .say button.mic { background: var(--bone); }
 .say button.mic.on { background: var(--lava); }
+.say button.mic.wait { background: var(--bone); opacity: .7; }
+.quick button .pic { margin-right: 5px; }
 .quick button:focus-visible, .say button:focus-visible, .say input:focus-visible, #talkBtn:focus-visible, .talk-head button:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
 .pill-btn { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 7px 14px; cursor: pointer; background: var(--canopy); color: var(--bone); }
 .pill-btn:focus-visible, .name-in:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
@@ -385,7 +387,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
     <div class="quick" id="quick"></div>
     <form class="say" id="sayForm" autocomplete="off">
       <input id="sayInput" type="text" maxlength="80" placeholder="Type something to say…" enterkeyhint="send">
-      <button class="mic" id="micBtn" type="button" hidden>Mic</button>
+      <button class="mic" id="micBtn" type="button" aria-label="Say it out loud">🎤 Say it</button>
       <button type="submit">Send</button>
     </form>
   </div>
@@ -443,7 +445,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <button class="mode kingmode" id="modeKing" type="button"><b>King of the Lily Pad</b><small>Hold the golden pad alone to score. Bump others off!</small></button>
         <button class="mode freemode" id="modeFree" type="button"><b>Free Play</b><small>No tagging. Explore, climb and catch flies.</small></button>
       </div>
-      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (18)</button>
+      <button class="more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="moreModes">More modes (19)</button>
       <div id="moreModes" hidden>
         <h3 class="more-cat">Tag twists</h3>
         <div class="more-grid">
@@ -459,6 +461,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
           <button class="mode mini" data-mode="mud" id="mode-mud" type="button"><b>Mud Splat</b><small>Throw mud at the other team. Three splats sends them home.</small></button>
           <button class="mode mini" data-mode="soccer" id="mode-soccer" type="button"><b>Lily Pad Soccer</b><small>Push the big ball onto the other team’s lily pad.</small></button>
           <button class="mode mini" data-mode="dodge" id="mode-dodge" type="button"><b>Pond Ball</b><small>Grab a ball and throw it. Hit frogs sit out.</small></button>
+          <button class="mode mini" data-mode="hoops" id="mode-hoops" type="button"><b>Basketball</b><small>Dribble, pass and shoot hoops. Jump by the hoop to slam dunk!</small></button>
         </div>
         <h3 class="more-cat">Races and challenges</h3>
         <div class="more-grid">
@@ -647,7 +650,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
-const APP_VERSION = 'ribbit-28';
+const APP_VERSION = 'ribbit-29';
 const DONATE_URL = 'https://ko-fi.com/josephdadams'; // a Ko-fi page like https://ko-fi.com/name; the menu's donate note stays hidden while this is empty
 if (!window.THREE) { document.body.insertAdjacentHTML('beforeend', '<div id="err">The 3D engine did not load. Check the internet connection and reload.</div>'); return; }
 const $ = id => document.getElementById(id);
@@ -4365,6 +4368,9 @@ const hands = [-1, 1].map(s => {
   h.rest = new V(s * 0.3, -0.36, -0.55);
   h.position.copy(h.rest); h.rotation.x = 0.35;
   camera.add(h);
+  // an arm from off the bottom corner of the screen up to the wrist, so the hands aren't floating
+  h.arm = new THREE.Mesh(GEO.cyl, handMat); h.arm.renderOrder = 10; camera.add(h.arm);
+  h.shoulder = new V(s * 0.5, -0.85, -0.42);
   return h;
 });
 
@@ -5113,7 +5119,7 @@ const PERSONA = {
 };
 const INTENTS = [
   ['myname', /\bmy name(?:'s| is)\s+([a-z][a-z' -]{0,15})/i],
-  ['whoit', /who(?:'s| is)\s+(?:it|lava|the lava)|who has it/i],
+  ['whoit', /who(?:'?s| is)\s+(?:it|lava|the lava)|who has it/i],
   ['joke', /joke|funny|make me laugh/i],
   ['fact', /fact|tell me something|did you know|teach me/i],
   ['name', /your name|who are you|what are you called/i],
@@ -5122,7 +5128,7 @@ const INTENTS = [
   ['age', /how old|your age/i],
   ['home', /where (?:do )?(?:you )?live|your home|where are you from/i],
   ['help', /how (?:do i|to) (?:play|move|climb|jump)|\bhelp\b/i],
-  ['tagme', /tag me|you'?re it|you are it/i],
+  ['tagme', /tag me|you'?re it|your it|you are it/i],
   ['cantcatch', /can'?t catch|catch me|too fast|try and get/i],
   ['follow', /follow|come (?:with|here|on)|team|let'?s go|this way/i],
   ['stay', /\bstop\b|\bstay\b|\bwait\b|go away|leave me/i],
@@ -5136,6 +5142,14 @@ const INTENTS = [
   ['no', /^\s*(?:no|nope|nah)\b/i],
 ];
 const QUICK = ["Hi!", "What's your name?", "Tell me a joke", "Frog fact!", "Follow me!", "Stay here", "You can't catch me!", "Who's lava?", "How old are you?", "You're slow!", "Want to be friends?", "Bye!"];
+const QUICK_PIC = ['👋', '❓', '😂', '🐸', '👉', '✋', '🏃', '🔥', '🎂', '🐢', '💚', '🌙']; // so you can find a reply without reading it
+// Words the frogs listen for. Misspelled typing gets snapped to the closest one, and voice on the Fire only listens for these.
+const WORDS = `hi hello hey yo howdy what what's whats up your you you're youre are name who is it lava the has my me
+  tell joke jokes funny make laugh fact facts something did know teach how old age where do live home from
+  food eat hungry fly flies bug bugs snack favorite feel going play move climb jump help tag catch can't cant too fast
+  try get follow come with here on team let's go this way stop stay wait away leave bye see later good night
+  friend friends love like want to be slow loser noob stink dumb bad at ugly smell job nice cool awesome great amazing
+  lol haha hehe yes yeah yep ok okay sure yup no nope nah frog a i am and of in for please thank thanks`.split(/\s+/);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 let playerName = '', voicesOn = true;
 try { playerName = localStorage.getItem('ribbit-name') || ''; voicesOn = localStorage.getItem('ribbit-voices') !== '0'; } catch (e) {}
@@ -5165,7 +5179,7 @@ function say(ai, text, directed = false) {
   ai.bubble.append(n, text);
   ai.bubble.classList.toggle('lava', ai.it);
   ai.bubble.hidden = false; ai.bubbleT = 2.2 + text.length * 0.055; ai.talkCd = 5 + Math.random() * 4;
-  if (!voicesOn || !window.speechSynthesis) return;
+  if (!voicesOn || !window.speechSynthesis || listening) return; // quiet while the mic is listening
   if (!directed && (speaking > 1 || ai.pos.distanceTo(player.pos) > 18)) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
@@ -5185,9 +5199,33 @@ function chatter(ai, key, extra, chance = 1) {
   if (talkCd > 0 || ai.talkCd > 0 || Math.random() > chance || ai === talkTarget && !$('talk').hidden) return;
   talkCd = 1.6; sayEvent(ai, key, extra);
 }
+// how many letters you'd have to change, add, drop or swap to turn a into b
+function spellDist(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+// "tel me a jok" -> "tell me a joke", so spelling never gets in the way of talking to a frog
+function fixSpelling(text) {
+  return text.toLowerCase().replace(/[a-z']+/g, w => {
+    if (w.length < 3 || WORDS.includes(w)) return w;
+    const most = w.length < 5 ? 1 : 2;
+    let best = w, bd = most + 1;
+    for (const k of WORDS) { if (Math.abs(k.length - w.length) > most) continue; const d = spellDist(w, k); if (d < bd) { bd = d; best = k; } }
+    return best;
+  });
+}
+function findIntent(text) {
+  for (const t of [text, fixSpelling(text)])
+    for (const [name, re] of INTENTS) { const m = t.match(re); if (m) return [name, m]; }
+  return ['fallback', null];
+}
 function reply(ai, text) {
-  let intent = 'fallback', m = null;
-  for (const [name, re] of INTENTS) { m = text.match(re); if (m) { intent = name; break; } }
+  let [intent, m] = findIntent(text);
   const l = ai.persona.l;
   let line;
   switch (intent) {
@@ -5247,11 +5285,23 @@ function playerSays(text) {
   setTimeout(() => reply(ai, text), 450);
 }
 const quick = $('quick');
-for (const q of QUICK) {
-  const b = document.createElement('button'); b.type = 'button'; b.textContent = q;
-  b.addEventListener('click', () => playerSays(q));
-  quick.append(b);
+// in your own voice, so you can hear a button before you send it
+function readAloud(text) {
+  if (!window.speechSynthesis) return;
+  try { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch (e) {}
 }
+QUICK.forEach((q, i) => {
+  const b = document.createElement('button'); b.type = 'button';
+  const pic = document.createElement('span'); pic.className = 'pic'; pic.textContent = QUICK_PIC[i]; pic.setAttribute('aria-hidden', 'true');
+  b.append(pic, q);
+  // hold a button to hear what it says, tap it to say it to the frog
+  let holdT = 0, held = false;
+  b.addEventListener('pointerdown', () => { held = false; clearTimeout(holdT); holdT = setTimeout(() => { held = true; readAloud(q); }, 450); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => clearTimeout(holdT));
+  b.addEventListener('contextmenu', e => e.preventDefault());
+  b.addEventListener('click', () => { if (held) { held = false; return; } playerSays(q); });
+  quick.append(b);
+});
 $('talkBtn').addEventListener('click', () => { if ($('talk').hidden) openTalk(); else $('talk').hidden = true; });
 $('talkClose').addEventListener('click', () => { $('talk').hidden = true; $('sayInput').blur(); });
 $('talkNext').addEventListener('click', () => {
@@ -5263,22 +5313,73 @@ $('sayForm').addEventListener('submit', e => {
   const v = $('sayInput').value; $('sayInput').value = '';
   playerSays(v);
 });
-// Voice input, only where the browser offers it for free (many Fire tablets don't)
+// Voice input. Uses the browser's own speech recognition where there is one. Fire tablets don't have it, so there
+// it runs Vosk right on the tablet instead: free, no account, and your voice never leaves the device. The model is
+// about 40MB the first time and Vosk keeps it in the browser after that.
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (SR) {
-  const mic = $('micBtn'); mic.hidden = false;
-  let rec = null;
-  mic.addEventListener('click', () => {
-    if (rec) { rec.stop(); return; }
-    try {
-      rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
-      rec.onresult = e => playerSays(e.results[0][0].transcript);
-      rec.onend = rec.onerror = () => { rec = null; mic.classList.remove('on'); mic.textContent = 'Mic'; };
-      if (window.speechSynthesis) speechSynthesis.cancel();
-      rec.start(); mic.classList.add('on'); mic.textContent = 'Listening…';
-    } catch (err) { rec = null; mic.hidden = true; }
-  });
+const VOSK_LIB = 'https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js';
+const VOSK_MODEL = 'https://ccoreilly.github.io/vosk-browser/models/vosk-model-small-en-us-0.15.tar.gz';
+let listening = false;
+const mic = $('micBtn'), MIC_LABEL = mic.textContent;
+function micState(cls, label) {
+  mic.classList.toggle('on', cls === 'on'); mic.classList.toggle('wait', cls === 'wait');
+  mic.textContent = label || MIC_LABEL; listening = cls === 'on';
 }
+function heard(text) {
+  text = text.replace(/\[unk\]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text) { $('sayInput').placeholder = "I didn't hear that. Try again!"; return; }
+  $('sayInput').placeholder = `You said: "${text}"`;
+  playerSays(text);
+}
+let voskModel = null, voskLoading = null, voskStop = null;
+function loadVosk() {
+  return voskLoading || (voskLoading = new Promise((ok, fail) => {
+    const s = document.createElement('script'); s.src = VOSK_LIB; s.onload = ok; s.onerror = fail;
+    document.head.append(s);
+  }).then(() => Vosk.createModel(VOSK_MODEL)).then(m => { voskModel = m; return m; }, e => { voskLoading = null; throw e; }));
+}
+async function voskListen() {
+  if (!voskModel) {
+    micState('wait', 'Getting ears ready…');
+    try { await loadVosk(); } catch (e) { micState(); $('sayInput').placeholder = "The microphone didn't load. Check the internet and try again."; return; }
+  }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } }); }
+  catch (e) { micState(); $('sayInput').placeholder = 'Ask a grown-up to let the game use the microphone.'; return; }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  // only listen for words the frogs understand (plus names), which helps a lot with kid voices
+  const words = [...new Set([...WORDS, ...Object.keys(PERSONA), ...(playerName.toLowerCase().match(/[a-z']+/g) || [])].map(w => w.toLowerCase()))];
+  const rec = new voskModel.KaldiRecognizer(ctx.sampleRate, JSON.stringify([...words, '[unk]']));
+  const src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(4096, 1, 1);
+  let done = false, giveUp = 0;
+  const finish = text => {
+    if (done) return; done = true; clearTimeout(giveUp); voskStop = null;
+    proc.disconnect(); src.disconnect(); stream.getTracks().forEach(t => t.stop());
+    ctx.close().catch(() => {}); rec.remove(); micState();
+    if (text != null) heard(text);
+  };
+  rec.on('partialresult', m => { const p = m.result.partial.replace(/\[unk\]/g, '').trim(); if (p) mic.textContent = p + '…'; });
+  rec.on('result', m => { if (m.result.text.replace(/\[unk\]/g, '').trim() || voskStop === 'stop') finish(m.result.text); });
+  proc.onaudioprocess = e => { if (!done) try { rec.acceptWaveform(e.inputBuffer); } catch (err) {} };
+  src.connect(proc); proc.connect(ctx.destination);
+  voskStop = () => { voskStop = 'stop'; rec.retrieveFinalResult(); setTimeout(() => finish(''), 1500); };
+  giveUp = setTimeout(() => { if (typeof voskStop === 'function') voskStop(); }, 9000);
+  micState('on', 'Listening…');
+}
+let rec = null;
+mic.addEventListener('click', () => {
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  if (rec) { rec.stop(); return; }
+  if (typeof voskStop === 'function') { voskStop(); return; }
+  if (voskStop || mic.classList.contains('wait')) return;
+  if (!SR) { voskListen(); return; }
+  try {
+    rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.onresult = e => heard(e.results[0][0].transcript);
+    rec.onend = rec.onerror = () => { rec = null; micState(); };
+    rec.start(); micState('on', 'Listening…');
+  } catch (err) { rec = null; micState(); voskListen(); }
+});
 $('nameIn').value = playerName;
 $('nameIn').addEventListener('input', e => {
   playerName = e.target.value.trim();
@@ -5715,7 +5816,7 @@ function camUpdate() {
     if (Math.abs(x - c.p.x) < W * 0.006 && Math.abs(y - c.p.y) < H * 0.006) continue;
     handMove(c.p, x, y);
   }
-  if (mode === 'slap' && state === 'play' && grip && !camGrip) tryThrow(); // Slap Battle: make a fist to slap
+  if ((mode === 'slap' || mode === 'hoops') && state === 'play' && grip && !camGrip) tryThrow(); // Slap Battle and Basketball: make a fist to slap or shoot
   camGrip = grip && state !== 'menu';
   if (!view.hidden) camDraw(view, marks);
 }
@@ -6224,7 +6325,7 @@ const endPointer = e => {
   if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 14 || performance.now() - p.t0 > 350) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  if (['mud', 'dodge', 'monsters', 'slap'].includes(mode) && state === 'play') { tryThrow(ray.ray.direction.clone()); return; }
+  if (['mud', 'dodge', 'monsters', 'slap', 'hoops'].includes(mode) && state === 'play') { tryThrow(ray.ray.direction.clone()); return; }
   const hit = ray.intersectObjects(ais.map(a => a.group).concat(mysteryActive ? [mysteryActive.group] : []), true)[0];
   if (hit && hit.object.userData.mystery) {
     const m = mysteries[hit.object.userData.mystery];
@@ -6242,6 +6343,7 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 const keys = {};
 let keyCd = 0, keyHand = 0, usedKeys = false;
 const handKick = [0, 0];
+const armWrist = new V(), armDir = new V(), armUp = new V(0, 1, 0);
 const GAME_KEYS = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'];
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') {
@@ -6470,7 +6572,7 @@ $('modeFree').addEventListener('click', () => begin('free', 0, 'host'));
 $('modeKing').addEventListener('click', () => begin('king', 0, 'host'));
 document.querySelectorAll('#moreModes [data-mode]').forEach(b => b.addEventListener('click', () => begin(b.dataset.mode, 0, 'host')));
 $('optsBtn').addEventListener('click', () => { const open = $('opts').hidden; $('opts').hidden = !open; $('optsBtn').setAttribute('aria-expanded', String(open)); $('optsBtn').textContent = open ? 'Fewer options' : 'Other options'; });
-$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (18)'; });
+$('moreBtn').addEventListener('click', () => { const open = $('moreModes').hidden; $('moreModes').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open)); $('moreBtn').textContent = open ? 'Fewer modes' : 'More modes (19)'; });
 $('menuBtn').addEventListener('click', () => {
   if (player.hog) exitHog();
   ejectAiHogs();
@@ -7629,9 +7731,9 @@ function concealed(b) {
   return false;
 }
 const CLASSICISH = ['classic', 'potato', 'bat', 'shrink', 'tongue', 'gravity'];
-const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge'];
+const TEAM_MODES = ['ctf', 'mud', 'soccer', 'dodge', 'hoops'];
 Object.assign(MODE_NAMES, { monsters: 'Monster Night', lethal: 'Lethal Toad', blood: 'Blood A', hide: 'Hide and Seek', bat: 'Bat Tag', shrink: 'Shrink Tag', tongue: 'Sticky Tongue Tag', keepaway: 'Keep Away', gravity: 'Gravity Swap',
-  mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', kart: 'Toadhog Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines', slap: 'Slap Battle' });
+  mud: 'Mud Splat', soccer: 'Lily Pad Soccer', dodge: 'Pond Ball', race: 'Hop Race', kart: 'Toadhog Race', lava: 'Floor Is Lava', swarm: 'Bug Swarm', simon: 'Simon Says Frog', musical: 'Musical Lily Pads', sardines: 'Sardines', slap: 'Slap Battle', hoops: 'Basketball' });
 function m2Send(d, target) { if (net && isHost()) net.ev.send({ k: 'm2', d }, target ? { target } : undefined); }
 function m2Ask(d) { if (net && !isHost()) net.ev.send({ k: 'm2', d }, { target: net.hostId }); }
 function alive() { return bodies.filter(b => !b.out); }
@@ -7711,6 +7813,7 @@ function projEvent(d) {
 let throwCd = 0;
 function tryThrow(dirV) {
   if (mode === 'slap') return state === 'play' && MODE2.slap.press(dirV);
+  if (mode === 'hoops') return state === 'play' && MODE2.hoops.press(dirV);
   if (state !== 'play' || !['mud', 'dodge', 'monsters'].includes(mode) || player.frozen > 0 || player.out || throwCd > 0) return false;
   if (mode === 'dodge' && !MODE2.dodge.balls.some(bl => bl.holder === player)) { flash('No ball!', 'Grab a red ball first.', 1, 'var(--bone)'); return false; }
   throwCd = mode === 'mud' ? 0.55 : mode === 'monsters' ? 1.1 : 0.4;
@@ -8017,6 +8120,17 @@ function mapLighting() {
   if (lantern) lantern.visible = false;
 }
 
+// Basketball: an orange ball with black seams, an orange rim and a white net
+const HOOPS_WIN = 21, HOOPS_TIME = 240;
+window.__dbg = () => ({ H: MODE2.hoops, player, bodies, ctf, get mode() { return mode; } });
+const hoopMats = (() => {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d');
+  x.fillStyle = '#f07a1e'; x.fillRect(0, 0, 128, 64); x.strokeStyle = '#2a1408'; x.lineWidth = 3;
+  x.beginPath(); x.moveTo(0, 32); x.lineTo(128, 32); for (const cx of [32, 96]) { x.moveTo(cx, 0); x.lineTo(cx, 64); } x.stroke();
+  x.beginPath(); x.ellipse(0, 32, 18, 32, 0, 0, Math.PI * 2); x.ellipse(64, 32, 18, 32, 0, 0, Math.PI * 2); x.ellipse(128, 32, 18, 32, 0, 0, Math.PI * 2); x.stroke();
+  return { ball: new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(c), emissive: 0x221005 }), rim: new THREE.MeshLambertMaterial({ color: 0xff5a1f, emissive: 0x401000 }),
+    net: new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.8 }) };
+})();
 // Slap Battle gloves: grab a glove box on the pad to swap. push = how far, up = how high, cd = seconds between slaps
 const GLOVES = {
   lily: { e: '🧤', name: 'Lily Glove', color: 0x52d273, push: 8, up: 5, cd: 0.55, say: 'A good all-round slap.' },
@@ -8385,6 +8499,182 @@ const MODE2 = {
       else projEvent(d);
     },
     end() { clearProj(); for (const bl of this.balls) scene.remove(bl.mesh); this.balls = []; for (const b of bodies) setOut(b, false); },
+  },
+  // ===== Basketball (Asher's idea): a hoop over each team's lily pad. Dribble, pass, shoot, and dunk! =====
+  // The host runs the ball; guests ask the host to shoot. hoops[t] is the hoop green or blue defends, so you shoot at hoops[1 - team].
+  hoops: { team: true, ball: null, hoops: [], group: null, mapKey: null, resetT: 0, cd: 0,
+    build() {
+      if (this.group) scene.remove(this.group);
+      const g = this.group = new THREE.Group(); scene.add(g); this.mapKey = mapKey;
+      if (ctf.group) ctf.group.traverse(o => { if (o.geometry === ctfGeo.pole) o.visible = false; }); // the hoop stands in for the flag pole
+      const mid = ctf.bases[0].clone().add(ctf.bases[1]).multiplyScalar(0.5);
+      this.hoops = [0, 1].map(t => {
+        const base = ctf.bases[t], u = mid.clone().sub(base).setY(0).normalize(), side = new V(-u.z, 0, u.x), yaw = Math.atan2(u.x, u.z);
+        const pole = base.clone().addScaledVector(u, -1.9), board = pole.clone().addScaledVector(u, 0.3), ring = pole.clone().addScaledVector(u, 1.15);
+        board.y = base.y + 3.3; ring.y = base.y + 2.8;
+        const pm = part(g, new THREE.CylinderGeometry(0.1, 0.12, 3.6, 8), M.white, 1, 1, 1, pole.x, base.y + 1.8, pole.z);
+        const bm = part(g, boxGeo, M.white, 2.4, 1.5, 0.12, board.x, board.y, board.z, 0, yaw, 0);
+        part(bm, boxGeo, teamRingMats[t], 0.36, 0.4, 1.4, 0, -0.12, 0); // a team-color square on the board
+        part(g, boxGeo, M.white, 0.08, 0.08, 1.0, (pole.x + ring.x) / 2, ring.y - 0.05, (pole.z + ring.z) / 2, 0, yaw, 0);
+        const rm = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.07, 6, 20), hoopMats.rim); rm.rotation.x = Math.PI / 2; rm.position.copy(ring); g.add(rm);
+        const net = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.45, 0.8, 12, 1, true), hoopMats.net); net.position.set(ring.x, ring.y - 0.4, ring.z); g.add(net);
+        return { u, side, board, ring, pm, bm, net };
+      });
+    },
+    ensure() {
+      if (!this.group || this.mapKey !== mapKey || !ctf.group) { teamTick(); this.build(); }
+      if (!this.ball) { this.ball = { pos: new V(), vel: new V(), holder: null, grounded: false, wall: false, shot: null, mesh: new THREE.Mesh(ballGeo, hoopMats.ball) }; this.ball.mesh.scale.setScalar(0.42); }
+      if (!this.ball.mesh.parent) scene.add(this.ball.mesh);
+    },
+    jumpBall() { // toss the ball up in the middle
+      const B = this.ball, c = ctf.bases[0].clone().add(ctf.bases[1]).multiplyScalar(0.5);
+      B.holder = null; B.shot = null; B.pos.set(c.x, Math.max(ctf.bases[0].y, ctf.bases[1].y, groundAt(c.x, c.z)) + 4, c.z); B.vel.set(0, 3, 0);
+    },
+    start() {
+      teamStart('Basketball', 'Grab the ball and shoot it in the other team’s hoop! Tap, F or B to shoot. Jump near the hoop to dunk!');
+      this.build(); this.ensure(); this.jumpBall(); this.resetT = 0;
+      for (const b of bodies) { b.score = 0; b.safeT = 0; b.noGrabT = 0; }
+    },
+    fwdOf(b) { const yaw = b === player ? b.yaw : Math.atan2(-b.vel.x, -b.vel.z); return new V(-Math.sin(yaw), 0, -Math.cos(yaw)); },
+    // the shoot button: shoot if you're facing their hoop, or pass the ball the way you're looking
+    press(dirV) {
+      if (this.ball && this.ball.holder !== player) { flash('No ball!', 'Grab the orange ball first.', 1, '#ff8c2a'); return false; }
+      if (this.cd > 0) return false;
+      this.cd = 0.35;
+      const d = (dirV || camForward()); const arr = [d.x, d.y, d.z].map(r2);
+      if (isHost()) this.throwBy(player, arr); else m2Ask({ t: 'throw', d: arr });
+      return true;
+    },
+    // host only
+    throwBy(owner, d) {
+      const B = this.ball; if (!B || B.holder !== owner) return;
+      const h = this.hoops[1 - (owner.team || 0)]; if (!h) return;
+      const dir = new V(d[0], d[1], d[2]); if (dir.lengthSq() < 1e-4) dir.copy(this.fwdOf(owner)); dir.normalize();
+      const p0 = owner.pos.clone().add(new V(0, 0.7, 0)), toHoop = h.ring.clone().sub(p0), dist = Math.hypot(toHoop.x, toHoop.z);
+      const facing = new V(dir.x, 0, dir.z).normalize().dot(new V(toHoop.x, 0, toHoop.z).normalize());
+      B.holder = null; owner.noGrabT = performance.now() + 600; B.pos.copy(p0).addScaledVector(new V(dir.x, 0, dir.z).normalize(), 0.5);
+      if (dist < 20 && facing > 0.45) { // a shot! close shots almost always go in
+        const miss = Math.random() * (0.1 + dist * 0.07) * (owner === player || owner.isRemote ? 1 : 1.25 / DIFF[diff]), ma = Math.random() * Math.PI * 2;
+        const tgt = h.ring.clone().add(new V(Math.cos(ma) * miss, 0.15, Math.sin(ma) * miss));
+        const T = 0.6 + dist * 0.055, dl = tgt.sub(B.pos);
+        B.vel.set(dl.x / T, (dl.y + 0.5 * G * T * T) / T, dl.z / T);
+        B.shot = { by: owner, three: dist > 9.5 };
+      } else { // a pass
+        B.vel.copy(dir).multiplyScalar(13); B.vel.y += 4; B.shot = null;
+      }
+      sfxTone(400, 700, 0.12, 'triangle', 0.05);
+    },
+    score(team, by, pts, big) {
+      ctf.score[team] += pts; this.resetT = 1.4;
+      if (by) { by.score = (by.score || 0) + pts; questFor(by, 'capture'); }
+      const who = by === player ? 'You' : by ? by.name : TEAM_NAMES[team];
+      announce(big, `${who} scored ${pts}! Green ${ctf.score[0]} – ${ctf.score[1]} Blue`, TEAM_CSS[team], 2.4);
+      sfxTone(520, 1040, 0.4, 'triangle', 0.14);
+      if (by === player) addFlies(pts);
+      if (ctf.score[team] >= HOOPS_WIN) teamWin(team, `${TEAM_NAMES[team]} team wins Basketball!`, `${ctf.score[0]} to ${ctf.score[1]}. New game soon.`);
+    },
+    update(dt, t, host) {
+      teamTick(); this.ensure();
+      this.cd -= dt;
+      const B = this.ball, now = performance.now();
+      for (const h of this.hoops) h.net.scale.y += (1 - h.net.scale.y) * Math.min(1, dt * 6);
+      if (B.holder) { // dribble beside the holder
+        const f = this.fwdOf(B.holder), hb = B.holder.pos;
+        B.pos.set(hb.x + f.x * 0.55 - f.z * 0.25, hb.y - R + 0.25 + Math.abs(Math.sin(t * 7)) * 0.75, hb.z + f.z * 0.55 + f.x * 0.25); B.vel.set(0, 0, 0);
+      }
+      B.mesh.position.copy(B.pos); B.mesh.rotation.x += (B.holder ? 6 : B.vel.z) * dt; B.mesh.rotation.z -= B.vel.x * dt;
+      if (!host || state !== 'play') return;
+      if (this.resetT > 0 && (this.resetT -= dt) <= 0) this.jumpBall();
+      if (!B.holder) {
+        const prev = B.pos.clone(), vy = B.vel.y;
+        B.vel.y -= G * dt; B.pos.addScaledVector(B.vel, dt);
+        B.grounded = false; collide(B);
+        if (B.grounded && vy < -2) { B.vel.y = -vy * 0.7; B.shot = null; }
+        if (B.grounded) { const fr = Math.exp(-1.2 * dt); B.vel.x *= fr; B.vel.z *= fr; }
+        this.hoops.forEach((h, tm) => {
+          // the backboard
+          const s0 = tq.subVectors(prev, h.board).dot(h.u), rel = tn.subVectors(B.pos, h.board), s = rel.dot(h.u);
+          if (s0 >= -0.1 && s < 0.32 && Math.abs(rel.dot(h.side)) < 1.25 && Math.abs(rel.y) < 0.8) { const vn = B.vel.dot(h.u); if (vn < 0) B.vel.addScaledVector(h.u, -vn * 1.6); B.pos.addScaledVector(h.u, 0.32 - s); sfxTone(180, 140, 0.08, 'square', 0.04); }
+          // through the ring, going down
+          if (prev.y >= h.ring.y && B.pos.y < h.ring.y && B.vel.y < 0 && this.resetT <= 0) {
+            const fd = Math.hypot(B.pos.x - h.ring.x, B.pos.z - h.ring.z);
+            if (fd < 0.62) {
+              const sc = 1 - tm, by = B.shot && B.shot.by && B.shot.by.team === sc ? B.shot.by : null;
+              h.net.scale.y = 1.6; B.vel.x *= 0.2; B.vel.z *= 0.2;
+              this.score(sc, by, B.shot && B.shot.three ? 3 : 2, B.shot && B.shot.three ? 'Three pointer!' : 'Swish!');
+              B.shot = null;
+            } else if (fd < 1.05) { // off the rim
+              const out = new V(B.pos.x - h.ring.x, 0, B.pos.z - h.ring.z).normalize();
+              B.pos.y = h.ring.y + 0.01; B.vel.y = Math.abs(B.vel.y) * 0.45 + 1.5; B.vel.addScaledVector(out, 2); sfxTone(300, 200, 0.1, 'square', 0.05);
+            }
+          }
+        });
+        if (B.pos.y < -30) this.jumpBall();
+        // pick it up
+        if (this.resetT <= 0) for (const b of bodies) {
+          if (b.out || (b.noGrabT || 0) > now || b.pos.distanceTo(B.pos) > 1.3) continue;
+          B.holder = b; B.shot = null; b.safeT = now + 1200;
+          if (b === player) sfxTone(600, 900, 0.1, 'triangle', 0.06);
+          break;
+        }
+      } else {
+        const hb = B.holder, h = this.hoops[1 - (hb.team || 0)];
+        // slam dunk: jump with the ball right next to their hoop
+        if (h && !hb.grounded && hb.pos.y > h.ring.y - 1.7 && flat(hb.pos, h.ring) < 2) {
+          B.holder = null; hb.noGrabT = now + 800; B.pos.set(h.ring.x, h.ring.y + 0.3, h.ring.z); B.vel.set(0, -6, 0);
+          h.net.scale.y = 1.8; this.resetT = 0.01; rumble(200, 0.8);
+          this.score(hb.team || 0, hb, 2, 'SLAM DUNK!'); B.shot = null;
+        } else for (const b of bodies) { // steals: bump into whoever has the ball
+          if (b === hb || b.out || b.team === hb.team || (hb.safeT || 0) > now || b.pos.distanceTo(hb.pos) > 1.15) continue;
+          B.holder = b; b.safeT = now + 1200; hb.noGrabT = now + 700;
+          if (b === player) flash('Steal!', `You stole the ball from ${hb.name}!`, 1.2, TEAM_CSS[player.team || 0]);
+          if (hb === player) flash('Stolen!', `${b.name} stole the ball!`, 1.2, TEAM_CSS[b.team || 0]);
+          sfxSlap(0.3);
+          break;
+        }
+      }
+      // computer frogs shoot when they're close to the hoop, or pass when they're stuck far away
+      const hb = B.holder;
+      if (hb && ais.includes(hb) && !hb.out && (hb.throwT = (hb.throwT || 1) - dt) <= 0) {
+        const h = this.hoops[1 - (hb.team || 0)], d = flat(hb.pos, h.ring);
+        if (d < 2.5 && hb.grounded && Math.random() < 0.5) { hb.vel.y = 8.5; hb.throwT = 0.6; } // going for a dunk
+        else if (d < 8 + Math.random() * 6) { hb.throwT = 1 + Math.random(); this.throwBy(hb, [h.ring.x - hb.pos.x, 0, h.ring.z - hb.pos.z]); }
+        else hb.throwT = 0.5;
+      }
+      if (roundTime >= HOOPS_TIME) teamWin(ctf.score[0] >= ctf.score[1] ? 0 : 1);
+    },
+    goal(ai) {
+      const B = this.ball; if (!B || ai.out) return null;
+      const my = ai.team || 0, them = this.hoops[1 - my], mine = this.hoops[my]; if (!them) return null;
+      const front = h => h.ring.clone().addScaledVector(h.u, 2.5);
+      if (B.holder === ai) return front(them);
+      if (B.holder && B.holder.team === my) { const s = ais.indexOf(ai) % 2 ? 1 : -1; return front(them).addScaledVector(them.side, s * 3.5).addScaledVector(them.u, 2); } // get open
+      if (B.holder) return B.holder.pos; // chase the ball carrier
+      if (ai.role === 'defend' && flat(B.pos, mine.ring) > 12) return front(mine);
+      return B.pos;
+    },
+    hud() {
+      const B = this.ball, mine = B && B.holder === player;
+      return { chip: mine ? 'GOT THE BALL!' : `${TEAM_NAMES[player.team || 0].toUpperCase()} TEAM`, bg: mine ? '#ff8c2a' : TEAM_CSS[player.team || 0],
+        info: `Green ${ctf.score[0]} – ${ctf.score[1]} Blue · first to ${HOOPS_WIN} · ${fmt(Math.max(0, HOOPS_TIME - roundTime))}`,
+        radar: B && !mine ? { pos: B.pos, label: 'Ball' } : mine && this.hoops[1 - (player.team || 0)] ? { pos: this.hoops[1 - (player.team || 0)].ring, label: 'Hoop' } : 'hide' };
+    },
+    row(b) { return this.ball && this.ball.holder === b ? `🏀 ${b.score || 0} pts` : `${TEAM_NAMES[b.team || 0]} · ${b.score || 0} pts`; },
+    snap() {
+      const B = this.ball, sc = {}; for (const b of bodies) if (b.score) sc[idOf(b)] = b.score;
+      return Object.assign(teamSnap(), { b: B ? [B.pos.x, B.pos.y, B.pos.z, B.vel.x, B.vel.y, B.vel.z].map(r2) : null, h: B && B.holder ? idOf(B.holder) : null, ps: sc });
+    },
+    apply(ms) {
+      teamApply(ms); this.ensure();
+      const B = this.ball;
+      B.holder = ms.h ? byId(String(ms.h)) || null : null;
+      if (ms.b && !B.holder) { B.pos.lerp(new V(ms.b[0], ms.b[1], ms.b[2]), 0.5); B.vel.set(ms.b[3], ms.b[4], ms.b[5]); }
+      for (const b of bodies) b.score = (ms.ps && +ms.ps[idOf(b)]) || 0;
+    },
+    onEvent(d, from) {
+      if (d.t === 'throw' && isHost() && Array.isArray(d.d)) { const o = remotes.get(from); if (o && (o.throwCd || 0) < performance.now()) { o.throwCd = performance.now() + 300; this.throwBy(o, d.d.map(x => +x || 0)); } }
+    },
+    end() { if (this.ball) { scene.remove(this.ball.mesh); this.ball.holder = null; } if (this.group) { scene.remove(this.group); this.group = null; } this.hoops = []; if (ctf.group) ctf.group.traverse(o => { if (o.geometry === ctfGeo.pole) o.visible = true; }); },
   },
   // ===== Races and challenges =====
   race: { seed: 0, rings: [], group: null,
@@ -10263,6 +10553,12 @@ function update(dt, t) {
     hand.position.lerp(handTarget, Math.min(1, dt * 18));
     const squash = (p || handKick[side] > 0) && inReach ? 0.7 : 1;
     hand.scale.y += (squash - hand.scale.y) * Math.min(1, dt * 15);
+    armWrist.set(0, 0, 0.09).applyQuaternion(hand.quaternion).add(hand.position);
+    armDir.subVectors(armWrist, hand.shoulder);
+    const len = armDir.length();
+    hand.arm.position.addVectors(armWrist, hand.shoulder).multiplyScalar(0.5);
+    hand.arm.quaternion.setFromUnitVectors(armUp, armDir.divideScalar(len));
+    hand.arm.scale.set(0.034, len, 0.034);
   });
 
   updateTalk(dt);
@@ -10312,6 +10608,7 @@ function update(dt, t) {
     hgb.hidden = !nh || (!player.hog && !canRide());
     const kh = mode === 'kart' && state !== 'menu' && player.hog && player.seat === 0 ? player.hog : null, ib = $('itemBtn');
     ib.hidden = !(kh && (kh.item || kh.rollT > 0)); if (!ib.hidden) ib.textContent = kartItemLabel(kh);
+    if (mode === 'hoops' && state === 'play') { ib.hidden = false; ib.textContent = `🏀 Shoot${usedKeys ? ' (F)' : ''}`; }
     if (mode === 'slap' && state === 'play') { ib.hidden = false; ib.textContent = `${(GLOVES[player.glove] || GLOVES.lily).e} Slap${usedKeys ? ' (F)' : ''}`; }
     const gb = $('gadgetBtn'); gb.hidden = !(player.gad && gadgetsActive() && !player.hog); if (!gb.hidden) gb.textContent = gadgetLabel();
     if (nh) hgb.textContent = (player.hog ? 'Hop out' : nh.seats[0] === null ? 'Drive' : 'Hop in') + (usedKeys ? ' (G)' : '');
@@ -10381,7 +10678,7 @@ function modeRules() { // the same one-line rules the menu buttons show
 }
 $('info').addEventListener('click', e => { e.currentTarget.blur(); modeRules(); });
 $('hogBtn').addEventListener('click', e => { e.currentTarget.blur(); toggleHog(); });
-$('itemBtn').addEventListener('click', e => { e.currentTarget.blur(); if (mode === 'slap') tryThrow(); else if (mode === 'kart' && state === 'play' && player.hog && player.seat === 0) kartUse(player.hog); });
+$('itemBtn').addEventListener('click', e => { e.currentTarget.blur(); if (mode === 'slap' || mode === 'hoops') tryThrow(); else if (mode === 'kart' && state === 'play' && player.hog && player.seat === 0) kartUse(player.hog); });
 function showGfx() { document.querySelectorAll('#gfxSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === gfx))); }
 const gfxAtLoad = gfx;
 document.querySelectorAll('#gfxSeg button').forEach(b => b.addEventListener('click', () => {
@@ -10428,9 +10725,9 @@ function frame(now) {
       camera.position.set(Math.sin(menuAng) * 23, 9, Math.cos(menuAng) * 23);
       camera.lookAt(0, 4, 0);
     }
-    hands.forEach(hd => { hd.visible = false; });
+    hands.forEach(hd => { hd.visible = hd.arm.visible = false; });
   } else {
-    hands.forEach(hd => { hd.visible = !player.hog; });
+    hands.forEach(hd => { hd.visible = hd.arm.visible = !player.hog; });
     update(dt, t);
   }
   for (const a of ais) drawAI(a, t);
