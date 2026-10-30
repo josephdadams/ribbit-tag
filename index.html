@@ -93,7 +93,7 @@ h1 span { color: var(--lava); display: block; }
 .padcheck { margin: 8px 0 4px; padding: 8px 10px 10px; border-radius: 12px; background: var(--canopy); font-size: .88rem; }
 .padcheck .keys-sub { margin: 0 0 4px; }
 .padcheck p { margin: 0; }
-.padcheck .pc-pad { margin-top: 8px; }
+.padcheck .pc-pad, .padcheck #wiiConnect { margin-top: 8px; }
 .padcheck .pc-name { color: var(--bone); font-weight: 700; overflow-wrap: anywhere; }
 .padcheck .pc-axes { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .padcheck .pc-bar { display: inline-block; width: 40px; height: 6px; border-radius: 3px; background: rgba(0,0,0,.35); position: relative; vertical-align: middle; margin-left: 3px; }
@@ -114,6 +114,32 @@ h1 span { color: var(--lava); display: block; }
 #menuBtn { pointer-events: auto; border: 0; cursor: pointer; }
 #hogBtn { position: absolute; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: var(--leaf); color: var(--ink); font-size: 1.3rem; padding: 12px 22px; touch-action: manipulation; }
 #gadgetBtn { position: absolute; right: 16px; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.3rem; padding: 14px 22px; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 0 4px 0 #b8941a; }
+#typeBtn { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #c9a7ff; color: var(--ink); font-size: 1.3rem; padding: 12px 22px; touch-action: manipulation; box-shadow: 0 4px 0 #7d5cc0; }
+#typing { position: fixed; inset: 0; z-index: 60; background: rgba(12, 10, 24, .88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; color: var(--bone); font-family: var(--body); user-select: none; -webkit-user-select: none; }
+#typing[hidden] { display: none; }
+#typing .ty-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: min(100%, 900px); }
+#typing h2 { font-family: var(--display); font-weight: 400; font-size: 1.6rem; margin: 0; color: #c9a7ff; }
+#typing .ty-head .spacer { flex: 1; }
+#typing .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+#typing .seg button, #tyDone { border: 0; border-radius: 999px; padding: 7px 12px; font: 800 .9rem var(--body); cursor: pointer; background: #2a2540; color: var(--bone); touch-action: manipulation; }
+#typing .seg button[aria-pressed="true"] { background: #c9a7ff; color: var(--ink); }
+#tyDone { background: var(--leaf); color: var(--ink); }
+#tyLine { width: min(100%, 900px); min-height: 2.4em; font: 700 clamp(1.3rem, 4.2vw, 2.1rem)/1.3 ui-monospace, Menlo, Consolas, monospace; background: #1b1830; border-radius: 14px; padding: 12px 16px; overflow-wrap: anywhere; }
+#tyLine .ok { color: #8fd162; }
+#tyLine .cur { background: #ffd23f; color: var(--ink); border-radius: 4px; }
+#tyLine .todo { color: #9c96b8; }
+#tyLine.oops { animation: tyShake .18s; }
+@keyframes tyShake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+#tyStats { font-weight: 800; font-size: .95rem; color: #d8d0f0; min-height: 1.3em; }
+#tyKb { display: flex; flex-direction: column; gap: 7px; width: min(100%, 900px); }
+#tyKb .row { display: flex; gap: 6px; justify-content: center; }
+#tyKb .kc { flex: 1 1 0; max-width: 76px; height: clamp(44px, 9vh, 64px); border: 0; border-radius: 11px; font: 800 clamp(1rem, 3vw, 1.4rem) var(--body); color: #2a2540; cursor: pointer; touch-action: none;
+  box-shadow: 0 6px 0 rgba(0,0,0,.35), inset 0 -4px 0 rgba(0,0,0,.12), inset 0 2px 0 rgba(255,255,255,.6); transition: transform .04s, box-shadow .04s; position: relative; }
+#tyKb .kc.down { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0,0,0,.35), inset 0 -2px 0 rgba(0,0,0,.12), inset 0 2px 0 rgba(255,255,255,.5); }
+#tyKb .kc.next { outline: 3px solid #ffd23f; outline-offset: 2px; }
+#tyKb .kc.bump::after { content: ''; position: absolute; left: 40%; right: 40%; bottom: 9px; height: 3px; border-radius: 2px; background: rgba(42,37,64,.45); }
+#tyKb .r0 .kc { background: #ffd6e0; } #tyKb .r1 .kc { background: #ffe9b8; } #tyKb .r2 .kc { background: #d4f5d0; } #tyKb .r3 .kc { background: #e6d6ff; }
+#tyKb .space { max-width: 420px; flex: 6 1 0; } #tyKb .wide { max-width: 130px; flex: 2 1 0; }
 #itemBtn { position: absolute; left: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); pointer-events: auto; border: 0; cursor: pointer; background: #ffd23f; color: var(--ink); font-size: 1.4rem; padding: 14px 24px; touch-action: manipulation; box-shadow: 0 4px 0 #b8941a; }
 #camView { position: absolute; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(240px, 38vw); height: auto; aspect-ratio: 4 / 3; border-radius: 14px; border: 2px solid rgba(10,26,16,.72); opacity: .85; }
 #camView.big { width: min(440px, 50vw); }
@@ -356,6 +382,7 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
   <button id="hogBtn" class="chip" type="button" hidden>Drive</button>
   <button id="itemBtn" class="chip" type="button" hidden></button>
   <button id="gadgetBtn" class="chip" type="button" hidden></button>
+  <button id="typeBtn" class="chip" type="button" hidden>&#9000; Type</button>
   <div id="bubbles"></div>
   <div id="scores" hidden>
     <div class="pl-head"><h2 id="scTitle">Scores</h2><span class="spacer"></span><button id="scClose" class="pill-btn" type="button">Close</button></div>
@@ -393,6 +420,16 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
       <button type="submit">Send</button>
     </form>
   </div>
+</div>
+
+<div id="typing" hidden role="dialog" aria-label="ASMR keyboard">
+  <div class="ty-head"><h2>ASMR Keyboard</h2>
+    <div class="seg" id="tySounds"><button type="button" data-s="thock">Thock</button><button type="button" data-s="clicky">Clicky</button><button type="button" data-s="bubbles">Bubbles</button><button type="button" data-s="music">Music</button></div>
+    <div class="seg" id="tySets"><button type="button" data-t="home">Home row</button><button type="button" data-t="words">Words</button><button type="button" data-t="lines">Sentences</button></div>
+    <span class="spacer"></span><button type="button" id="tyDone">Done</button></div>
+  <div id="tyLine"></div>
+  <div id="tyStats"></div>
+  <div id="tyKb"></div>
 </div>
 
 <div id="menu">
@@ -603,15 +640,17 @@ kbd { font-family: var(--body); font-weight: 800; font-size: .8em; background: v
         <li><span class="ic">L R</span><span>Each thumb is a sticky frog hand. <strong>Left side</strong> of the screen is your left hand, <strong>right side</strong> is your right.</span></li>
         <li><span class="ic">&darr;</span><span><strong>Swipe down</strong> to shove the ground away and launch forward. Faster swipes make bigger leaps.</span></li>
         <li><span class="ic">&harr;</span><span><strong>Swipe sideways</strong> to turn around.</span></li>
-        <li><span class="ic">&uarr;</span><span>Next to a tree or rock wall? Keep swiping down to <strong>climb</strong> it. The treehouse has steps.</span></li>
+        <li><span class="ic">&uarr;</span><span>Next to a tree or rock wall? Keep swiping down to <strong>climb</strong> it. The stump in the Forest has mushroom shelves up the inside.</span></li>
         <li><span class="ic">✋</span><span><strong>Hold your finger down</strong> while touching a wall, tree or ceiling to <strong>hang on</strong>. Swipe down to climb higher, let go to drop.</span></li>
         <li><span class="ic hot">!</span><span>Your hands go see-through when there is nothing close enough to grab. The arrow at the top points to the lava frog.</span></li>
         <li><span class="ic">💦</span><span>Grab a <strong>gadget box</strong>: a <strong>Bubble Bazooka</strong>, a <strong>Firefly Jet Pack</strong> or <strong>Tongue Shooters</strong>. Use it with the yellow gadget button.</span></li>
         <li><span class="ic">Hi</span><span><strong>Tap a frog</strong> or press <strong>Talk</strong> to chat. Tell them to follow you, ask for a joke, or tease them.</span></li>
         <li class="keys-li"><span class="ic">Pad</span><div><strong>Controller</strong>
-          <div class="padcheck"><p class="keys-sub">Controller check</p><p id="padCheckMsg">Plug in a controller, then press a button on it.</p><div id="padCheckList"></div></div>
+          <div class="padcheck"><p class="keys-sub">Controller check</p><p id="padCheckMsg">Plug in a controller, then press a button on it.</p><div id="padCheckList"></div><button class="pill-btn" id="wiiConnect" type="button" hidden>Connect a Wii Remote</button></div>
           <dl class="keys"><dt><kbd>Left stick</kbd></dt><dd>Push (up forward, down back, sideways)</dd><dt><kbd>Right stick</kbd></dt><dd>Turn</dd><dt><kbd>A</kbd></dt><dd>Jump</dd><dt>Hold <kbd>RB</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>RT</kbd></dt><dd>Big pushes</dd><dt><kbd>LT</kbd></dt><dd>Use your gadget</dd><dt><kbd>X</kbd></dt><dd>Talk (D-pad for quick replies)</dd><dt><kbd>Y</kbd></dt><dd>Player list</dd><dt><kbd>Start</kbd></dt><dd>Menu</dd></dl>
           <p class="keys-sub">Magicsee R1 ring (hold <kbd>@</kbd> and press <kbd>B</kbd> after turning it on)</p><dl class="keys"><dt><kbd>Stick</kbd></dt><dd>Push forward / back, sideways to turn</dd><dt><kbd>Trigger</kbd></dt><dd>Jump</dd><dt>Hold <kbd>top button</kbd></dt><dd>Grab and hang on</dd><dt><kbd>B</kbd></dt><dd>Jump, or get in a toadhog</dd><dt><kbd>D</kbd></dt><dd>Throw / go back</dd></dl>
+          <p class="keys-sub">Wii Remote and Nunchuk (press 1 and 2 together, then Connect a Wii Remote)</p><dl class="keys"><dt><kbd>Nunchuk stick</kbd></dt><dd>Push forward / back, sideways to turn</dd><dt><kbd>A</kbd> or shake the remote</dt><dd>Jump, or get in a toadhog</dd><dt>Hold <kbd>B</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>Z</kbd></dt><dd>Big pushes</dd><dt><kbd>C</kbd></dt><dd>Use your gadget</dd><dt><kbd>1</kbd></dt><dd>Throw / go back</dd><dt><kbd>&minus;</kbd></dt><dd>Talk</dd><dt><kbd>Home</kbd></dt><dd>Player list</dd><dt><kbd>+</kbd></dt><dd>Menu</dd><dt>No Nunchuk?</dt><dd>Hold the remote sideways: D-pad moves, 2 jumps</dd></dl>
+          <p class="keys-sub">Presentation clicker (any brand: Logitech, Targus and more)</p><dl class="keys"><dt>Hold <kbd>Next</kbd></dt><dd>Push forward</dd><dt>Hold <kbd>Back</kbd></dt><dd>Turn</dd><dt><kbd>Slideshow</kbd> or <kbd>blank screen</kbd></dt><dd>Jump</dd><dt>On menus</dt><dd>Next / Back move around, slideshow or blank screen picks</dd></dl>
           <p class="keys-sub">On menus</p><dl class="keys"><dt><kbd>D-pad</kbd></dt><dd>Move around</dd><dt><kbd>A</kbd></dt><dd>Pick</dd><dt><kbd>B</kbd></dt><dd>Go back</dd></dl></div></li>
         <li class="keys-li"><span class="ic">Key</span><div><strong>Keyboard</strong>
           <dl class="keys"><dt><kbd>W</kbd> <kbd>S</kbd></dt><dd>Push forward / back</dd><dt><kbd>A</kbd> <kbd>D</kbd></dt><dd>Turn</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Push sideways</dd><dt><kbd>Space</kbd></dt><dd>Jump</dd><dt>Hold <kbd>C</kbd></dt><dd>Grab and hang on</dd><dt>Hold <kbd>Shift</kbd></dt><dd>Big pushes</dd><dt><kbd>R</kbd></dt><dd>Use your gadget</dd><dt><kbd>T</kbd></dt><dd>Talk</dd><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Quick replies</dd><dt><kbd>Tab</kbd></dt><dd>Next frog</dd><dt><kbd>H</kbd></dt><dd>Be host</dd><dt><kbd>M</kbd></dt><dd>Music on/off</dd><dt><kbd>P</kbd></dt><dd>Player list</dd><dt><kbd>L</kbd></dt><dd>Scores</dd><dt><kbd>I</kbd></dt><dd>Mode info</dd><dt><kbd>Esc</kbd></dt><dd>Menu</dd></dl>
@@ -731,7 +770,7 @@ let HALF = 30; // half the arena's width; big maps set their own
 const flatGround = () => 0;
 let ceilY = 40; // nothing goes higher than this (Frog City's towers raise it)
 let groundAt = flatGround; // height of the ground itself (hills, cave floors); boxes sit on top of it
-let hogs = [], teleports = [];
+let hogs = [], teleports = [], mapDoors = [], mapTaps = [], slides = [], movers = [], doorCd = 0;
 let G = 18;
 const boxes = [], trees = [], blobs = [], ledges = [];
 const mapGroup = new THREE.Group();
@@ -885,7 +924,7 @@ function addTufts(m, n, zMax = HALF) {
   for (let i = 0; i < n; i++) {
     const tx = (srnd() - .5) * HALF * 2, tz = Math.min(zMax, (srnd() - .5) * HALF * 2);
     d.position.set(tx, groundAt(tx, tz) + 0.2, tz);
-    d.rotation.set(0, srnd() * 6, 0); d.scale.setScalar(0.7 + srnd() * 0.8); d.updateMatrix(); t.setMatrixAt(i, d.matrix);
+    d.rotation.set(0, srnd() * 6, 0); d.scale.setScalar(groundAt(tx, tz) < 0 ? 0 : 0.7 + srnd() * 0.8); d.updateMatrix(); t.setMatrixAt(i, d.matrix); // no grass down tunnels
   }
 }
 function scatter(n, gap, taken, ok, make) { // place n things at least `gap` apart, avoiding `taken` spots
@@ -2723,6 +2762,7 @@ function frogCityBuild() {
     addBox(x, 1.5, z, along ? 1.6 : 2, 0.6, along ? 2 : 1.6, M.cityWin, true);
   }
   addHog(16, 6, 0, M.hogGreen); addHog(-6, 16, Math.PI / 2, M.hogBlue);
+  if (!trackOn) addMapDoor(-10.6, 0.2, -4, Math.PI / 2, 'forest', 'THE STUMP', '#2f6a3a'); // back to the Forest
   // a skyline beyond the walls, just to look at
   for (let i = 0; i < 44; i++) {
     const a = i / 44 * Math.PI * 2, r = HALF + 12 + srnd() * 14, h = 20 + srnd() * 50, s = 10 + srnd() * 10;
@@ -2787,19 +2827,346 @@ function gulchBuild() {
   addHog(11, -40, Math.PI, M.hogBlue); addHog(-11, -40, Math.PI, M.hogBlue);
 }
 
+// ---------- Moving platforms: minecarts and elevators that carry whoever is standing on them ----------
+// Where they are comes from the clock, so they're in the same place on every device.
+function addMover(w, h, d, look, path) { // look: a group of meshes drawn around (0, 0, 0) at the platform's middle
+  const b = addBox(0, -50, 0, w, h, d, M.ac, true, true); b.floor = true;
+  look.userData.dyn = true; mapGroup.add(look);
+  const mv = { b, w, h, d, look, path, at: new V(), was: null }; movers.push(mv); return mv;
+}
+function updateMovers(host) {
+  if (!movers.length) return;
+  const t = Date.now() / 1000;
+  for (const mv of movers) {
+    mv.path(t, mv.at);
+    const dx = mv.was ? mv.at.x - mv.was.x : 0, dy = mv.was ? mv.at.y - mv.was.y : 0, dz = mv.was ? mv.at.z - mv.was.z : 0;
+    const { b } = mv;
+    if (mv.was && Math.abs(dx) + Math.abs(dy) + Math.abs(dz) < 3) for (const f of host ? [player, ...ais] : [player]) { // ride along
+      if (f.hog) continue;
+      const p = f.pos;
+      if (p.x > b.min.x - 0.2 && p.x < b.max.x + 0.2 && p.z > b.min.z - 0.2 && p.z < b.max.z + 0.2 && p.y - R > b.max.y - 0.15 && p.y - R < b.max.y + 0.35) { p.x += dx; p.y += dy; p.z += dz; }
+    }
+    b.min.set(mv.at.x - mv.w / 2, mv.at.y - mv.h / 2, mv.at.z - mv.d / 2); b.max.set(mv.at.x + mv.w / 2, mv.at.y + mv.h / 2, mv.at.z + mv.d / 2);
+    mv.look.position.copy(mv.at);
+    (mv.was || (mv.was = new V())).copy(mv.at);
+  }
+}
+
+// ---------- The Mines: a big dark mine with minecarts going round, a scaffold tower, an elevator and an ore chute ----------
+Object.assign(M, { mnDirt: lam(0x5a4632), mnRock: lam(0x6b5a48), mnWall: lam(0x3d3026), mnBeam: lam(0x6e4a28), mnCart: lam(0x5d6b73), mnGold: fx(0xffc93c), mnTnt: lam(0xd62828), mnFuse: lam(0x1b1b1f), mnChute: lam(0xa0a4a8), mnDrill: lam(0xb8c0c8) });
+function minesCart(paint) {
+  const g = new THREE.Group(), part = (m, sx, sy, sz, x, y, z) => { const p = new THREE.Mesh(boxGeo, m); p.scale.set(sx, sy, sz); p.position.set(x, y, z); g.add(p); return p; };
+  part(paint, 1.8, 0.9, 1.8, 0, 0.05, 0);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const w = new THREE.Mesh(geo(facet(new THREE.CylinderGeometry(0.28, 0.28, 0.15, 10))), M.mnFuse); w.rotation.z = Math.PI / 2; w.position.set(sx * 0.95, -0.45, sz * 0.6); g.add(w); }
+  for (let i = 0; i < 5; i++) { const n = new THREE.Mesh(geo(facet(new THREE.OctahedronGeometry(0.32, 0))), M.mnGold); n.position.set((i % 3 - 1) * 0.45, 0.55, (i > 2 ? 0.3 : -0.25)); n.rotation.y = i; g.add(n); }
+  return g;
+}
+function minesBuild() {
+  addGround(M.mnDirt); addWalls(M.mnWall); addEdgeRocks(M.mnRock, 30, 7);
+  addBox(0, 18.5, 0, HALF * 2 + 2, 1, HALF * 2 + 2, M.mnWall); // ceiling: grab it and swing along
+  for (let i = 0; i < 36; i++) { const h = 1 + srnd() * 2.5, c = put(new THREE.Mesh(geo(facet(new THREE.ConeGeometry(0.3 + srnd() * 0.4, h, 6))), M.mnRock)); c.rotation.x = Math.PI; c.position.set((srnd() - .5) * 56, 18 - h / 2, (srnd() - .5) * 56); }
+  // the minecart track: a loop all the way round, with two carts full of gold you can ride
+  const T = 18, sleeper = (x, z, along) => { const s = put(new THREE.Mesh(boxGeo, M.mnBeam)); s.scale.set(along ? 0.35 : 2.2, 0.1, along ? 2.2 : 0.35); s.position.set(x, 0.05, z); };
+  for (let u = -T; u < T; u += 1.2) { sleeper(u, -T, true); sleeper(u, T, true); sleeper(-T, u, false); sleeper(T, u, false); }
+  for (const o of [-0.7, 0.7]) for (const [x, z, w, d] of [[0, -T + o, 2 * T + 1.4, 0.12], [0, T + o, 2 * T + 1.4, 0.12], [-T + o, 0, 0.12, 2 * T + 1.4], [T + o, 0, 0.12, 2 * T + 1.4]]) {
+    const r = put(new THREE.Mesh(boxGeo, M.mineRail)); r.scale.set(w, 0.12, d); r.position.set(x, 0.16, z);
+  }
+  const loop = (t, out) => { // round the square at 4 m/s
+    let u = ((t * 4) % (8 * T) + 8 * T) % (8 * T);
+    if (u < 2 * T) return out.set(-T + u, 0.95, -T); u -= 2 * T;
+    if (u < 2 * T) return out.set(T, 0.95, -T + u); u -= 2 * T;
+    if (u < 2 * T) return out.set(T - u, 0.95, T); u -= 2 * T;
+    return out.set(-T, 0.95, T - u);
+  };
+  if (!trackOn) { addMover(1.8, 0.9, 1.8, minesCart(M.mnCart), loop); addMover(1.8, 0.9, 1.8, minesCart(M.mnTnt), (t, out) => loop(t + 18, out)); } // (no carts on the race track)
+  // the scaffold tower in the middle: three floors with steps zigzagging up
+  for (const [x, z] of [[-4, -4], [4, -4], [-4, 4], [4, 4]]) addPillar(x, z, 0.25, 12.4, M.mnBeam, 0.25);
+  for (const y of [4, 8, 12]) { addBox(-1.3, y, 0, 5.4, 0.4, 9, M.plank, true).floor = true; addBox(3.3, y, -2.5, 2.4, 0.4, 4, M.plank, true).floor = true; }
+  steps([[5.6, 1.2, 3], [5.6, 2.5, 0.4], [3.4, 3.4, 2.6]], M.plank, 2, M.mnBeam);
+  steps([[3.4, 5.2, 2.6], [5.6, 6.5, 0.4], [3.4, 7.4, 2.6]], M.plank, 2, M.mnBeam);
+  steps([[3.4, 9.2, 2.6], [5.6, 10.5, 0.4], [3.4, 11.4, 2.6]], M.plank, 2, M.mnBeam);
+  for (let i = 0; i < 4; i++) { const l = put(new THREE.Mesh(ballGeo, M.flame)); l.scale.setScalar(0.22); l.position.set(i % 2 ? 4 : -4, 13, i < 2 ? -4 : 4); }
+  fcSign('THE MINES', '#8a5a35', 0, 14.2, 4.3, 0, 4);
+  crystals(-2, 12.2, -2, M.mnGold, 5); // a pile of gold at the top
+  // the high ledge along the back wall, an elevator up to it and an ore chute back down
+  addBox(0, 4, -27.5, HALF * 2, 8, 5, M.mnRock, true);
+  addBox(0, 8.1, -27.5, HALF * 2, 0.2, 5, M.plank, true);
+  for (let x = -26; x <= 26; x += 4) { addPillar(x, -25.1, 0.08, 1, M.mnBeam, 0.08, 8.2); const l = put(new THREE.Mesh(ballGeo, M.flame)); l.scale.setScalar(0.16); l.position.set(x, 9.4, -25.1); }
+  const lift = new THREE.Group(); { const f = new THREE.Mesh(boxGeo, M.plank); f.scale.set(3, 0.3, 3); lift.add(f); for (const sx of [-1, 1]) { const r = new THREE.Mesh(boxGeo, M.mineRail); r.scale.set(0.1, 2, 0.1); r.position.set(sx * 1.45, 1, 1.45); lift.add(r); } }
+  if (!trackOn) addMover(3, 0.3, 3, lift, (t, out) => { // up, wait, down, wait
+    const c = t % 14, u = c < 4 ? c / 4 : c < 7 ? 1 : c < 11 ? 1 - (c - 7) / 4 : 0;
+    return out.set(-12, 0.15 + (8.05 - 0.15) * (u * u * (3 - 2 * u)), -23.4);
+  });
+  for (const sx of [-13.7, -10.3]) addPillar(sx, -24.9, 0.15, 11, M.mnBeam, 0.15);
+  addBox(-12, 11, -24.9, 4, 0.4, 0.4, M.mnBeam, true);
+  fcSign('ELEVATOR', '#5d6b73', -12, 10.3, -24.6, 0, 2.6);
+  if (!trackOn) addSlide('z', -25, -12, 11.8, 14.6, 8.05, 0.05, M.mnChute, M.mnBeam, u => Math.abs(u + T) < 1.6);
+  fcSign('ORE CHUTE', '#8a5a35', 13.2, 10, -25.05, 0, 2.6);
+  steps([[24, 1.4, -22.5], [26.5, 2.8, -22.5], [26.5, 4.2, -20], [24, 5.6, -20], [24, 7, -22.6]], M.plank, 2.2, M.mnBeam); // the climb up the other end
+  // a giant drill boring into the east wall
+  addBox(24, 1.2, 6, 4, 2.4, 3.5, M.mnCart, true);
+  const drill = new THREE.Mesh(geo(facet(new THREE.ConeGeometry(1.3, 3.6, 10))), M.mnDrill); drill.rotation.z = -Math.PI / 2; drill.position.set(27.6, 1.6, 6); drill.userData.dyn = true; mapGroup.add(drill);
+  addBox(27.4, 1.6, 6, 3.2, 2.2, 2.2, M.mnDrill, false, true);
+  mapAnims.push((dt) => { drill.rotation.x += dt * 4; });
+  // crates and TNT to climb, gems and gold in the walls, lanterns on posts
+  for (const [x, z, n] of [[-24, 8, 3], [-22, 12, 2], [10, 24, 2], [-8, -12, 2], [12, 8, 1], [-12, 6, 1]]) for (let i = 0; i < n; i++) addBox(x + (i % 2) * 0.3, 0.6 + i * 1.2, z, 1.2, 1.2, 1.2, M.labCrate, true);
+  for (const [x, z] of [[-20, -10], [8, -8], [22, 20], [-14, 22]]) { addBox(x, 0.55, z, 1.1, 1.1, 1.1, M.mnTnt, true); const f = put(new THREE.Mesh(boxGeo, M.mnFuse)); f.scale.set(1.12, 0.18, 1.12); f.position.set(x, 0.55, z); }
+  const gems = [M.crysA, M.crysB, M.crysC, M.mnGold];
+  for (let i = 0; i < 16; i++) {
+    const side = i % 4, u = (srnd() - 0.5) * 50, x = side === 0 ? -HALF + 1 : side === 1 ? HALF - 1 : u, z = side === 2 ? HALF - 1 : side === 3 ? -24.6 : u;
+    crystals(x, side === 3 ? 0.2 : 1 + srnd() * 4, z, gems[i % 4], 3);
+  }
+  for (const [x, z] of [[-10, 10], [10, -12], [-22, -16], [20, 14], [0, 20], [-26, 24], [26, -8]]) { addPillar(x, z, 0.12, 3, M.mnBeam, 0.1); const l = put(new THREE.Mesh(ballGeo, M.flame)); l.scale.setScalar(0.25); l.position.set(x, 3.2, z); }
+  if (!trackOn) addMapDoor(0, 0, HALF - 2.4, Math.PI, 'forest', 'THE STUMP', '#2f6a3a'); // back up to the Forest
+}
+
+// ---------- The Stump lobby (in the middle of the Forest), like the stump in Gorilla Tag ----------
+// A giant hollow stump you start in. The front door goes out to the forest, a log tunnel behind the computer goes to
+// Frog City, and a mine shaft under the floor goes down to the Mines (Crystal Caves). Out the front there's a picnic
+// area with a chalkboard of everyone in the game, and a slide comes down off the rim. Grab while you're on the slide
+// to juke: it flings you back the other way.
+Object.assign(M, { slide: lam(0xffc93c), slideRail: lam(0x3a86ff), pcScreen: new THREE.MeshBasicMaterial({ color: 0xffffff }), pcCase: lam(0xd8d4c8), pcKey: lam(0xf2eee2),
+  chalk: lam(0x24503a), mineRail: lam(0x9aa0a6), doorDark: new THREE.MeshBasicMaterial({ color: 0x0a0812 }) });
+const LOBBY = { SR: 10, SH: 9, mine: [-2, 2, -26.5, -2], mineDeep: 6, slide: [-25, -11, -1.2, 1.2, 0.05, 9] }; // mine shaft [x0, x1, z0, z1], slide [x0, x1, z0, z1, y at x0, y at x1]
+let lobbyOn = false;
+function forestGround(x, z) { // flat, except the mine shaft sloping down under the stump floor
+  const m = LOBBY.mine;
+  if (!lobbyOn || x <= m[0] || x >= m[1] || z <= m[2] || z >= m[3]) return 0;
+  return -Math.min(LOBBY.mineDeep, (m[3] - z) / 11 * LOBBY.mineDeep);
+}
+const DOOR_MODES = ['free', 'infection', 'classic', 'freeze', 'potato', 'hide', 'bat', 'shrink', 'tongue', 'gravity']; // modes where you can walk to another map
+function addMapDoor(x, y, z, ry, to, title, bg) { // a glowing doorway: walk into it to go to another map
+  const nx = Math.sin(ry), nz = Math.cos(ry), tx = Math.cos(ry), tz = -Math.sin(ry), W = 3, H = 2.7;
+  for (const s of [-1, 1]) { const p = put(new THREE.Mesh(boxGeo, M.stWood)); p.scale.set(0.35, H, 0.35); p.position.set(x + tx * s * W / 2, y + H / 2, z + tz * s * W / 2); }
+  const top = put(new THREE.Mesh(boxGeo, M.stWood)); top.scale.set(Math.abs(tx) * W + 0.35, 0.35, Math.abs(tz) * W + 0.35); top.position.set(x, y + H, z);
+  const back = put(new THREE.Mesh(boxGeo, M.doorDark)); back.scale.set(W, H, 0.12); back.position.set(x - nx * 0.15, y + H / 2, z - nz * 0.15); back.rotation.y = ry;
+  const glow = put(new THREE.Mesh(geo(new THREE.PlaneGeometry(W - 0.2, H - 0.15)), M.teleGlow)); glow.position.set(x - nx * 0.05, y + H / 2 - 0.05, z - nz * 0.05); glow.rotation.y = ry; glow.userData.dyn = true;
+  mapAnims.push((dt, t) => { glow.scale.y = 0.92 + Math.sin(t * 3 + x) * 0.08; });
+  fcSign(title, bg, x + nx * 0.2, y + H + 0.55, z + nz * 0.2, ry, 3.2);
+  mapDoors.push({ c: new V(x, y, z), nx, nz, tx, tz, to });
+}
+function updateMapDoors(dt) {
+  doorCd -= dt;
+  if (!mapDoors.length || state === 'menu' || player.hog || doorCd > 0) return;
+  const p = player.pos;
+  for (const d of mapDoors) {
+    const dx = p.x - d.c.x, dz = p.z - d.c.z, along = dx * d.nx + dz * d.nz, side = dx * d.tx + dz * d.tz;
+    if (Math.abs(side) > 1.5 || along > 0.7 || along < -1.5 || p.y - R < d.c.y - 0.5 || p.y - R > d.c.y + 2.6) continue;
+    doorCd = 1.2;
+    const bounce = () => { player.vel.set(d.nx * 7, 2.5, d.nz * 7); sfxTone(300, 180, 0.15, 'square', 0.06); };
+    if (net && !isHost()) { const h = remotes.get(net.hostId); bounce(); flash('Only the host can change the map', `${h ? h.name : 'The host'} has to walk through this door.`, 2.6, 'var(--lava)'); return; }
+    if (state === 'play' && !DOOR_MODES.includes(mode)) { bounce(); flash('Finish this game first', 'Doors to other maps work in Free Play and the tag games.', 2.6, 'var(--lava)'); return; }
+    goToMap(d.to);
+    return;
+  }
+}
+function goToMap(key) { // walking through a map door: everyone in the game comes along
+  const btn = $('map-' + key);
+  if (btn) btn.click(); else { buildMap(key); placeIdle(); }
+  spawnAt(MAPS[mapKey].spawn[0], MAPS[mapKey].spawn[1], player.pos); player.vel.set(0, 0, 0); doorCd = 2;
+  chooseSong(); sfxTone(300, 1400, 0.35, 'sine', 0.1); rumble(120, 0.4);
+  flash(MAPS[mapKey].label, mapKey === 'forest' ? 'Back at the stump!' : 'Find the glowing door to go back to the stump.', 2.6, 'var(--leaf)');
+}
+// screens and boards drawn on a canvas, redrawn when what they show changes
+function canvasMat(w, h) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+  return { c, g: c.getContext('2d'), tex, mat: new THREE.MeshBasicMaterial({ map: tex }) };
+}
+const modeLabel = () => MODE_NAMES[mode] || ($('mode-' + mode) && $('mode-' + mode).querySelector('b').textContent) || 'Free Play';
+const myName = () => net && net.isPublic ? publicName(myId) : playerName || 'You';
+const bodyHex = b => b === player ? skinHexOf(look) : b.isRemote ? b.skinHex : b.hatHex;
+const boardSeen = new Map(); let boardStart = 0; // who's been on the board, and when they showed up
+function lobbyBoard(x, y, z, ry) { // the chalkboard by the picnic tables: everyone in the game
+  const W = 5.2, H = 4, cm = canvasMat(520, 400);
+  const nx = Math.sin(ry), nz = Math.cos(ry), tx = Math.cos(ry), tz = -Math.sin(ry);
+  const frame = put(new THREE.Mesh(boxGeo, M.plank)); frame.scale.set(Math.abs(tx) * (W + 0.4) + Math.abs(nx) * 0.25, H + 0.4, Math.abs(tz) * (W + 0.4) + Math.abs(nz) * 0.25); frame.position.set(x, y, z);
+  for (const s of [-1, 1]) addPillar(x + tx * s * (W / 2 - 0.3), z + tz * s * (W / 2 - 0.3), 0.15, y - H / 2, M.trunk, 0.15);
+  const face = put(new THREE.Mesh(geo(new THREE.PlaneGeometry(W, H)), cm.mat)); face.position.set(x + nx * 0.14, y, z + nz * 0.14); face.rotation.y = ry; face.userData.dyn = true;
+  let sig = '', t = 0; boardStart = performance.now();
+  mapAnims.push(dt => {
+    if ((t -= dt) > 0) return; t = 0.5;
+    const now = performance.now(), all = [player, ...remotes.values(), ...ais];
+    for (const b of all) { const id = b === player ? 'me' : b.id; if (!boardSeen.has(id)) boardSeen.set(id, now - boardStart < 3000 ? 0 : now); }
+    const rows = all.slice(0, 11).map(b => { const s = boardSeen.get(b === player ? 'me' : b.id); return [b === player ? myName() : b.name, bodyHex(b), b.isRemote || b === player, b.tags || 0, s && now - s < 20000]; });
+    const head = net ? roomLabel().toUpperCase() : 'SOLO GAME', s2 = head + modeLabel() + JSON.stringify(rows);
+    if (s2 === sig) return; sig = s2;
+    const g = cm.g; g.fillStyle = '#24503a'; g.fillRect(0, 0, 520, 400);
+    g.fillStyle = '#eef6e8'; g.font = 'bold 22px monospace'; g.textBaseline = 'middle';
+    g.fillText(head, 18, 24); g.textAlign = 'right'; g.fillText(modeLabel().toUpperCase(), 502, 24); g.textAlign = 'left';
+    g.font = 'bold 18px monospace'; g.fillStyle = '#bfe0b8'; g.fillText('PLAYER', 18, 58); g.fillText('COLOR', 300, 58); g.fillText('TAGS', 430, 58);
+    g.fillRect(16, 70, 488, 2);
+    rows.forEach(([nm, col, human, tags, fresh], i) => {
+      const yy = 92 + i * 28;
+      g.fillStyle = human ? '#ffffff' : '#a8c8a0'; g.font = 'bold 20px monospace';
+      g.fillText(String(nm).toUpperCase().slice(0, 13), 18, yy);
+      if (!human) { g.fillStyle = '#86a880'; g.font = 'bold 13px monospace'; g.fillText('CPU', 246, yy); g.font = 'bold 20px monospace'; }
+      g.fillStyle = hex(col); g.fillRect(304, yy - 10, 44, 20);
+      g.fillStyle = '#eef6e8'; g.fillText(String(tags), 440, yy);
+      if (fresh) { g.fillStyle = '#ffd23f'; g.font = 'bold 14px monospace'; g.fillText('JUST JOINED!', 358, yy); }
+    });
+    cm.tex.needsUpdate = true;
+  });
+}
+function lobbyComputer(x, z, ry) { // a computer like Gorilla Tag's: its pages flip by themselves, tap the screen to flip it yourself
+  const nx = Math.sin(ry), nz = Math.cos(ry), tx = Math.cos(ry), tz = -Math.sin(ry), cm = canvasMat(512, 352);
+  const desk = addBox(x, 0.55, z, Math.abs(tx) * 3 + Math.abs(nx) * 1.3, 1.1, Math.abs(tz) * 3 + Math.abs(nz) * 1.3, M.plank, true); desk.floor = true;
+  addBox(x - nx * 0.25, 1.95, z - nz * 0.25, Math.abs(tx) * 2.7 + Math.abs(nx) * 0.3, 1.9, Math.abs(tz) * 2.7 + Math.abs(nz) * 0.3, M.pcCase, true);
+  const scr = put(new THREE.Mesh(geo(new THREE.PlaneGeometry(2.4, 1.65)), cm.mat)); scr.position.set(x - nx * 0.09, 1.95, z - nz * 0.09); scr.rotation.y = ry; scr.userData.dyn = true;
+  const kb = put(new THREE.Mesh(boxGeo, M.pcKey)); kb.scale.set(Math.abs(tx) * 1.6 + Math.abs(nx) * 0.5, 0.08, Math.abs(tz) * 1.6 + Math.abs(nz) * 0.5); kb.position.set(x + nx * 0.35, 1.14, z + nz * 0.35);
+  const pages = ['ROOM', 'NAME', 'COLOR', 'MAP', 'MODE', 'PLAYERS', 'TUNNELS'];
+  let page = 0, flip = 5, sig = '', t = 0;
+  scr.userData.tap = () => { page = (page + 1) % pages.length; flip = 8; t = 0; sfxTone(880, 880, 0.05, 'square', 0.05); };
+  mapTaps.push(scr);
+  mapAnims.push(dt => {
+    if ((flip -= dt) <= 0) { page = (page + 1) % pages.length; flip = 5; t = 0; }
+    if ((t -= dt) > 0) return; t = 0.5;
+    const humans = 1 + remotes.size, lines = {
+      ROOM: [net ? roomLabel().toUpperCase() : 'NOT IN A ROOM', '', net ? (net.isPublic ? 'ANYONE CAN JOIN' : 'FRIENDS TYPE THIS CODE') : 'TYPE A ROOM CODE ON', net ? (net.isPublic ? '' : 'AND TAP JOIN') : 'THE MENU TO PLAY', net ? '' : 'WITH FRIENDS'],
+      NAME: ['NAME: ' + myName().toUpperCase().slice(0, 16), '', 'CHANGE IT ON THE MENU'],
+      COLOR: ['YOUR FROG COLOR:', '', '', '', 'CHANGE IT IN THE', 'WARDROBE'],
+      MAP: ['MAP: ' + MAPS[mapKey].label.toUpperCase(), '', 'WALK THROUGH A', 'GLOWING DOOR TO GO', 'TO ANOTHER MAP'],
+      MODE: ['MODE: ' + modeLabel().toUpperCase(), '', state === 'play' ? 'TIME: ' + fmt(roundTime) : ''],
+      PLAYERS: [`${humans} ${humans === 1 ? 'PLAYER' : 'PLAYERS'}`, `${ais.length} COMPUTER FROGS`, '', 'SEE WHO JOINED ON', 'THE BOARD OUTSIDE'],
+      TUNNELS: ['BEHIND ME: FROG CITY', 'IN THE FLOOR: MINES', 'FRONT DOOR: FOREST', '', 'SLIDE OFF THE TOP!', 'GRAB ON IT TO JUKE'],
+    }[pages[page]];
+    const s2 = page + lines.join('|') + (pages[page] === 'COLOR' ? skinHexOf(look) : '');
+    if (s2 === sig) return; sig = s2;
+    const g = cm.g; g.fillStyle = '#0b4a14'; g.fillRect(0, 0, 512, 352);
+    g.fillStyle = '#e8ffe0'; g.font = 'bold 24px monospace'; g.textBaseline = 'middle';
+    pages.forEach((pg, i) => g.fillText(pg + (i === page ? ' <-' : ''), 14, 30 + i * 38));
+    g.fillStyle = 'rgba(232,255,224,0.35)'; g.fillRect(168, 12, 2, 270);
+    g.fillStyle = '#e8ffe0'; g.font = 'bold 22px monospace';
+    lines.forEach((ln, i) => g.fillText(ln, 180, 30 + i * 38));
+    if (pages[page] === 'COLOR') { g.fillStyle = hex(skinHexOf(look)); g.fillRect(184, 66, 130, 70); }
+    g.fillStyle = '#9fd89a'; g.font = 'bold 16px monospace'; g.fillText('TAP THE SCREEN FOR THE NEXT PAGE', 14, 328);
+    cm.tex.needsUpdate = true;
+  });
+}
+function addSlide(along, a0, a1, b0, b1, y0, y1, m = M.slide, rail = M.slideRail, legSkip = () => false) {
+  // a slide running along x or z from a0 (height y0) to a1 (height y1), b0 to b1 wide, with rails you can grab to juke
+  const z = along === 'z', L = a1 - a0, k = (y1 - y0) / L, ang = Math.atan(k), len = Math.hypot(L, y1 - y0), mid = (a0 + a1) / 2, cb = (b0 + b1) / 2, ym = (y0 + y1) / 2;
+  const at = (u, b, y) => z ? [b, y, u] : [u, y, b];
+  slides.push(z ? { z: true, x0: b0, x1: b1, z0: a0, z1: a1, y0, k } : { x0: a0, x1: a1, z0: b0, z1: b1, y0, k });
+  const bed = put(new THREE.Mesh(boxGeo, m)); bed.position.set(...at(mid, cb, ym - 0.15 / Math.cos(ang)));
+  if (z) { bed.scale.set(b1 - b0, 0.3, len); bed.rotation.x = -ang; } else { bed.scale.set(len, 0.3, b1 - b0); bed.rotation.z = ang; }
+  for (const sb of [b0 - 0.15, b1 + 0.15]) {
+    const r = put(new THREE.Mesh(boxGeo, rail)); r.position.set(...at(mid, sb, ym + 0.45));
+    if (z) { r.scale.set(0.3, 0.25, len); r.rotation.x = -ang; } else { r.scale.set(len, 0.25, 0.3); r.rotation.z = ang; }
+    const n = Math.ceil(Math.abs(L) / 2), st = L / n;
+    for (let i = 0; i < n; i++) { // felt as short blocks
+      const ua = a0 + i * st, ya = y0 + i * st * k, yb = ya + st * k, lo = Math.min(ya, yb) - 0.3, hi = Math.max(ya, yb) + 0.6;
+      const c = at(ua + st / 2, sb, (lo + hi) / 2), bx = addBox(c[0], c[1], c[2], z ? 0.3 : Math.abs(st), hi - lo, z ? Math.abs(st) : 0.3, rail, true, true); bx.slideRail = true;
+    }
+  }
+  for (let u = a0 + Math.sign(L) * 3; Math.sign(L) * (a1 - u) > 0; u += Math.sign(L) * 4) { // legs: felt a little shorter than they look, so frogs on the slide never catch on them
+    if (legSkip(u)) continue;
+    const h = y0 + (u - a0) * k - 0.3, c = at(u, cb, 0); addPillar(c[0], c[2], 0.25, h, M.ac, 0.25); trees[trees.length - 1].h = h - 0.8;
+  }
+}
+function lobbySlide() { const [x0, x1, z0, z1, y0, y1] = LOBBY.slide; addSlide('x', x0, x1, z0, z1, y0, y1); }
+Object.assign(M, { kcA: fx(0xff7aa2), kcB: fx(0xffc93c), kcC: fx(0x6fdc8c), kcD: fx(0x9b7bff), kbBase: lam(0x3a3352) });
+function lobbyTypingCorner(x, z) { // Abraham's ASMR keyboard: a desk with a big colorful keyboard. Walk up to it and tap Type (or the keys)
+  const desk = addBox(x, 0.22, z, 1.4, 0.44, 3, M.plank, true); desk.floor = true;
+  const base = put(new THREE.Mesh(boxGeo, M.kbBase)); base.scale.set(1, 0.14, 2.4); base.position.set(x - 0.1, 0.51, z); base.userData.dyn = true;
+  base.userData.tap = openTyping; mapTaps.push(base);
+  const kcm = [M.kcA, M.kcB, M.kcC, M.kcD];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < (r === 3 ? 1 : 10); c++) {
+    const k = put(new THREE.Mesh(boxGeo, kcm[r])); k.scale.set(0.18, 0.14, r === 3 ? 1.1 : 0.18); k.position.set(x + 0.28 - r * 0.2, 0.65 + (3 - r) * 0.08, r === 3 ? z : z - 0.95 + c * 0.21);
+  }
+  addPillar(x + 0.4, z + 1.25, 0.08, 0.9, M.trunk, 0.08, 0.44); const bulb = put(new THREE.Mesh(ballGeo, M.flame)); bulb.scale.setScalar(0.18); bulb.position.set(x + 0.4, 1.4, z + 1.25);
+  const a = Math.atan2(z, x), rr = LOBBY.SR - 1.08; fcSign('ASMR KEYBOARD', '#7d5cc0', Math.cos(a) * rr, 2.7, Math.sin(a) * rr, Math.atan2(-Math.cos(a), -Math.sin(a)), 3.2);
+  mapAnims.push(() => { // the Type button shows up when you're standing by it
+    const p = player.pos, near = state !== 'menu' && !player.hog && Math.hypot(p.x - (x - 1.4), p.z - z) < 2.6 && p.y < 4;
+    const btn = $('typeBtn'), want = !near || !$('typing').hidden;
+    if (btn.hidden !== want) { btn.hidden = want; btn.textContent = usedKeys ? '\u2328 Type (K)' : '\u2328 Type'; }
+  });
+}
+function forestLobby() {
+  const { SR, SH, mine } = LOBBY, SEG = 24, T = 2, seg = i => (i + 0.5) / SEG * Math.PI * 2;
+  // ground with a hole where the mine shaft opens into the stump floor
+  themeGround = themeGround || M.grass;
+  const out = HALF + 20, sh = new THREE.Shape([new THREE.Vector2(-out, -out), new THREE.Vector2(out, -out), new THREE.Vector2(out, out), new THREE.Vector2(-out, out)]);
+  const hole = () => new THREE.Path([new THREE.Vector2(mine[0], -mine[3]), new THREE.Vector2(mine[0], -(-SR + 1.2)), new THREE.Vector2(mine[1], -(-SR + 1.2)), new THREE.Vector2(mine[1], -mine[3])]);
+  sh.holes.push(hole());
+  const gr = put(new THREE.Mesh(geo(new THREE.ShapeGeometry(sh)), M.grass)); gr.rotation.x = -Math.PI / 2;
+  const moss = new THREE.Shape(); moss.absarc(0, 0, SR - 1, 0, Math.PI * 2); moss.holes.push(hole());
+  const mf = put(new THREE.Mesh(geo(new THREE.ShapeGeometry(moss, 24)), M.stMoss)); mf.rotation.x = -Math.PI / 2; mf.position.y = 0.03;
+  // the stump wall: bark outside, darker wood inside, a pale rim on top, with gaps for the front door and the city tunnel
+  const DOOR = 7, CITY = 4, rIn = SR - T / 2;
+  for (let i = 0; i < SEG; i++) {
+    if (i === DOOR || i === CITY) continue;
+    const a = seg(i), c = Math.cos(a), s = Math.sin(a), w = SR * Math.PI * 2 / SEG + 0.35;
+    addBox(c * SR, SH / 2, s * SR, 2.2, SH, 2.2, M.stBark, true, true); // what you feel and climb
+    const wall = put(new THREE.Mesh(boxGeo, M.stBark)); wall.scale.set(T, SH, w); wall.position.set(c * SR, SH / 2, s * SR); wall.rotation.y = -a;
+    const lip = put(new THREE.Mesh(boxGeo, M.stWood)); lip.scale.set(T + 0.1, 0.3, w); lip.position.set(c * SR, SH + 0.15, s * SR); lip.rotation.y = -a;
+    const ring = put(new THREE.Mesh(boxGeo, M.stRing)); ring.scale.set(0.2, 0.32, w); ring.position.set(c * (SR + 0.3), SH + 0.16, s * (SR + 0.3)); ring.rotation.y = -a;
+    if (srnd() < 0.5) { const root = put(new THREE.Mesh(boxGeo, M.stBark)); root.scale.set(2.4, 1.4, 1.2); root.position.set(c * (SR + 1.6), 0.5, s * (SR + 1.6)); root.rotation.set(0, -a, -0.35); }
+  }
+  for (const i of [DOOR, CITY]) { // a lintel over each opening, so the wall keeps going above it
+    const a = seg(i), w = SR * Math.PI * 2 / SEG + 0.35;
+    addBox(Math.cos(a) * SR, (SH + 4) / 2, Math.sin(a) * SR, 2.2, SH - 4, 2.2, M.stBark, true, true);
+    const top = put(new THREE.Mesh(boxGeo, M.stBark)); top.scale.set(T, SH - 4, w); top.position.set(Math.cos(a) * SR, (SH + 4) / 2, Math.sin(a) * SR); top.rotation.y = -a;
+    const lip = put(new THREE.Mesh(boxGeo, M.stWood)); lip.scale.set(T + 0.1, 0.3, w); lip.position.set(Math.cos(a) * SR, SH + 0.15, Math.sin(a) * SR); lip.rotation.y = -a;
+  }
+  const sign = (i, text, bg, y = 5) => { const a = seg(i); fcSign(text, bg, Math.cos(a) * (rIn - 0.08), y, Math.sin(a) * (rIn - 0.08), Math.atan2(-Math.cos(a), -Math.sin(a)), 3); };
+  sign(DOOR, 'FOREST', '#2f6a3a'); sign(CITY, 'FROG CITY', '#3a86ff');
+  { const a = seg(17.5); fcSign('THE MINES', '#8a5a35', Math.cos(a) * (rIn - 0.08), 2.4, Math.sin(a) * (rIn - 0.08), 0, 3); }
+  // mushroom shelves up the inside wall to the rim (and the slide), a lantern and a log to sit on
+  for (let k = 0; k < 8; k++) { const a = Math.PI * 1.08 - k * 0.42, r = SR - 2.3; addCap(Math.cos(a) * r, 1.2 + k * 1.05, Math.sin(a) * r, 1.4, k % 2 ? M.stRedCap : M.mushB); }
+  addBox(-4, 0.45, 2.5, 1.1, 0.9, 3.4, M.trunk, true).floor = true;
+  addPillar(-6.5, 5.5, 0.12, 1.6, M.trunk, 0.12); const lamp = put(new THREE.Mesh(ballGeo, M.flame)); lamp.scale.setScalar(0.35); lamp.position.set(-6.5, 1.9, 5.5);
+  // the computer, with the city tunnel right behind it
+  const ca = seg(CITY), cx = Math.cos(ca) * SR;
+  lobbyComputer(cx, SR - 4.6, Math.PI);
+  // the city tunnel: a long hollow log heading out the front
+  const TX0 = cx - 1.7, TX1 = cx + 1.7, TZ0 = SR - 1.4, TZ1 = 22;
+  for (const wx of [TX0 - 0.25, TX1 + 0.25]) addBox(wx, 1.9, (TZ0 + TZ1) / 2, 0.5, 3.8, TZ1 - TZ0, M.stBark, true);
+  addBox(cx, 4.05, (TZ0 + TZ1) / 2, TX1 - TX0 + 1, 0.5, TZ1 - TZ0, M.stBark, true);
+  addBox(cx, 1.9, TZ1 + 0.25, TX1 - TX0 + 1, 3.8, 0.5, M.stBark, true);
+  plane(TX0, TX1, TZ0, TZ1, 0.04, M.dirt);
+  for (let z = TZ0 + 2; z < TZ1 - 1; z += 4) { const l = put(new THREE.Mesh(ballGeo, M.flame)); l.scale.setScalar(0.18); l.position.set(cx, 3.6, z); }
+  addMapDoor(cx, 0, TZ1 - 0.1, Math.PI, 'frogcity', 'FROG CITY', '#3a86ff');
+  // the mine shaft: down through a hole in the floor, under the stump wall and out under the forest
+  const [mx0, mx1, mz0, mz1] = mine, D = -LOBBY.mineDeep, under = -SR + 1.2;
+  for (const wx of [mx0 - 0.25, mx1 + 0.25]) addBox(wx, D / 2 - 0.25, (mz0 + mz1) / 2, 0.5, -D + 0.5, mz1 - mz0, M.caveWall, true);
+  addBox(0, D / 2 - 0.25, mz0 - 0.25, mx1 - mx0 + 1, -D + 0.5, 0.5, M.caveWall, true);
+  const roof = addBox(0, -0.51, (mz0 + under) / 2, mx1 - mx0 + 1, 1, under - mz0, M.caveWall); roof.floor = true; // the forest floor over the tunnel
+  const ramp = put(new THREE.Mesh(geo(new THREE.PlaneGeometry(mx1 - mx0, Math.hypot(11, D))), M.stone)); ramp.rotation.x = -Math.PI / 2 - Math.atan2(-D, 11); ramp.position.set(0, D / 2 + 0.03, mz1 - 5.5);
+  plane(mx0, mx1, mz0, mz1 - 11, D + 0.03, M.stone);
+  for (let z = mz1 - 1; z > mz0 + 1; z -= 1.2) { // rails and sleepers all the way down
+    const y = forestGround(0, z) + 0.06, sl = put(new THREE.Mesh(boxGeo, M.plank)); sl.scale.set(2.6, 0.1, 0.35); sl.position.set(0, y, z);
+  }
+  for (const rx of [-0.75, 0.75]) {
+    const r1 = put(new THREE.Mesh(boxGeo, M.mineRail)); r1.scale.set(0.12, 0.12, Math.hypot(11, D)); r1.rotation.x = Math.atan2(-D, 11); r1.position.set(rx, D / 2 + 0.15, mz1 - 5.5);
+    const r2 = put(new THREE.Mesh(boxGeo, M.mineRail)); r2.scale.set(0.12, 0.12, mz1 - 11 - mz0); r2.position.set(rx, D + 0.15, (mz0 + mz1 - 11) / 2);
+  }
+  for (let z = under - 1; z > mz0 + 2; z -= 3.5) { // wooden supports with lanterns
+    for (const s of [mx0 + 0.15, mx1 - 0.15]) { const p = put(new THREE.Mesh(boxGeo, M.plank)); p.scale.set(0.3, -1 - forestGround(0, z), 0.3); p.position.set(s, (forestGround(0, z) - 1) / 2, z); }
+    const bm = put(new THREE.Mesh(boxGeo, M.plank)); bm.scale.set(mx1 - mx0, 0.3, 0.3); bm.position.set(0, -1.15, z);
+    const l = put(new THREE.Mesh(ballGeo, M.flame)); l.scale.setScalar(0.16); l.position.set(0, -1.5, z);
+  }
+  const cart = addBox(mx0 + 0.75, D + 0.7, mz0 + 6, 1.3, 1.1, 2.2, M.labMetal, true); cart.floor = true; // an old mine cart, pushed off to the side
+  addBox(mx0 + 0.75, D + 1.35, mz0 + 6, 1, 0.3, 1.8, M.rock, true);
+  addMapDoor(0, D, mz0 + 0.1, 0, 'mines', 'THE MINES', '#8a5a35');
+  lobbySlide();
+  lobbyTypingCorner(6.3, -4);
+  // the picnic area out the front, with the board of who's playing
+  for (const [x, z] of [[-6.5, 15], [-1.5, 16.5]]) {
+    addBox(x, 0.95, z, 2.6, 0.14, 1.3, M.plank, true).floor = true;
+    for (const s of [-1, 1]) { addBox(x, 0.5, z + s * 1, 2.6, 0.12, 0.45, M.plank, true).floor = true; for (const e of [-1, 1]) { const lg = put(new THREE.Mesh(boxGeo, M.trunk)); lg.scale.set(0.15, 0.9, 0.15); lg.position.set(x + e * 1.1, 0.45, z + s * 0.4); } }
+  }
+  lobbyBoard(-4, 2.6, 21.5, Math.PI);
+}
 const MAPS = {
   forest: {
     label: 'Forest', sky: 0xa9d9e6, fog: [16, 64], hemi: [0xe8f6ff, 0x3d5a24, 0.85], sun: 0.75,
-    spawn: [0, 17], ring: [0, -2, 15],
-    idle: ["I love this forest!", "Race you to the treehouse!", "These trees are perfect for climbing."],
+    spawn: [0, 2], ring: [0, -2, 15], ground: forestGround,
+    idle: ["I love this forest!", "Race you to the top of the stump!", "These trees are perfect for climbing.", "Let's go down the slide!", "Meet me at the picnic tables!", "Let's go to the mines!"],
     build() {
-      addGround(M.grass); addPatches(M.dirt, 9, 1.5, 4); addWalls(M.cliff); addEdgeRocks(M.rock, 28, 6.5);
-      addTree(0, 0, 1.3, 15, 5.5);
-      addBox(0, 7, 0, 10, 0.5, 10, M.plank, true);
-      steps([[7, 1.3, 6.5], [9.6, 2.7, 2.8], [9.2, 4.1, -1.6], [6.6, 5.6, -4.6]], M.plank, 2.6, M.trunk);
-      for (const [x, z] of [[-4.6, -4.6], [4.6, -4.6], [-4.6, 4.6], [4.6, 4.6]]) {
-        const post = put(new THREE.Mesh(boxGeo, M.trunk)); post.scale.set(0.3, 7, 0.3); post.position.set(x, 3.5, z);
-      }
+      lobbyOn = !trackOn; // the race track version has no stump, tunnels or slide
+      if (lobbyOn) forestLobby(); else addGround(M.grass);
+      addPatches(M.dirt, 9, 1.5, 4); addWalls(M.cliff); addEdgeRocks(M.rock, 28, 6.5);
       addTree(-18, -15, 0.9, 10, 4);
       addBox(-18, 4.6, -15, 5.5, 0.4, 5.5, M.plank, true);
       addBox(-13.8, 1, -11.5, 3, 2, 3, M.rock, true);
@@ -2811,7 +3178,7 @@ const MAPS = {
       addBox(9, 0.5, -15, 8, 1, 1.2, M.trunk, true);
       const taken = [[0, 0], [-18, -15], [14, 14], [-12, 13], [18, -6], [9, -15], [-14, -12], [21, 21]];
       addJumpWalls(21, 21, false);
-      scatter(24, 5.5, taken, (x, z) => Math.hypot(x, z) > 10 && !(x > 3 && x < 13 && z > -8 && z < 10),
+      scatter(24, 5.5, taken, (x, z) => Math.hypot(x, z) > 14 && !(x < -9 && Math.abs(z) < 4) && !(x > 0 && x < 8 && z > 6 && z < 25) && !(x > -10 && x < 1 && z > 11) && !(Math.abs(x) < 4 && z < -6),
         (x, z) => addTree(x, z, 0.5 + srnd() * 0.45, 6 + srnd() * 5, 2.4 + srnd() * 1.6));
       addTufts(M.leafB, 220); addClouds();
     },
@@ -2870,7 +3237,14 @@ const MAPS = {
       }
       const pool = put(new THREE.Mesh(geo(new THREE.CircleGeometry(3.5, 10)), M.glowPool));
       pool.rotation.x = -Math.PI / 2; pool.position.set(-10, 0.02, -8);
+      if (!trackOn) addMapDoor(0, 0, HALF - 2.4, Math.PI, 'forest', 'THE STUMP', '#2f6a3a'); // the way back up to the Forest
     },
+  },
+  mines: {
+    label: 'The Mines', sky: 0x14100c, fog: [12, 52], hemi: [0xffd9a8, 0x2a2018, 0.8], sun: 0.35, ceil: 17.5,
+    spawn: [0, 23], ring: [0, 0, 12], indoor: true,
+    idle: ["Ride the minecart!", "Look at all that gold!", "Let's take the elevator up!", "Wheee, the ore chute!", "Don't touch the TNT!", "That drill is so loud!"],
+    build: minesBuild,
   },
   canyon: {
     label: 'Canyon', sky: 0xf4c891, fog: [18, 70], hemi: [0xfff0d8, 0x8a5a30, 0.9], sun: 0.8,
@@ -3843,7 +4217,7 @@ function buildMap(key) {
   ownGeos.forEach(g => g.dispose()); ownGeos = [];
   boxes.length = trees.length = blobs.length = ledges.length = 0; water = null;
   for (const h of hogs) { stopHogVoice(h); for (const b of h.seats) if (b) { b.hog = null; b.seat = -1; } }
-  hogs = []; teleports = []; labClearAll(); if (typeof hideMyFrog === 'function') hideMyFrog();
+  hogs = []; teleports = []; mapDoors = []; mapTaps = []; slides = []; movers = []; $('typeBtn').hidden = true; labClearAll(); if (typeof hideMyFrog === 'function') hideMyFrog();
   // Toadhog Race turns the map into a race track; the big hilly maps lend their look to a flat map's scenery
   try { trackOn = mode === 'kart' && state !== 'menu'; } catch (e) { trackOn = false; } // (the very first build runs before mode exists)
   track = null; themeGround = themeWall = null;
@@ -3968,6 +4342,7 @@ function collide(b) {
     if (bx.bounce && tn.y > 0.6 && vn < -2) { v.y = Math.max(bx.bounce, -vn * 0.85); if (b.isPlayer) { sfxTone(260, 620, 0.16, 'sine', 0.1); questEvent('bounce'); rumble(60, 0.3); } continue; }
     if (vn < 0) v.addScaledVector(tn, -vn);
     if (tn.y > 0.6) { b.grounded = true; if (bx.ice) b.onIce = true; } else if (Math.abs(tn.y) < 0.5) b.wall = true;
+    if (bx.slideRail) b.slideT = 0.3;
   }
   for (const t of trees) {
     if (p.y > t.h + R || p.y < t.y0 - R) continue;
@@ -3987,6 +4362,14 @@ function collide(b) {
     const vn = v.dot(tn); if (vn < 0) v.addScaledVector(tn, -vn);
     if (tn.y > 0.5) b.grounded = true; else b.wall = true;
   }
+  for (const s of slides) { // slides: a slippery slope you can't stand still on
+    if (p.x < s.x0 || p.x > s.x1 || p.z < s.z0 || p.z > s.z1) continue;
+    const u = s.z ? p.z - s.z0 : p.x - s.x0, sy = s.y0 + u * s.k, c = 1 / Math.hypot(1, s.k), d = (p.y - sy) * c;
+    if (d >= R || d < -0.6) continue;
+    const nu = -s.k * c, ny = c, nx = s.z ? 0 : nu, nz = s.z ? nu : 0; p.x += nx * (R - d); p.y += ny * (R - d); p.z += nz * (R - d);
+    const vn = v.x * nx + v.y * ny + v.z * nz; if (vn < 0) { v.x -= nx * vn; v.y -= ny * vn; v.z -= nz * vn; }
+    b.grounded = true; b.onIce = true; b.slideT = 0.3;
+  }
   p.x = clamp(p.x, -HALF + R, HALF - R); p.z = clamp(p.z, -HALF + R, HALF - R);
   if (p.y > ceilY) { p.y = ceilY; if (v.y > 0) v.y = 0; }
 }
@@ -4004,7 +4387,7 @@ function physics(b, dt) {
   if (b.frozen > 0) { const f = Math.exp(-8 * dt); b.vel.x *= f; b.vel.z *= f; }
   b.pos.addScaledVector(b.vel, dt);
   const wasGrounded = b.grounded, vy = b.vel.y;
-  b.grounded = false; b.wall = false; b.onIce = false;
+  b.grounded = false; b.wall = false; b.onIce = false; b.slideT = Math.max(0, (b.slideT || 0) - dt);
   collide(b);
   if (b.isPlayer && b.grounded && !wasGrounded && vy < -6) sfxSlap(0.18);
   const wet = b.pos.y < R + 0.3 && (water && b.pos.z > water.z || slowZones.some(([x0, x1, z0, z1]) => b.pos.x > x0 && b.pos.x < x1 && b.pos.z > z0 && b.pos.z < z1));
@@ -4018,7 +4401,10 @@ function updateGrip() {
   const b = player, was = b.hang;
   if (!b.hangN) b.hangN = new V();
   b.hang = 0;
-  if (!(pointers.size > camHandCount() || keys.KeyC || padGrip || camGrip) || state === 'menu' || b.hog || b.frozen > 0 || b.iced || b.out || b.grounded) return;
+  const grip = pointers.size > camHandCount() || keys.KeyC || padGrip || camGrip;
+  if (grip && !b.gripWas && b.slideT > 0 && state !== 'menu' && !b.hog && b.frozen <= 0) juke(b);
+  b.gripWas = grip;
+  if (!grip || state === 'menu' || b.hog || b.frozen > 0 || b.iced || b.out || b.grounded) return;
   const best = surfaceGap(b.pos);
   if (wallGap < 0.2) { b.hang = 1; b.hangN.copy(wallN); }
   else if (best < 0.2 && sN.y < -0.5) { b.hang = 2; b.hangN.copy(sN); } // the ceiling
@@ -4026,6 +4412,14 @@ function updateGrip() {
   if (was === 1 && !b.hang && best < REACH && sN.y > 0.5) { // climbed past the top of the wall: pull up onto it
     b.vel.y = Math.max(b.vel.y, 4.5); b.vel.x -= b.hangN.x * 2.5; b.vel.z -= b.hangN.z * 2.5;
   }
+}
+function juke(b) { // grab the slide while you're going: it flings you back the way you came
+  const v = b.vel, s = Math.hypot(v.x, v.z);
+  if (s < 2.5) return;
+  const go = Math.min(15, s * 1.1 + 3);
+  v.x = -v.x / s * go; v.z = -v.z / s * go; v.y = Math.max(v.y, 0) + 6.5; b.slideT = 0;
+  sfxTone(380, 1300, 0.2, 'triangle', 0.12); rumble(90, 0.5); handKick[0] = handKick[1] = 0.18;
+  flash('JUKE!', '', 0.7, '#ffd23f');
 }
 // Nearest grabbable surface for the player's hands
 const sN = new V(), wallN = new V();
@@ -4044,6 +4438,11 @@ function surfaceGap(p) {
     const dx = p.x - t.x, dz = p.z - t.z, hd = Math.hypot(dx, dz) || 1, d = hd - t.r - R;
     if (d < best) { best = d; sN.set(dx / hd, 0, dz / hd); }
     if (d < wallGap) { wallGap = d; wallN.set(dx / hd, 0, dz / hd); wallBox = null; }
+  }
+  for (const s of slides) {
+    if (p.x < s.x0 || p.x > s.x1 || p.z < s.z0 || p.z > s.z1) continue;
+    const c = 1 / Math.hypot(1, s.k), d = (p.y - s.y0 - (s.z ? p.z - s.z0 : p.x - s.x0) * s.k) * c - R;
+    if (d > -0.6 && d < best) { best = d; sN.set(s.z ? 0 : -s.k * c, c, s.z ? -s.k * c : 0); }
   }
   for (const s of blobs) {
     tn.subVectors(p, s.c); const len = tn.length() || 1, d = len - s.r - R; tn.multiplyScalar(1 / len);
@@ -4633,6 +5032,7 @@ function sfxTone(f0, f1, dur, type = 'square', vol = 0.12) {
 const SONGS = {
   menu:    { bpm: 96,  root: 60, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 5, 3, 4], seed: 3 },
   forest:  { bpm: 104, root: 62, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 3, 5, 4], seed: 11 },
+  mines:   { bpm: 88,  root: 55, scale: 'minor', lead: 'pluck',   drums: 'light', prog: [0, 3, 4, 0], seed: 23, echo: true },
   caves:   { bpm: 78,  root: 57, scale: 'minor', lead: 'bell',    drums: 'soft',  prog: [0, 5, 3, 6], seed: 7, pad: true, echo: true },
   canyon:  { bpm: 92,  root: 62, scale: 'minor', lead: 'pluck',   drums: 'light', prog: [0, 6, 5, 4], seed: 19, echo: true },
   beach:   { bpm: 112, root: 65, scale: 'major', lead: 'steel',   drums: 'light', prog: [0, 4, 5, 3], seed: 23 },
@@ -5350,7 +5750,7 @@ for (const a of ALL_AIS) {
   a.ownerAi = a; a.group.traverse(o => { o.userData.ai = a; });
 }
 // what frogs call each map when they talk about where they are
-const PLACE = { forest: 'forest', caves: 'cave', canyon: 'canyon', beach: 'beach', snow: 'mountain', volcano: 'volcano', sky: 'sky', moon: 'moon',
+const PLACE = { forest: 'forest', mines: 'mines', caves: 'cave', canyon: 'canyon', beach: 'beach', snow: 'mountain', volcano: 'volcano', sky: 'sky', moon: 'moon',
   candy: 'candy land', spooky: 'spooky woods', city: 'city', pond: 'pond', swamp: 'swamp', garden: 'garden', canopy: 'rainforest', cove: 'cove',
   reef: 'reef', toys: 'toy room', icecastle: 'castle', stump: 'stump', backrooms: 'maze', lab: 'lab', mega: 'mega map', gulch: 'gulch', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
   rainbow: 'meadow', eggs: 'meadow', fireworks: 'lake' };
@@ -6522,6 +6922,8 @@ const endPointer = e => {
   if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 14 || performance.now() - p.t0 > 350) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
+  const tapHit = mapTaps.length && ray.intersectObjects(mapTaps)[0];
+  if (tapHit && tapHit.distance < 9) { tapHit.object.userData.tap(); return; }
   if (['mud', 'dodge', 'monsters', 'slap', 'hoops', 'swing'].includes(mode) && state === 'play') { tryThrow(ray.ray.direction.clone()); return; }
   const hit = ray.intersectObjects(ais.map(a => a.group).concat(mysteryActive ? [mysteryActive.group] : []), true)[0];
   if (hit && hit.object.userData.mystery) {
@@ -6582,6 +6984,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Space' && player.hog && !e.repeat) honk();
   if (e.code === 'KeyI') { modeRules(); return; }
   if (e.code === 'KeyM') { setMusic(!musicOn); return; }
+  if (e.code === 'KeyK' && !$('typeBtn').hidden) { e.preventDefault(); openTyping(); return; }
   if (e.code === 'KeyT' || e.code === 'Enter') { e.preventDefault(); openTalk(talkOpen ? talkTarget : null); $('sayInput').focus(); return; }
   if (talkOpen && e.code === 'Tab') { $('talkNext').click(); return; }
   if (talkOpen && /^Digit[1-9]$/.test(e.code)) { const b = $('quick').children[+e.code.slice(5) - 1]; if (b) b.click(); return; }
@@ -6590,6 +6993,36 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'KeyR') gadgetUp(); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+// Presentation clickers (Logitech, Targus, Amazon Basics, any brand) are tiny keyboards: Next sends Page Down,
+// Back sends Page Up, the slideshow button sends F5 (then Esc), and the blank-screen button sends B or a period.
+// In a game: hold Next to push, hold Back to turn, slideshow or blank button jumps. On menus: Next/Back move, slideshow or blank picks.
+const CLICK_NEXT = ['PageDown'], CLICK_BACK = ['PageUp'], CLICK_GO = ['F5', 'KeyB', 'Period'];
+let clickerSeen = false;
+addEventListener('keydown', e => {
+  const next = CLICK_NEXT.includes(e.code), back = CLICK_BACK.includes(e.code);
+  const go = CLICK_GO.includes(e.code) && (e.code === 'F5' || clickerSeen); // B and . stay plain keys until a clicker shows up
+  if (!(next || back || go) || e.target.tagName === 'INPUT' || e.ctrlKey || e.metaKey || e.altKey) return;
+  e.preventDefault(); // F5 would reload the page, Page Down would scroll it
+  if (!clickerSeen) {
+    clickerSeen = true; usedKeys = true;
+    flash('Clicker connected', 'Hold Next to push, hold Back to turn, the blank-screen button jumps.', 3, 'var(--leaf)');
+    $('hint').textContent = 'Hold Next to push · hold Back to turn · blank-screen button to jump';
+  }
+  if (state === 'menu' || wardrobeOpen || !$('frogsPanel').hidden || !$('questsPanel').hidden) {
+    if (next || back) padMoveFocus(next ? 1 : -1);
+    else if (!e.repeat) { const el = document.activeElement; if (padFocusables().includes(el)) el.click(); else padMoveFocus(1); }
+    return;
+  }
+  if (next) keys.ArrowUp = true;
+  else if (back) keys.ArrowLeft = true;
+  else keys.Space = true;
+  if (!e.repeat) keyMove();
+}, true);
+addEventListener('keyup', e => {
+  if (CLICK_NEXT.includes(e.code)) keys.ArrowUp = false;
+  else if (CLICK_BACK.includes(e.code)) keys.ArrowLeft = false;
+  else if (CLICK_GO.includes(e.code)) keys.Space = false;
+});
 function keyPush(dy, speed, turn) {
   if (!armPush(dy, speed, turn)) return false;
   sfxSlap(0.2); handKick[keyHand] = 0.18; keyHand = 1 - keyHand; pushedDistance += 60;
@@ -6618,7 +7051,8 @@ function keyJump() {
 
 // ---------- Menu wiring ----------
 const MAP_INFO = {
-  forest: 'The classic. A big treehouse in the middle with steps up, more tree forts, and rocks to climb.',
+  mines: 'A big dark mine with minecarts full of gold going round (ride them!), a scaffold tower, an elevator up to a high ledge, an ore chute to slide down and a giant drill.',
+  forest: 'The classic, with a giant hollow stump in the middle (Asher\'s idea). Use the computer, walk through the tunnels to Frog City and the Mines, see who\'s playing on the board by the picnic tables, and juke on the slide.',
   caves: 'Dark caves full of shiny crystals and glowing mushrooms. Grab the ceiling and swing along it!',
   canyon: 'Tall red mesas with steps up the sides, a wobbly rope bridge, and a giant stone arch.',
   beach: 'Sand, waves, a pier with a boat, a lifeguard tower, bouncy umbrellas and a sandcastle.',
@@ -7143,6 +7577,125 @@ function addFlies(n) {
   const c = $('flyChip'); c.classList.add('pop'); setTimeout(() => c.classList.remove('pop'), 160);
 }
 showFlies();
+// ---------- The ASMR keyboard (Abraham's idea): practice typing on big squishy keys that make lovely sounds ----------
+const TYPE_SETS = {
+  home: ['asdf jkl', 'fjfj dkdk slsl', 'a sad lad', 'all fall', 'ask dad', 'flask glass', 'jak has a flag', 'salsa salad', 'dad fall glad', 'add a lass'],
+  words: ['frog', 'jump', 'lava', 'tag', 'stump', 'slide', 'mines', 'ribbit', 'climb', 'tree', 'fly', 'swamp', 'lily pad', 'bounce', 'toadhog', 'crystal', 'juke', 'tunnel', 'city', 'click'],
+  lines: ['the frog jumped over the log.', 'ribbit ribbit says the happy frog.', 'the floor is lava, so run fast.', 'asher and abraham love to play tag.', 'the slide in the forest is super fast.',
+    'tap the keys and hear them click.', 'frogs can climb trees and rocks.', 'the mines are deep and dark.', 'a big bug flew past my nose.', 'i can type faster every day.',
+    'the stump is the best place to hang out.', 'green frogs, blue frogs, red frogs.', 'grab the slide to do a juke.', 'catch the flies to get a new hat.'],
+};
+const TY_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm,.'];
+const ty = { sound: 'thock', set: 'lines', text: '', at: 0, good: 0, bad: 0, t0: 0, best: 0, last: '' };
+try { ty.sound = localStorage.getItem('ribbit-type-sound') || 'thock'; ty.set = localStorage.getItem('ribbit-type-set') || 'lines'; ty.best = +localStorage.getItem('ribbit-type-best') || 0; } catch (e) {}
+function asmrKey(k, up) { // every key sounds a tiny bit different, like a real keyboard
+  if (!actx) return;
+  if (!noiseBuf) sfxSlap(0);
+  const t = actx.currentTime + 0.002, out = actx.createGain(); out.gain.value = 0.9; out.connect(actx.destination);
+  const big = k === ' ' || k === 'back', idx = Math.max(0, 'qwertyuiopasdfghjklzxcvbnm,. '.indexOf(k)), r = 0.95 + ((idx * 37) % 11) / 100 + Math.random() * 0.03;
+  const noise = (type, f, q, vol, dur, at = 0) => {
+    const n = actx.createBufferSource(); n.buffer = noiseBuf; n.playbackRate.value = r * (big ? 0.7 : 1);
+    const fl = actx.createBiquadFilter(); fl.type = type; fl.frequency.value = f * r; fl.Q.value = q;
+    const g = actx.createGain(); g.gain.setValueAtTime(vol, t + at); g.gain.exponentialRampToValueAtTime(0.0001, t + at + dur);
+    n.connect(fl); fl.connect(g); g.connect(out); n.start(t + at); n.stop(t + at + dur + 0.02);
+  };
+  const tone = (type, f0, f1, vol, dur, at = 0) => {
+    const o = actx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t + at); o.frequency.exponentialRampToValueAtTime(f1, t + at + dur);
+    const g = actx.createGain(); g.gain.setValueAtTime(0.0001, t + at); g.gain.exponentialRampToValueAtTime(vol, t + at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + at + dur);
+    o.connect(g); g.connect(out); o.start(t + at); o.stop(t + at + dur + 0.03);
+  };
+  if (ty.sound === 'thock') { // deep and creamy
+    if (up) { noise('bandpass', 2200, 1.4, 0.05, 0.03); return; }
+    noise('lowpass', 1300, 0.7, 0.4, 0.06); tone('sine', (big ? 105 : 165) * r, (big ? 70 : 105) * r, 0.3, 0.08); noise('bandpass', 3400, 2, 0.06, 0.012);
+  } else if (ty.sound === 'clicky') { // a crisp double click, like a blue switch
+    if (up) { noise('highpass', 3200, 0.8, 0.12, 0.014); return; }
+    noise('highpass', 2600, 0.7, 0.28, 0.018); tone('square', 3300 * r, 2700 * r, 0.035, 0.01); noise('bandpass', 4200, 1.5, 0.16, 0.014, 0.011); tone('sine', 250 * r, 170 * r, 0.1, 0.04);
+  } else if (ty.sound === 'bubbles') { // little pops
+    if (up) { tone('sine', 1300 * r, 1900 * r, 0.035, 0.03); return; }
+    const f = big ? 320 : 480 + (idx % 9) * 55; tone('sine', f * r, f * 0.45, 0.25, 0.1); noise('lowpass', 900, 0.7, 0.05, 0.02);
+  } else { // music: every key is a note, so typing plays a tune
+    if (up) return;
+    const steps = [0, 2, 4, 7, 9], n = big ? -12 : steps[idx % 5] + 12 * Math.floor((idx % 15) / 5), f = 262 * Math.pow(2, n / 12);
+    tone('triangle', f, f, 0.16, 0.55); tone('sine', f * 2, f * 2, 0.05, 0.3); noise('lowpass', 2000, 0.7, 0.07, 0.02);
+  }
+}
+function tyKeyEl(k) { return $('tyKb').querySelector(`[data-k="${k === ' ' ? 'space' : k}"]`); }
+function tyNewLine() {
+  const list = TYPE_SETS[ty.set] || TYPE_SETS.lines;
+  let t = ty.last; for (let i = 0; i < 8 && t === ty.last; i++) t = pick(list);
+  if (ty.set === 'words') { t = []; for (let i = 0; i < 4; i++) t.push(pick(list)); t = t.join(' '); }
+  ty.text = ty.last = t; ty.at = 0; ty.good = 0; ty.bad = 0; ty.t0 = 0; tyDraw();
+}
+function tyDraw(msg) {
+  const el = $('tyLine'); el.innerHTML = '';
+  const span = (txt, c) => { if (!txt) return; const s = document.createElement('span'); s.className = c; s.textContent = txt; el.append(s); };
+  span(ty.text.slice(0, ty.at), 'ok'); span(ty.text[ty.at] === ' ' ? '\u2423' : ty.text[ty.at] || '', 'cur'); span(ty.text.slice(ty.at + 1), 'todo');
+  document.querySelectorAll('#tyKb .kc.next').forEach(k => k.classList.remove('next'));
+  const nk = ty.text[ty.at] && tyKeyEl(ty.text[ty.at]); if (nk) nk.classList.add('next');
+  const secs = ty.t0 ? (performance.now() - ty.t0) / 1000 : 0, wpm = secs > 1 ? Math.round(ty.at / 5 / (secs / 60)) : 0, acc = ty.good + ty.bad ? Math.round(ty.good / (ty.good + ty.bad) * 100) : 100;
+  $('tyStats').textContent = msg || `${wpm} words a minute · ${acc}% right${ty.best ? ` · best ${ty.best}` : ''}`;
+}
+function tyPress(k) {
+  initAudio(); asmrKey(k);
+  const el = tyKeyEl(k); if (el) el.classList.add('down');
+  if (k === 'back' || !ty.text) return;
+  if (k === ty.text[ty.at]) {
+    if (!ty.t0) ty.t0 = performance.now();
+    ty.at++; ty.good++;
+    if (ty.at >= ty.text.length) { // finished the line
+      const secs = (performance.now() - ty.t0) / 1000, wpm = Math.round(ty.text.length / 5 / Math.max(secs, 1) * 60), acc = Math.round(ty.good / (ty.good + ty.bad) * 100);
+      const best = wpm > ty.best && ty.text.length >= 8; if (best) { ty.best = wpm; try { localStorage.setItem('ribbit-type-best', wpm); } catch (e) {} }
+      addFlies(1); sfxTone(660, 1320, 0.3, 'triangle', 0.1);
+      tyDraw(`Nice! ${wpm} words a minute, ${acc}% right.${best ? ' New best!' : ''} +1 fly`);
+      setTimeout(() => { if (!$('typing').hidden) tyNewLine(); }, 1300);
+      ty.text = ''; return;
+    }
+    tyDraw();
+  } else {
+    ty.bad++; tyDraw(); const ln = $('tyLine'); ln.classList.remove('oops'); void ln.offsetWidth; ln.classList.add('oops');
+    if (actx) sfxTone(190, 150, 0.08, 'sine', 0.05);
+  }
+}
+function tyRelease(k) { const el = tyKeyEl(k); if (el && el.classList.contains('down')) { el.classList.remove('down'); asmrKey(k, true); } }
+{ // build the on-screen keyboard
+  const kb = $('tyKb');
+  const key = (row, k, label, cls = '') => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'kc ' + cls; b.dataset.k = k; b.textContent = label;
+    b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) {} tyPress(k === 'space' ? ' ' : k); });
+    const up = () => tyRelease(k === 'space' ? ' ' : k); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
+    row.append(b);
+  };
+  TY_ROWS.forEach((keys, i) => { const row = document.createElement('div'); row.className = 'row r' + i; for (const k of keys) key(row, k, k.toUpperCase(), k === 'f' || k === 'j' ? 'bump' : ''); if (i === 0) key(row, 'back', '\u232B', 'wide'); kb.append(row); });
+  const row = document.createElement('div'); row.className = 'row r3'; key(row, 'space', 'space', 'space'); kb.append(row);
+}
+const tySeg = () => {
+  document.querySelectorAll('#tySounds button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === ty.sound)));
+  document.querySelectorAll('#tySets button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === ty.set)));
+};
+document.querySelectorAll('#tySounds button').forEach(b => b.addEventListener('click', () => { ty.sound = b.dataset.s; try { localStorage.setItem('ribbit-type-sound', ty.sound); } catch (e) {} tySeg(); initAudio(); asmrKey('f'); setTimeout(() => asmrKey('f', true), 90); b.blur(); }));
+document.querySelectorAll('#tySets button').forEach(b => b.addEventListener('click', () => { ty.set = b.dataset.t; try { localStorage.setItem('ribbit-type-set', ty.set); } catch (e) {} tySeg(); tyNewLine(); b.blur(); }));
+function openTyping() {
+  if (state === 'menu') return;
+  initAudio(); pointers.clear(); for (const k in keys) keys[k] = false;
+  $('typing').hidden = false; $('typeBtn').hidden = true; tySeg(); tyNewLine();
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+function closeTyping() { $('typing').hidden = true; document.querySelectorAll('#tyKb .kc.down').forEach(k => k.classList.remove('down')); }
+$('tyDone').addEventListener('click', closeTyping);
+$('typeBtn').addEventListener('click', e => { e.currentTarget.blur(); openTyping(); });
+addEventListener('keydown', e => { // while it's open, a real keyboard types here instead of moving your frog
+  if ($('typing').hidden) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (e.code === 'Escape') { closeTyping(); return; }
+  if (e.repeat) return;
+  const k = e.key === 'Backspace' ? 'back' : e.key.toLowerCase();
+  if (k === 'back' || k.length === 1) tyPress(k);
+}, true);
+addEventListener('keyup', e => {
+  if ($('typing').hidden) return;
+  const k = e.key === 'Backspace' ? 'back' : e.key.toLowerCase(); if (k === 'back' || k.length === 1) tyRelease(k);
+}, true);
 function updatePickups(dt, t) {
   for (const pk of pickups) {
     if (pk.t > 0) { pk.t -= dt; if (pk.t <= 0) pk.mesh.visible = true; continue; }
@@ -7800,14 +8353,89 @@ addEventListener('gamepadconnected', e => {
   flash('Controller connected', 'Left stick to push, right stick to turn, A to jump.', 2.6, 'var(--leaf)');
   if (!usedKeys) $('hint').textContent = 'Left stick to push · right stick to turn · A to jump · hold RB to grab · X to talk';
 });
+// Wii Remote (and Nunchuk) over WebHID: browsers don't list a Wii Remote as a gamepad, so we talk to it ourselves
+// and dress it up as a standard pad for pollGamepad. Needs WebHID (Chrome or Edge on a computer); the remote has to be
+// paired in the computer's Bluetooth settings first. Upright with a Nunchuk, or sideways (D-pad on the left) without one.
+// Buttons: A jumps, B grabs (back on menus), Z big pushes, C gadget, 1 throw/back, 2 jump, - talk, Home players, + menu.
+// Shaking the remote is a jump too (button 17 below).
+const WII_IDS = [{ vendorId: 0x057e, productId: 0x0306 }, { vendorId: 0x057e, productId: 0x0330 }];
+const isWii = p => !!p.wii || /wii|nunchuk|rvl-cnt/i.test(p.id);
+const wii = { dev: null, ext: false, nunchuk: false, leds: 0x10, rumble: 0, shakeUntil: 0, shakeCd: 0 };
+const wiiPad = { id: 'Wii Remote', connected: false, mapping: 'standard', wii: true, axes: [0, 0, 0, 0],
+  buttons: Array.from({ length: 18 }, (_, i) => i === 17 ? { get pressed() { return performance.now() < wii.shakeUntil; }, value: 0 } : { pressed: false, value: 0 }) };
+const wiiSend = (id, bytes) => wii.dev ? wii.dev.sendReport(id, new Uint8Array(bytes)).catch(() => {}) : Promise.resolve();
+const wiiWrite = (addr, val) => wiiSend(0x16, [0x04 | wii.rumble, addr >> 16 & 255, addr >> 8 & 255, addr & 255, 1, val, ...new Array(15).fill(0)]);
+const wiiMode = () => wiiSend(0x12, [0x04 | wii.rumble, 0x35]); // keep reporting: buttons, motion and 16 extension bytes
+async function wiiStatus(flags) {
+  const ext = !!(flags & 0x02);
+  if (ext && !wii.ext) { // something plugged into the bottom: wake it up unencrypted, then ask what it is
+    await wiiWrite(0xa400f0, 0x55); await wiiWrite(0xa400fb, 0x00);
+    await wiiSend(0x17, [0x04 | wii.rumble, 0xa4, 0x00, 0xfa, 0x00, 0x06]);
+  }
+  if (!ext && wii.nunchuk) flash('Nunchuk unplugged', 'Hold the remote sideways: D-pad moves, 2 jumps.', 2.6, 'var(--leaf)');
+  wii.ext = ext; if (!ext) wii.nunchuk = false;
+  wiiMode(); // a status report always switches reporting back to buttons only
+}
+function wiiInput(e) {
+  const d = new Uint8Array(e.data.buffer, e.data.byteOffset, e.data.byteLength), id = e.reportId;
+  if (id === 0x20) { wiiStatus(d[2]); return; }
+  if (id === 0x21) { // the extension's id: a Nunchuk ends in 00 00
+    const nun = (d[2] & 15) === 0 && d[9] === 0 && d[10] === 0;
+    if (nun && !wii.nunchuk) flash('Nunchuk connected', 'Stick to push and turn, A to jump, hold B to grab.', 2.6, 'var(--leaf)');
+    wii.nunchuk = nun; return;
+  }
+  if (d.length < 2) return;
+  const b0 = d[0], b1 = d[1], btn = wiiPad.buttons, set = (i, on) => { if (on) { btn[i].pressed = true; btn[i].value = 1; } };
+  for (let i = 0; i < 17; i++) { btn[i].pressed = false; btn[i].value = 0; }
+  const L = b0 & 1, R = b0 & 2, D = b0 & 4, U = b0 & 8;
+  if (wii.nunchuk) { set(PAD.UP, U); set(PAD.DOWN, D); set(PAD.LEFT, L); set(PAD.RIGHT, R); }
+  else { set(PAD.UP, R); set(PAD.DOWN, L); set(PAD.LEFT, U); set(PAD.RIGHT, D); } // held sideways
+  set(PAD.START, b0 & 0x10); set(PAD.A, (b1 & 0x08) || (b1 & 0x01)); set(PAD.B, b1 & 0x02); set(PAD.RB, b1 & 0x04);
+  set(PAD.X, b1 & 0x10); set(PAD.Y, b1 & 0x80);
+  wiiPad.axes[0] = wiiPad.axes[1] = 0;
+  if (id === 0x35 && d.length >= 21) {
+    const g = [d[2], d[3], d[4]].map(v => (v - 128) / 26), now = performance.now(); // roughly 26 steps per g
+    if (Math.hypot(g[0], g[1], g[2]) > 2.6 && now > wii.shakeCd) { wii.shakeUntil = now + 150; wii.shakeCd = now + 400; }
+    if (wii.nunchuk) {
+      const x = d[5], y = d[6], z = !(d[10] & 1), c = !(d[10] & 2);
+      wiiPad.axes[0] = Math.max(-1, Math.min(1, (x - 128) / 96)); wiiPad.axes[1] = Math.max(-1, Math.min(1, (128 - y) / 96));
+      set(PAD.RT, z); set(PAD.LT, c);
+    }
+  }
+}
+async function wiiOpen(dev) {
+  if (wii.dev === dev && dev.opened) return;
+  try { if (!dev.opened) await dev.open(); } catch (e) { flash('Couldn\'t reach the Wii Remote', 'Press 1 and 2 together and try again.', 3, 'var(--lava)'); return; }
+  Object.assign(wii, { dev, ext: false, nunchuk: false, rumble: 0 });
+  dev.oninputreport = wiiInput;
+  wiiPad.connected = true; padSeen = true;
+  await wiiSend(0x11, [wii.leds]); // light up player 1
+  await wiiSend(0x15, [0x00]); // status: is a Nunchuk plugged in?
+  flash('Wii Remote connected', 'Plug in a Nunchuk, or hold it sideways: D-pad moves, 2 jumps.', 3, 'var(--leaf)');
+  if (!usedKeys) $('hint').textContent = 'Nunchuk stick to push and turn · A or shake to jump · hold B to grab · Z for big pushes';
+}
+if (navigator.hid) {
+  $('wiiConnect').hidden = false;
+  $('wiiConnect').addEventListener('click', async () => {
+    try { const [dev] = await navigator.hid.requestDevice({ filters: WII_IDS }); if (dev) wiiOpen(dev); } catch (e) {}
+  });
+  const mine = dev => WII_IDS.some(f => f.vendorId === dev.vendorId && f.productId === dev.productId);
+  navigator.hid.getDevices().then(ds => { const dev = ds.find(mine); if (dev) wiiOpen(dev); }).catch(() => {});
+  navigator.hid.addEventListener('connect', e => { if (mine(e.device)) wiiOpen(e.device); });
+  navigator.hid.addEventListener('disconnect', e => {
+    if (e.device !== wii.dev) return;
+    wii.dev = null; wiiPad.connected = false;
+    flash('Wii Remote went to sleep', 'Press 1 and 2 together to wake it up.', 2.6, 'var(--lava)');
+  });
+}
 function activePad() {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  for (const p of pads) if (p && p.connected && p.mapping === 'standard') return p;
-  for (const p of pads) if (p && p.connected) return p;
-  return null;
+  if (wiiPad.connected) return wiiPad;
+  const pads = (navigator.getGamepads ? [...navigator.getGamepads()] : []).filter(p => p && p.connected && !/accelerometer|\bIR\b|motion ?plus|balance/i.test(p.id)); // a Wii Remote on Android also shows its motion sensors as pads
+  return pads.find(p => p.mapping === 'standard') || pads[0] || null;
 }
 function rumble(ms = 120, strength = 0.5) {
   const p = activePad();
+  if (p === wiiPad) { wii.rumble = 1; wiiSend(0x11, [wii.leds | 1]); clearTimeout(wii.rumbleT); wii.rumbleT = setTimeout(() => { wii.rumble = 0; wiiSend(0x11, [wii.leds]); }, ms); return; }
   try { if (p && p.vibrationActuator) p.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: strength, weakMagnitude: strength * 0.6 }); } catch (e) {}
 }
 // menu navigation: move focus through the visible buttons of whatever panel is on top
@@ -7838,8 +8466,10 @@ function padCheck(dt) {
   if ((padCheckT -= dt) > 0 || $('menu').hidden) return;
   padCheckT = 0.1;
   const pads = (navigator.getGamepads ? [...navigator.getGamepads()] : []).filter(p => p && p.connected);
+  if (wiiPad.connected) { wiiPad.id = wii.nunchuk ? 'Wii Remote + Nunchuk' : 'Wii Remote'; pads.unshift(wiiPad); }
   const list = $('padCheckList'), keyNote = padCheckKey ? ` Last key: ${padCheckKey}.` : '';
-  $('padCheckMsg').textContent = !navigator.getGamepads ? 'This browser can\'t use controllers.' + keyNote
+  $('padCheckMsg').textContent = wiiPad.connected ? 'Found a Wii Remote. Press buttons and move the stick.' + keyNote
+    : !navigator.getGamepads ? 'This browser can\'t use controllers.' + keyNote
     : !window.isSecureContext ? 'Controllers only work when the game is opened from an https:// address.' + keyNote
     : !pads.length ? 'No controller yet. Plug one in, then press a button on it.' + keyNote
     : `${pads.length === 1 ? 'Found a controller' : `Found ${pads.length} controllers`}. Press buttons and move the sticks.` + keyNote;
@@ -7848,7 +8478,7 @@ function padCheck(dt) {
     let el = list.children[n];
     if (!el) { el = document.createElement('div'); el.className = 'pc-pad'; el.innerHTML = '<p class="pc-name"></p><p class="pc-btns"></p><div class="pc-axes"></div>'; list.append(el); }
     el.querySelector('.pc-name').textContent = p.id + (p.mapping === 'standard' ? '' : ' (unusual layout)');
-    const down = p.buttons.map((x, i) => x.pressed || x.value > 0.5 ? (Object.keys(PAD).find(k => PAD[k] === i) || '#' + i) : null).filter(Boolean);
+    const down = p.buttons.map((x, i) => x.pressed || x.value > 0.5 ? (p.wii && i === 17 ? 'SHAKE' : Object.keys(PAD).find(k => PAD[k] === i) || '#' + i) : null).filter(Boolean);
     el.querySelector('.pc-btns').textContent = `${p.buttons.length} buttons. Pressed: ${down.length ? down.join(', ') : 'none'}`;
     const ax = el.querySelector('.pc-axes');
     while (ax.children.length < p.axes.length) { const s = document.createElement('span'); s.innerHTML = '<b></b><span class="pc-bar"><i></i></span>'; ax.append(s); }
@@ -7866,9 +8496,10 @@ function pollGamepad(dt) {
   const pressed = i => b(i) && !padPrev[i];
   const dz = v => Math.abs(v) < 0.18 ? 0 : v;
   let lx = dz(p.axes[0] || 0), ly = dz(p.axes[1] || 0);
-  const rx = dz(p.axes[2] || 0);
-  if (rx || dz(p.axes[3] || 0)) padRightSeen = true;
-  const ring = isRing(p), oneStick = ring || !padRightSeen;
+  const ring = isRing(p), wiiP = isWii(p); // a Wii Remote's motion can land on the right stick axes, so it never turns with them
+  const rx = wiiP ? 0 : dz(p.axes[2] || 0);
+  if (rx || (!wiiP && dz(p.axes[3] || 0))) padRightSeen = true;
+  const oneStick = ring || wiiP || !padRightSeen;
   const inMenu = state === 'menu' || !$('questsPanel').hidden || !$('frogsPanel').hidden || wardrobeOpen;
   if (inMenu || !$('players').hidden) {
     padNavT -= dt;
@@ -7876,7 +8507,7 @@ function pollGamepad(dt) {
     if ((up || down) && padNavT <= 0) { padMoveFocus(down ? 1 : -1); padNavT = 0.22; }
     if (!up && !down) padNavT = 0;
     if (pressed(PAD.A) || (ring && pressed(PAD.LB))) { initAudio(); const el = document.activeElement; if (el && el.tagName === 'BUTTON') el.click(); else padMoveFocus(0); }
-    if (pressed(PAD.B)) padBack();
+    if (pressed(PAD.B) || (p.wii && pressed(PAD.RB))) padBack();
     if (wardrobeOpen && mannequin) mannequin.group.rotation.y += rx * dt * 3;
   } else if (state !== 'menu') {
     const talkOpen = !$('talk').hidden;
@@ -7889,9 +8520,9 @@ function pollGamepad(dt) {
     player.yaw -= (rx + turn) * 2.8 * dt;
     if (pressed(PAD.RS)) tiltRecenter();
     hogPad.t = player.hog ? -ly + (b(PAD.RT) ? 1 : 0) - (b(PAD.LT) ? 1 : 0) : 0; hogPad.s = player.hog ? -(lx + turn) : 0;
-    // the ring has no LB to spare: its trigger jumps, and A gets in and out of a toadhog when you're by one
-    let jumpPressed = pressed(PAD.A) || (ring && pressed(PAD.LB)), jumpHeld = b(PAD.A) || (ring && b(PAD.LB));
-    if (ring ? pressed(PAD.A) && (player.hog || (nearHog() && canRide())) : pressed(PAD.LB)) { toggleHog(); jumpPressed = jumpHeld = false; }
+    // the ring has no LB to spare: its trigger jumps, and A gets in and out of a toadhog when you're by one (the Wii Remote too)
+    let jumpPressed = pressed(PAD.A) || (ring && pressed(PAD.LB)) || (p.wii && pressed(17)), jumpHeld = b(PAD.A) || (ring && b(PAD.LB));
+    if (ring || wiiP ? pressed(PAD.A) && (player.hog || (nearHog() && canRide())) : pressed(PAD.LB)) { toggleHog(); jumpPressed = jumpHeld = false; }
     padGrip = b(PAD.RB) && !talkOpen;
     if (!player.hog && player.gad && pressed(PAD.LT)) gadgetDown(); else if (gadgetHeld && !b(PAD.LT) && padPrev[PAD.LT]) gadgetUp();
     if (player.hog) { if (jumpPressed) honk(); }
@@ -10898,7 +11529,7 @@ function update(dt, t) {
   for (let i = 0; i < steps; i++) { if (!player.hog) physics(player, h); if (host) for (const a of ais) if (!a.hog) physics(a, h); }
   if (host) for (const a of ais) aiThink(a, dt);
   netFrame(dt);
-  updateHogs(dt); updateTeleports();
+  updateHogs(dt); updateTeleports(); updateMapDoors(dt); updateMovers(host);
   for (const b of bodies) { b.frozen = Math.max(0, b.frozen - dt); b.immune = Math.max(0, b.immune - dt); }
 
   if (state === 'play') {

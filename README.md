@@ -72,6 +72,35 @@ Pair the ring with the tablet, then every time you turn it on, hold `@` and pres
 
 On menus the stick moves between buttons and the trigger or `B` picks.
 
+#### Wii Remote and Nunchuk
+
+Browsers don't treat a Wii Remote as a gamepad, so the game talks to it directly over WebHID. That needs Chrome or Edge on a computer (the Fire tablet's browser doesn't have WebHID). Pair the remote in the computer's Bluetooth settings (press the red sync button under the battery cover), then open the menu and tap **Connect a Wii Remote** under Controller check. After that, pressing `1` and `2` together should bring it back without tapping Connect again. Player 1's light comes on and it rumbles when you get tagged.
+
+| Button | Action |
+| --- | --- |
+| Nunchuk stick | Push: up for forward, down for back, sideways to turn |
+| `A`, or shake the remote | Jump, or get in and out of a toadhog when you're next to one |
+| `B` (hold) | Grab and hang on |
+| `Z` (hold) | Big pushes (gas in a toadhog) |
+| `C` | Use your gadget (reverse in a toadhog) |
+| `1` | Throw, or close a panel |
+| `−` | Talk (D-pad for quick replies) |
+| `Home` | Player list |
+| `+` | Menu |
+
+No Nunchuk? Hold the remote sideways with the D-pad on the left: the D-pad moves and turns, and `2` jumps. On menus the D-pad moves between buttons, `A` picks and `B` goes back.
+
+#### Presentation clicker
+
+Any slide clicker works (Logitech, Targus, Amazon Basics and the rest): they all show up as a tiny keyboard, so plug in the USB dongle or pair it over Bluetooth and press a button. Some clickers send the slideshow button as `F5` and then `Esc`, so a second press of that button opens the menu.
+
+| Button | Action |
+| --- | --- |
+| Hold Next (Page Down) | Push forward |
+| Hold Back (Page Up) | Turn |
+| Slideshow (F5) or blank screen (B or .) | Jump |
+| On menus | Next / Back move around, slideshow or blank screen picks |
+
 ### Gadgets
 
 Colored boxes float around every map (except in Toadhog Race, which has its own items). Touch one to pick up its gadget:
@@ -192,8 +221,10 @@ Tap **Scores** during a game (or press `L`) to see everyone in the game ranked b
 
 ## Maps
 
-Forest, Mega Map, Frog City, Frog Gulch, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), The Backrooms (a yellow maze under humming lights), and The Laboratory (a secret lab with monsters loose).
+Forest, Mega Map, Frog City, Frog Gulch, The Mines, Crystal Caves, Canyon, Beach, Snowy Peaks, Volcano, Sky Islands, Moon Base, Candy Land, Spooky Woods, City Rooftops, Lily Pond, Misty Swamp, Giant Garden, Rainforest Canopy, Pirate Cove, Coral Reef, Toy Room, Ice Castle, The Stump (a giant hollow tree stump to hang out in, with jump walls), The Backrooms (a yellow maze under humming lights), and The Laboratory (a secret lab with monsters loose).
 
+- **Forest** (Asher's idea): you start inside a giant hollow stump, like the one in Gorilla Tag. Inside there's a green-screen computer that shows your room, name, color, map and mode (tap the screen to flip pages). Behind the computer a log tunnel goes to **Frog City**, a hole in the floor leads down a mine shaft with rails and lanterns to **The Mines**, and the front door goes out to the forest. In the back of the stump is Abraham's **ASMR keyboard**: walk up to the desk and tap **Type** (or press `K`) to practice typing on big squishy keys. Pick a sound (Thock, Clicky, Bubbles or Music, where every key is a note) and a level (home row, words or sentences). It shows your words a minute and how many you got right, and every line you finish earns a fly. A real keyboard types there too. Walk into a glowing door to go to that map, and everyone in your game comes too. Only the host can do it, and only in Free Play and the tag games. Frog City and the Mines each have a door back to the stump. Out the front there's a picnic area with a chalkboard showing everyone in the game, their color and tags, and who just joined. A slide comes down off the rim, and if you **grab while you're on the slide** you do a **juke**: it flings you back the way you came.
+- **The Mines**: a big dark mine. Two minecarts full of gold go round a track (stand on one to ride it), a wooden scaffold tower climbs to a pile of gold, an elevator goes up to a high ledge, an ore chute slides you back down (you can juke on it), and a giant drill spins in the wall.
 - **Mega Map**: one giant world. Forest in the middle, a city to the east, snowy peaks to the north, and caves underneath. Tunnels, a subway, a log bridge and a skybridge join it all up, and a ramp lets you drive down into the caves.
 - **The Stump** and several other maps have **jump walls**: two tall plank walls close together. Push off one, then the other, to climb fast.
 - **Frog City**: a giant city on a grid of streets, with a park in the middle. Walk into the shops and towers (Fly Pizza, Tadpole Toys, the Frog Museum and more), climb up through a hole in every floor, and come out a hatch on the roof. Frog Tower is the tallest building, 60 m high. Two toadhogs are parked by the park.
