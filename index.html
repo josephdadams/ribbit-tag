@@ -1502,7 +1502,7 @@ const TRACK_STYLES = { // shape, how hilly (0-3), tunnels, puddle kind, boost pa
   sky: ['eight', 2, 0, null, 4, 1], moon: ['flower5', 3, 1, null, 2, 0], candy: ['clover4', 1, 1, 'choc', 3, 1], spooky: ['eight', 1, 1, 'slime', 1, 2],
   city: ['clover4', 0, 2, 'oil', 3, 1], frogcity: ['clover4', 0, 2, 'oil', 3, 2], pond: ['loop', 1, 0, 'mud', 2, 1], swamp: ['clover3', 1, 1, 'mud', 1, 1], garden: ['eight', 1, 1, 'water', 2, 2],
   canopy: ['flower5', 2, 1, 'mud', 2, 0], cove: ['eight', 1, 1, 'water', 2, 2], reef: ['loop', 2, 1, 'slime', 2, 1], toys: ['eight', 1, 1, null, 4, 3],
-  icecastle: ['clover3', 1, 1, 'ice', 1, 1], backrooms: ['clover4', 0, 3, 'water', 1, 1], stump: ['flower5', 2, 1, 'mud', 2, 1], lab: ['flower5', 0, 2, 'slime', 2, 3],
+  icecastle: ['clover3', 1, 1, 'ice', 1, 1], backrooms: ['clover4', 0, 3, 'water', 1, 1], stump: ['flower5', 2, 1, 'mud', 2, 1], lab: ['flower5', 0, 2, 'slime', 2, 3], sewer: ['clover4', 0, 2, 'slime', 1, 1],
   manor: ['eight', 1, 1, 'slime', 1, 2], farm: ['clover3', 2, 0, 'mud', 2, 1], santa: ['clover4', 1, 1, 'ice', 2, 1], valentine: ['loop', 1, 1, 'choc', 3, 1],
   rainbow: ['flower5', 3, 0, null, 3, 1], eggs: ['clover4', 1, 1, 'choc', 2, 1], fireworks: ['eight', 1, 1, 'water', 3, 1],
 };
@@ -2920,6 +2920,168 @@ function minesBuild() {
   if (!trackOn) addMapDoor(0, 0, HALF - 2.4, Math.PI, 'forest', 'THE STUMP', '#2f6a3a'); // back up to the Forest
 }
 
+// ---------- The Sewer Maze (under the Stump, Asher's idea) ----------
+// Through a door at the bottom of the mine shaft: a maze of brick tunnels with a slime stream down the middle.
+// Press all the big red buttons hidden in the dead ends, and don't get eaten by the alligators: they wander the
+// tunnels, and when they smell you close by they come snapping. The room you start in is safe, they never go in
+// there. Get eaten and you're back at the start, but your buttons stay pressed. Each frog presses their own buttons.
+Object.assign(M, {
+  swrFloor: lam(0x4a5048), swrWall: lam(0x6a5444), swrBrick: lam(0x4e3e34), swrMoss: lam(0x3f5a2a), swrCeil: lam(0x2e3330), swrPipe: lam(0x6f7a72),
+  swrSlime: new THREE.MeshLambertMaterial({ color: 0x5a9a30, emissive: 0x10300a }), swrBtnBase: lam(0x8e989e),
+  gator: lam(0x3a5a2a), gatorDark: lam(0x24381a), gatorBelly: lam(0x8a9a5a), gatorTooth: lam(0xfff6dc), gatorMouth: lam(0xc0404a),
+});
+const SEWER = { N: 7, CELL: 6, CEIL: 5, start: [3, 6], buttons: [], gators: [], done: false, hint: 0 };
+function sewerGator() { // a big scary alligator, snout pointing -z; its jaw and tail move
+  const g = new THREE.Group(), eyeMat = new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0xffd23f, emissiveIntensity: 0.8 });
+  part(g, boxGeo, M.gator, 1.1, 0.5, 2.4, 0, 0.4, 0); // body
+  part(g, boxGeo, M.gatorBelly, 1, 0.12, 2.2, 0, 0.17, 0);
+  for (let k = 0; k < 5; k++) part(g, boxGeo, M.gatorDark, 0.22, 0.18, 0.22, 0, 0.72, -0.9 + k * 0.45); // bumps down the back
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) part(g, boxGeo, M.gator, 0.32, 0.35, 0.38, sx * 0.66, 0.18, sz * 0.8); // stubby legs
+  const head = new THREE.Group(); head.position.set(0, 0.45, -1.2); g.add(head);
+  const top = new THREE.Group(); head.add(top);
+  part(top, boxGeo, M.gator, 0.95, 0.38, 0.55, 0, 0.12, -0.1);
+  part(top, boxGeo, M.gator, 0.8, 0.28, 1.4, 0, 0.06, -0.75); // the long snout
+  const eyes = [];
+  for (const s of [-1, 1]) {
+    part(top, ballGeo, M.gator, 0.2, 0.18, 0.2, s * 0.3, 0.34, -0.15);
+    eyes.push(part(top, ballGeo, eyeMat, 0.13, 0.13, 0.08, s * 0.3, 0.4, -0.25));
+    for (let k = 0; k < 5; k++) part(top, boxGeo, M.gatorTooth, 0.07, 0.18, 0.07, s * 0.36, -0.14, -0.3 - k * 0.27);
+  }
+  const jaw = new THREE.Group(); jaw.position.set(0, -0.05, 0); head.add(jaw);
+  part(jaw, boxGeo, M.gator, 0.78, 0.18, 1.4, 0, -0.12, -0.7);
+  part(jaw, boxGeo, M.gatorMouth, 0.62, 0.04, 1.25, 0, -0.02, -0.68);
+  for (const s of [-1, 1]) for (let k = 0; k < 4; k++) part(jaw, boxGeo, M.gatorTooth, 0.07, 0.15, 0.07, s * 0.33, 0.05, -0.42 - k * 0.27);
+  const tail = new THREE.Group(); tail.position.set(0, 0.38, 1.15); g.add(tail);
+  part(tail, boxGeo, M.gator, 0.78, 0.4, 1.4, 0, 0, 0.7);
+  const tip = new THREE.Group(); tip.position.set(0, -0.04, 1.35); tail.add(tip);
+  part(tip, boxGeo, M.gator, 0.45, 0.26, 1.3, 0, 0, 0.62);
+  for (let k = 0; k < 3; k++) part(tip, boxGeo, M.gatorDark, 0.16, 0.16, 0.16, 0, 0.18, 0.2 + k * 0.4);
+  g.scale.setScalar(1.3); put(g);
+  return { g, top, jaw, tail, tip, eyes, eyeMat };
+}
+function sewerBuild() {
+  const { N, CELL, CEIL } = SEWER, x0 = -N * CELL / 2, cx = i => x0 + CELL / 2 + i * CELL, id = (i, j) => j * N + i, home = id(...SEWER.start);
+  addGround(M.swrFloor); addWalls(M.swrWall);
+  addBox(0, CEIL + 0.5, 0, HALF * 2 + 2, 1, HALF * 2 + 2, M.swrCeil);
+  SEWER.buttons = []; SEWER.gators = []; SEWER.done = false; SEWER.hint = 3;
+  if (trackOn) return; // the race track version is just the tunnels' look
+  // carve the maze (seeded, so it's the same for everyone), then knock out a few more walls so there's more than one way round
+  const open = Array.from({ length: N * N }, () => []), link = (a, b) => { open[a].push(b); open[b].push(a); };
+  const seen = new Set([home]), stack = [home];
+  while (stack.length) {
+    const c = stack[stack.length - 1], i = c % N, j = (c - i) / N;
+    const nb = [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]].filter(([a, b]) => a >= 0 && b >= 0 && a < N && b < N && !seen.has(id(a, b)));
+    if (!nb.length) { stack.pop(); continue; }
+    const n = id(...nb[Math.floor(srnd() * nb.length)]); link(c, n); seen.add(n); stack.push(n);
+  }
+  for (let k = 0, tries = 0; k < 6 && tries < 200; tries++) {
+    const i = Math.floor(srnd() * (N - 1)), j = Math.floor(srnd() * N), across = srnd() < 0.5;
+    const a = across ? id(i, j) : id(j, i), b = across ? id(i + 1, j) : id(j, i + 1);
+    if (!open[a].includes(b)) { link(a, b); k++; }
+  }
+  const bfs = from => { const d = new Array(N * N).fill(Infinity), q = [from]; d[from] = 0; for (let k = 0; k < q.length; k++) for (const n of open[q[k]]) if (d[n] === Infinity) { d[n] = d[q[k]] + 1; q.push(n); } return d; };
+  const far = bfs(home), gap = (a, b) => Math.abs(a % N - b % N) + Math.abs(Math.floor(a / N) - Math.floor(b / N));
+  // brick walls (too tall to hop over: they meet the ceiling), with slimy moss along the bottom
+  const wall = (x, z, w, d) => {
+    addBox(x, CEIL / 2, z, w, CEIL, d, M.swrWall);
+    const m = put(new THREE.Mesh(boxGeo, M.swrMoss)); m.scale.set(w + 0.04, 0.5, d + 0.04); m.position.set(x, 0.25, z);
+    const b = put(new THREE.Mesh(boxGeo, M.swrBrick)); b.scale.set(w + 0.03, 0.22, d + 0.03); b.position.set(x, 2.6, z);
+  };
+  for (let j = 0; j < N; j++) for (let i = 0; i < N - 1; i++) {
+    if (!open[id(i, j)].includes(id(i + 1, j))) wall(cx(i) + CELL / 2, cx(j), 0.6, CELL);
+    if (!open[id(j, i)].includes(id(j, i + 1))) wall(cx(j), cx(i) + CELL / 2, CELL, 0.6);
+  }
+  for (let i = 1; i < N; i++) for (let j = 1; j < N; j++) addBox(x0 + i * CELL, CEIL / 2, x0 + j * CELL, 0.8, CEIL, 0.8, M.swrBrick);
+  // the green slime stream running down the middle of every tunnel, lamps, and pipes along the outside walls
+  for (let c = 0; c < N * N; c++) {
+    const x = cx(c % N), z = cx(Math.floor(c / N));
+    plane(x - 0.7, x + 0.7, z - 0.7, z + 0.7, 0.02, M.swrSlime);
+    for (const n of open[c]) if (n > c) { const nx = cx(n % N), nz = cx(Math.floor(n / N)); plane(Math.min(x, nx) - 0.7, Math.max(x, nx) + 0.7, Math.min(z, nz) - 0.7, Math.max(z, nz) + 0.7, 0.02, M.swrSlime); }
+    if ((c % N + Math.floor(c / N)) % 2 === 0) { const l = put(new THREE.Mesh(ballGeo, M.flame)); l.scale.setScalar(0.2); l.position.set(x, CEIL - 0.3, z); }
+  }
+  const pg = geo(facet(new THREE.CylinderGeometry(0.25, 0.25, HALF * 2, 8)));
+  for (const [x, z, ry] of [[0, -HALF + 0.3, Math.PI / 2], [-HALF + 0.3, 0, 0], [HALF - 0.3, 0, 0]]) { const p = put(new THREE.Mesh(pg, M.swrPipe)); p.rotation.set(Math.PI / 2, 0, ry); p.position.set(x, CEIL - 0.6, z); }
+  // the big red buttons, tucked in the dead ends far from the start
+  const pick6 = (list, n, sp) => { const out = []; for (const c of list) if (out.length < n && out.every(o => gap(o, c) >= sp)) out.push(c); return out; };
+  const byFar = [...far.keys()].filter(c => c !== home).sort((a, b) => far[b] - far[a]);
+  let spots = pick6(byFar.filter(c => open[c].length === 1), 6, 3);
+  for (const c of byFar) if (spots.length < 6 && !spots.includes(c) && spots.every(o => gap(o, c) >= 2)) spots.push(c);
+  const bGeo = geo(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 14));
+  for (const c of spots) {
+    let x = cx(c % N), z = cx(Math.floor(c / N));
+    if (open[c].length === 1) { const n = open[c][0]; x -= Math.sign(n % N - c % N) * 1.9; z -= Math.sign(Math.floor(n / N) - Math.floor(c / N)) * 1.9; } // against the end wall
+    addBox(x, 0.5, z, 1, 1, 1, M.swrBtnBase, true);
+    const plate = put(new THREE.Mesh(boxGeo, M.labHazard)); plate.scale.set(1.1, 0.06, 1.1); plate.position.set(x, 1.02, z);
+    const mat = new THREE.MeshLambertMaterial({ color: 0xff3030, emissive: 0x801010 }), dome = put(new THREE.Mesh(bGeo, mat));
+    dome.position.set(x, 1.15, z); dome.userData.dyn = true;
+    SEWER.buttons.push({ x, z, dome, mat, on: false });
+  }
+  // the alligators start out in far-off tunnels
+  const lairs = byFar.filter(c => far[c] >= 4 && !spots.includes(c));
+  for (let k = lairs.length - 1; k > 0; k--) { const r = Math.floor(srnd() * (k + 1)); [lairs[k], lairs[r]] = [lairs[r], lairs[k]]; }
+  for (const c of pick6(lairs, 4, 3)) SEWER.gators.push(Object.assign(sewerGator(), { cell: c, prev: c, next: c, u: 0, pos: new V(cx(c % N), 0, cx(Math.floor(c / N))), off: new V(), yaw: srnd() * 6, chase: false, fullT: 0 }));
+  addMapDoor(0, 0, HALF - 0.6, Math.PI, 'forest', 'THE STUMP', '#2f6a3a'); // back up to the Forest
+  // every frame: press buttons, move the alligators, and get eaten
+  const toCell = p => { const i = Math.floor((p.x - x0) / CELL), j = Math.floor((p.z - x0) / CELL); return i >= 0 && j >= 0 && i < N && j < N && p.y < CEIL ? id(i, j) : -1; };
+  const base = new V(), want = new V();
+  let pc = -2, pd = null;
+  mapAnims.push((dt, t) => {
+    dt = Math.min(dt, 0.1);
+    const live = state !== 'menu' && !player.hog, me = player.pos, mc = live ? toCell(me) : -1;
+    player.swrCd = Math.max(0, (player.swrCd || 0) - dt);
+    if (mc !== pc) { pc = mc; pd = mc >= 0 && mc !== home ? bfs(mc) : null; } // how far each tunnel is from you (nothing hunts you in the start room)
+    if (live && SEWER.hint > 0 && (SEWER.hint -= dt) <= 0) flash(`Press all ${SEWER.buttons.length} buttons!`, "Don't get eaten by the alligators!", 3, '#7dff4a');
+    for (const b of SEWER.buttons) {
+      if (!b.on && live && Math.hypot(me.x - b.x, me.z - b.z) < 1.5 && me.y < 3) {
+        b.on = true; b.mat.color.setHex(0x52d273); b.mat.emissive.setHex(0x1a6a2a);
+        const n = SEWER.buttons.filter(x => x.on).length, all = SEWER.buttons.length;
+        sfxTone(500, 1000, 0.15, 'square', 0.08); rumble(80, 0.3);
+        if (n < all) flash(`${n} of ${all} buttons!`, all - n === 1 ? 'Just one more! Watch out for alligators!' : `${all - n} more to go.`, 1.8, '#7dff4a');
+        else {
+          SEWER.done = true; addFlies(10);
+          flash('You pressed all the buttons!', 'The alligators fell asleep. +10 flies! Find the door back to the stump.', 4, '#ffd23f');
+          [523, 659, 784, 1047].forEach((f, k) => setTimeout(() => sfxTone(f, f, 0.18, 'square', 0.08), k * 140));
+        }
+      }
+      b.dome.position.y += ((b.on ? 1.07 : 1.15 + Math.sin(t * 4) * 0.03) - b.dome.position.y) * Math.min(1, dt * 10);
+    }
+    for (const a of SEWER.gators) {
+      if (SEWER.done) { // asleep: jaws shut, eyes closed, slow breathing
+        a.jaw.rotation.x *= 0.9; a.top.rotation.x *= 0.9; a.eyes.forEach(e => { e.scale.y = 0.02; }); a.g.scale.y = 1.3 + Math.sin(t * 1.5) * 0.04; continue;
+      }
+      a.fullT -= dt;
+      const hunt = !!pd && a.fullT <= 0 && pd[a.next] <= 4; // close enough down the tunnels to smell you
+      if (hunt && !a.chase && live) { sfxTone(110, 55, 0.7, 'sawtooth', 0.1); flash('An alligator smells you!', 'RUN!', 1.4, '#ff6b6b'); }
+      a.chase = hunt;
+      if ((a.u += dt * (hunt ? 4.6 : 1.8) / CELL) >= 1) { // reached the next tunnel: pick where to go from there
+        a.u = 0; a.prev = a.cell; a.cell = a.next;
+        const ways = open[a.cell].filter(n => n !== home), fwd = ways.filter(n => n !== a.prev), list = fwd.length ? fwd : ways;
+        if (hunt) { const best = ways.reduce((m, n) => pd[n] < pd[m] ? n : m, a.cell); a.next = best; }
+        else a.next = list.length ? list[Math.floor(Math.random() * list.length)] : a.cell;
+      }
+      base.set(cx(a.cell % N), 0, cx(Math.floor(a.cell / N))).lerp(want.set(cx(a.next % N), 0, cx(Math.floor(a.next / N))), a.u);
+      const near = hunt && (a.cell === mc || a.next === mc); // in your tunnel: lunge right at you
+      want.set(near ? clamp(me.x - base.x, -2, 2) : 0, 0, near ? clamp(me.z - base.z, -2, 2) : 0);
+      a.off.lerp(want, Math.min(1, dt * 3));
+      const ox = a.pos.x, oz = a.pos.z; a.pos.copy(base).add(a.off);
+      const dx = near ? me.x - a.pos.x : a.pos.x - ox, dz = near ? me.z - a.pos.z : a.pos.z - oz;
+      if (Math.hypot(dx, dz) > 0.001) a.yaw = lerpAngle(a.yaw, Math.atan2(-dx, -dz), Math.min(1, dt * 8));
+      a.g.position.copy(a.pos); a.g.rotation.y = a.yaw;
+      const open1 = hunt ? 0.25 + 0.4 * Math.max(0, Math.sin(t * 9 + a.cell)) : 0.08 + 0.06 * Math.sin(t * 2 + a.cell);
+      a.jaw.rotation.x = -open1; a.top.rotation.x = open1 * 0.35;
+      a.tail.rotation.y = Math.sin(t * (hunt ? 10 : 4) + a.cell) * 0.35; a.tip.rotation.y = Math.sin(t * (hunt ? 10 : 4) + a.cell - 1) * 0.5;
+      a.eyeMat.color.setHex(hunt ? 0xff2a2a : 0xffd23f); a.eyeMat.emissive.setHex(hunt ? 0xff2a2a : 0xffd23f);
+      // chomp!
+      const hx = a.pos.x - Math.sin(a.yaw) * 1.9, hz = a.pos.z - Math.cos(a.yaw) * 1.9;
+      if (live && mc >= 0 && player.swrCd <= 0 && me.y < 2.4 && (Math.hypot(me.x - hx, me.z - hz) < 1.3 || Math.hypot(me.x - a.pos.x, me.z - a.pos.z) < 1.4)) {
+        player.swrCd = 3; a.fullT = 6;
+        spawnAt(MAPS.sewer.spawn[0], MAPS.sewer.spawn[1], player.pos); player.vel.set(0, 0, 0); player.yaw = 0; player.frozen = Math.max(player.frozen, 1);
+        flash('CHOMP!', 'An alligator got you! Your buttons stay pressed.', 2.6, '#ff6b6b'); rumble(350, 0.9); sfxTone(180, 40, 0.35, 'square', 0.16);
+      }
+    }
+  });
+}
+
 // ---------- The Stump lobby (in the middle of the Forest), like the stump in Gorilla Tag ----------
 // A giant hollow stump you start in. The front door goes out to the forest, a log tunnel behind the computer goes to
 // Frog City, and a mine shaft under the floor goes down to the Mines (Crystal Caves). Out the front there's a picnic
@@ -3028,7 +3190,7 @@ function lobbyComputer(x, z, ry) { // a computer like Gorilla Tag's: its pages f
       MAP: ['MAP: ' + MAPS[mapKey].label.toUpperCase(), '', 'WALK THROUGH A', 'GLOWING DOOR TO GO', 'TO ANOTHER MAP'],
       MODE: ['MODE: ' + modeLabel().toUpperCase(), '', state === 'play' ? 'TIME: ' + fmt(roundTime) : ''],
       PLAYERS: [`${humans} ${humans === 1 ? 'PLAYER' : 'PLAYERS'}`, `${ais.length} COMPUTER FROGS`, '', 'SEE WHO JOINED ON', 'THE BOARD OUTSIDE'],
-      TUNNELS: ['BEHIND ME: FROG CITY', 'IN THE FLOOR: MINES', 'FRONT DOOR: FOREST', '', 'SLIDE OFF THE TOP!', 'GRAB ON IT TO JUKE'],
+      TUNNELS: ['BEHIND ME: FROG CITY', 'IN THE FLOOR: MINES', ' AND THE SEWER MAZE', 'FRONT DOOR: FOREST', 'SLIDE OFF THE TOP!', 'GRAB ON IT TO JUKE'],
     }[pages[page]];
     const s2 = page + lines.join('|') + (pages[page] === 'COLOR' ? skinHexOf(look) : '');
     if (s2 === sig) return; sig = s2;
@@ -3149,6 +3311,7 @@ function forestLobby() {
   const cart = addBox(mx0 + 0.75, D + 0.7, mz0 + 6, 1.3, 1.1, 2.2, M.labMetal, true); cart.floor = true; // an old mine cart, pushed off to the side
   addBox(mx0 + 0.75, D + 1.35, mz0 + 6, 1, 0.3, 1.8, M.rock, true);
   addMapDoor(0, D, mz0 + 0.1, 0, 'mines', 'THE MINES', '#8a5a35');
+  addMapDoor(mx1 - 0.1, D, -18.55, -Math.PI / 2, 'sewer', 'SEWER MAZE', '#4f7a3a'); // in the side of the shaft, between two supports
   lobbySlide();
   lobbyTypingCorner(6.3, -4);
   // the picnic area out the front, with the board of who's playing
@@ -3245,6 +3408,12 @@ const MAPS = {
     spawn: [0, 23], ring: [0, 0, 12], indoor: true,
     idle: ["Ride the minecart!", "Look at all that gold!", "Let's take the elevator up!", "Wheee, the ore chute!", "Don't touch the TNT!", "That drill is so loud!"],
     build: minesBuild,
+  },
+  sewer: {
+    label: 'Sewer Maze', sky: 0x141c14, fog: [6, 30], hemi: [0xd0ecc0, 0x2a3424, 0.95], sun: 0.25, ceil: SEWER.CEIL, half: 21,
+    spawn: [0, 16], ring: [0, 17, 2], indoor: true,
+    idle: ["Ew, it smells down here!", "Did you see that alligator?!", "Where's the next button?", "Don't step in the slime!", "I think we're lost...", "Shh! I hear snapping!"],
+    build: sewerBuild,
   },
   canyon: {
     label: 'Canyon', sky: 0xf4c891, fog: [18, 70], hemi: [0xfff0d8, 0x8a5a30, 0.9], sun: 0.8,
@@ -5033,6 +5202,7 @@ const SONGS = {
   menu:    { bpm: 96,  root: 60, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 5, 3, 4], seed: 3 },
   forest:  { bpm: 104, root: 62, scale: 'major', lead: 'marimba', drums: 'light', prog: [0, 3, 5, 4], seed: 11 },
   mines:   { bpm: 88,  root: 55, scale: 'minor', lead: 'pluck',   drums: 'light', prog: [0, 3, 4, 0], seed: 23, echo: true },
+  sewer:   { bpm: 84,  root: 52, scale: 'minor', lead: 'pluck',   drums: 'soft',  prog: [0, 6, 5, 6], seed: 311, echo: true },
   caves:   { bpm: 78,  root: 57, scale: 'minor', lead: 'bell',    drums: 'soft',  prog: [0, 5, 3, 6], seed: 7, pad: true, echo: true },
   canyon:  { bpm: 92,  root: 62, scale: 'minor', lead: 'pluck',   drums: 'light', prog: [0, 6, 5, 4], seed: 19, echo: true },
   beach:   { bpm: 112, root: 65, scale: 'major', lead: 'steel',   drums: 'light', prog: [0, 4, 5, 3], seed: 23 },
@@ -5750,7 +5920,7 @@ for (const a of ALL_AIS) {
   a.ownerAi = a; a.group.traverse(o => { o.userData.ai = a; });
 }
 // what frogs call each map when they talk about where they are
-const PLACE = { forest: 'forest', mines: 'mines', caves: 'cave', canyon: 'canyon', beach: 'beach', snow: 'mountain', volcano: 'volcano', sky: 'sky', moon: 'moon',
+const PLACE = { forest: 'forest', mines: 'mines', sewer: 'sewer', caves: 'cave', canyon: 'canyon', beach: 'beach', snow: 'mountain', volcano: 'volcano', sky: 'sky', moon: 'moon',
   candy: 'candy land', spooky: 'spooky woods', city: 'city', pond: 'pond', swamp: 'swamp', garden: 'garden', canopy: 'rainforest', cove: 'cove',
   reef: 'reef', toys: 'toy room', icecastle: 'castle', stump: 'stump', backrooms: 'maze', lab: 'lab', mega: 'mega map', gulch: 'gulch', manor: 'mansion', farm: 'farm', santa: 'village', valentine: 'garden',
   rainbow: 'meadow', eggs: 'meadow', fireworks: 'lake' };
@@ -7051,6 +7221,7 @@ function keyJump() {
 
 // ---------- Menu wiring ----------
 const MAP_INFO = {
+  sewer: 'Asher\'s idea: a sewer maze under the stump, through the door at the bottom of the mine shaft. Press all the big red buttons, and don\'t get eaten by the really scary alligators!',
   mines: 'A big dark mine with minecarts full of gold going round (ride them!), a scaffold tower, an elevator up to a high ledge, an ore chute to slide down and a giant drill.',
   forest: 'The classic, with a giant hollow stump in the middle (Asher\'s idea). Use the computer, walk through the tunnels to Frog City and the Mines, see who\'s playing on the board by the picnic tables, and juke on the slide.',
   caves: 'Dark caves full of shiny crystals and glowing mushrooms. Grab the ceiling and swing along it!',
