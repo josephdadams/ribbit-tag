@@ -258,11 +258,11 @@ Each Toadhog has its own engine that revs as it speeds up. A speeding Toadhog bu
 ### Holiday maps
 
 <!-- HOLIDAY-MAP:START -->
-### Now on the menu: Haunted Manor
+### Coming next: Harvest Farm
 
-The Halloween map is available until Nov 2. Look for it under **Limited time** on the map picker.
+The Thanksgiving map arrives on Nov 10.
 
-![Haunted Manor](docs/screenshots/holiday-manor.png)
+![Harvest Farm](docs/screenshots/holiday-farm.png)
 <!-- HOLIDAY-MAP:END -->
 
 Some maps only show up on the menu (under **Limited time**) around a holiday:
