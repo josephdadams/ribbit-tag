@@ -258,9 +258,9 @@ Each Toadhog has its own engine that revs as it speeds up. A speeding Toadhog bu
 ### Holiday maps
 
 <!-- HOLIDAY-MAP:START -->
-### Coming next: Harvest Farm
+### Now on the menu: Harvest Farm
 
-The Thanksgiving map arrives on Nov 10.
+The Thanksgiving map is available until Nov 30. Look for it under **Limited time** on the map picker.
 
 ![Harvest Farm](docs/screenshots/holiday-farm.png)
 <!-- HOLIDAY-MAP:END -->
